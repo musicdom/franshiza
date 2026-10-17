@@ -34,7 +34,7 @@
 
 В репозитории добавлены Vercel Functions:
 
-- `/api/webhook` — принимает события `bot_started`, `message_created` и `message_callback`, подтверждает callback-нажатия через `POST /answers`, отвечает покупателю и сохраняет заявки в Redis, если Redis REST-переменные настроены.
+- `/api/webhook` — принимает события `bot_started`, `message_created` и `message_callback`, поддерживает callback-нажатия через `POST /answers` и отправляет новые навигационные кнопки как `message`-кнопки для надёжной обработки через `message_created`, отвечает покупателю и сохраняет заявки в Redis, если Redis REST-переменные настроены.
 - `/api/setup-webhook` — защищённо регистрирует HTTPS webhook в MAX.
 
 ### Переменные окружения Vercel
