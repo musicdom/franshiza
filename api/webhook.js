@@ -387,7 +387,7 @@ module.exports = async function handler(req, res) {
         const senderName = cleanText(sender.name, 120) || "Покупатель";
         const product = cleanText(body.text, 1200);
         try {
-          await sendMessage(adminChatId, `Новая заявка с сайта MAX Бизнес\nОт: ${senderName}\nЧат: ${chatId}\nСообщение: ${product}`);
+          await sendMessage(adminChatId, `Новая заявка с сайта Франшиза\nОт: ${senderName}\nЧат: ${chatId}\nСообщение: ${product}`);
         } catch (notificationError) {
           console.error("MAX admin notification failed:", notificationError && notificationError.message ? notificationError.message : "unknown error");
         }
