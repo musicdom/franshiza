@@ -46,7 +46,7 @@ fillCategories();renderCatalog();
 [search,categoryFilter,typeFilter,statusFilter].forEach(el=>el.addEventListener(el===search?"input":"change",renderCatalog));
 $("reset-filters").addEventListener("click",resetFilters);$("empty-reset").addEventListener("click",resetFilters);
 grid.addEventListener("click",e=>{const btn=e.target.closest("[data-product]");if(btn)openProduct(btn.dataset.product)});
-document.addEventListener("click",e=>{const request=e.target.closest("[data-request]");if(request)openRequest(request.dataset.request)});
+document.addEventListener("click",e=>{const request=e.target.closest("[data-request]");if(request&&!request.closest("#dialog-content"))openRequest(request.dataset.request)});
 $("dialog-close").addEventListener("click",closeProduct);$("request-close").addEventListener("click",closeRequest);
 productDialog.addEventListener("click",e=>{if(e.target===productDialog)closeProduct()});requestDialog.addEventListener("click",e=>{if(e.target===requestDialog)closeRequest()});
 $("dialog-content").addEventListener("click",e=>{const b=e.target.closest("[data-request]");if(b){closeProduct();openRequest(b.dataset.request)}});
