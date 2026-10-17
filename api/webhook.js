@@ -39,24 +39,6 @@ async function saveLead(lead) {
   return id;
 }
 
-function normalizeButtonAttachments(attachments = []) {
-  return attachments.map((attachment) => {
-    if (!attachment || attachment.type !== "inline_keyboard" || !attachment.payload || !Array.isArray(attachment.payload.buttons)) return attachment;
-    return {
-      ...attachment,
-      payload: {
-        ...attachment.payload,
-        buttons: attachment.payload.buttons.map((row) => Array.isArray(row) ? row.map((button) => {
-          if (!button || button.type !== "callback") return button;
-          // MAX message buttons send their visible text as message_created events.
-          // This keeps the menu functional even if callback delivery is delayed or misconfigured.
-          return { type: "message", text: String(button.text || button.payload || "") };
-        }) : row)
-      }
-    };
-  });
-}
-
 async function sendMessage(chatId, text, attachments = []) {
   const token = process.env.MAX_BOT_TOKEN;
   if (!token) throw new Error("MAX_BOT_TOKEN is not configured");
@@ -64,7 +46,7 @@ async function sendMessage(chatId, text, attachments = []) {
     token,
     method: "POST",
     apiPath: `/messages?chat_id=${encodeURIComponent(String(chatId))}`,
-    body: { text, ...(attachments.length ? { attachments: normalizeButtonAttachments(attachments) } : {}) }
+    body: { text, ...(attachments.length ? { attachments } : {}) }
   });
   if (!response.ok) {
     throw new Error(`MAX send message failed: ${response.status} ${response.raw.slice(0, 200)}`);
