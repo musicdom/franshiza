@@ -1,6 +1,6 @@
-const { getConfig } = require("../_lib/config");
-const { json, method, requireSameOrigin, safeEqual, signSession, setSessionCookie, clientIp } = require("../_lib/http");
-const { rateLimit } = require("../_lib/store");
+const { getConfig } = require("../../lib/server/config");
+const { json, method, requireSameOrigin, safeEqual, signSession, setSessionCookie, clientIp } = require("../../lib/server/http");
+const { rateLimit } = require("../../lib/server/store");
 const crypto = require("node:crypto");
 
 module.exports = async function handler(req, res) {
