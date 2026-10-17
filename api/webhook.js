@@ -59,15 +59,9 @@ const welcomeKeyboard = [{
   type: "inline_keyboard",
   payload: {
     buttons: [
-      [{ type: "open_app", text: "🚀 Открыть каталог", web_app: "se14711525_bot" }],
-      [
-        { type: "message", text: "🏪 Подобрать бота" },
-        { type: "message", text: "💰 Узнать цены" }
-      ],
-      [
-        { type: "message", text: "⚙️ Как это работает" },
-        { type: "message", text: "👨‍💼 Связаться с менеджером" }
-      ]
+      [{ type: "message", text: "🏪 Подобрать решение" }, { type: "message", text: "💰 Цены" }],
+      [{ type: "open_app", text: "🚀 Каталог решений", web_app: "se14711525_bot" }],
+      [{ type: "message", text: "👨‍💼 Менеджер" }]
     ]
   }
 }];
@@ -77,19 +71,8 @@ const businessKeyboard = [{
   payload: {
     buttons: [
       [{ type: "message", text: "💇 Салон красоты" }, { type: "message", text: "🍽️ Кафе / ресторан" }],
-      [{ type: "message", text: "🛍️ Магазин" }, { type: "message", text: "🏢 Услуги / другое" }],
-      [{ type: "message", text: "⬅️ Главное меню" }]
-    ]
-  }
-}];
-
-const goalKeyboard = [{
-  type: "inline_keyboard",
-  payload: {
-    buttons: [
-      [{ type: "message", text: "📅 Запись клиентов" }, { type: "message", text: "📩 Приём заявок" }],
-      [{ type: "message", text: "🛒 Каталог и продажи" }, { type: "message", text: "💬 Консультации и FAQ" }],
-      [{ type: "message", text: "👨‍💼 Менеджер" }, { type: "message", text: "⬅️ Главное меню" }]
+      [{ type: "message", text: "🛍️ Магазин" }, { type: "message", text: "🏢 Другое" }],
+      [{ type: "message", text: "🏠 Меню" }]
     ]
   }
 }];
@@ -136,12 +119,8 @@ module.exports = async function handler(req, res) {
         created_at: new Date().toISOString()
       });
       const greeting = product
-        ? `Здравствуйте! 👋 Вы выбрали решение «${product}».
-
-Это «Франшиза» — готовые идеи и боты для бизнеса в MAX.
-
-Расскажите, для какого бизнеса нужен бот и что он должен делать. Подберём сценарий и сориентируем по срокам и стоимости.`
-        : "Здравствуйте! 👋 Это «Франшиза» — готовые идеи и боты для бизнеса в MAX.\n\nПомогаем автоматизировать:\n• Приём заявок и запись клиентов\n• Продажи и консультации\n• Ответы на частые вопросы\n• Каталог товаров и услуг\n\nВыберите раздел ниже или напишите сферу бизнеса и задачу. Например: «Салон красоты — нужна онлайн-запись». Подберём подходящее решение и расскажем о запуске.";
+        ? "Здравствуйте! 👋 Вы выбрали решение «" + product + "». Напишите, что хотите автоматизировать, или выберите действие ниже."
+        : "Здравствуйте! 👋 Я помогу подобрать готового бота для вашего бизнеса в MAX. Выберите один из трёх вариантов ниже или просто напишите, что вам нужно.";
       await sendMessage(chatId, greeting, welcomeKeyboard);
       return json(res, 200, { ok: true });
     }
@@ -169,38 +148,32 @@ module.exports = async function handler(req, res) {
         return json(res, 200, { ok: true, command: "id" });
       }
       if (command === "старт" || command === "start" || command === "menu") {
-        await sendMessage(chatId, "Здравствуйте! 👋 Это «Франшиза» — готовые идеи и боты для бизнеса в MAX. Помогаем автоматизировать заявки, запись клиентов, продажи, консультации и каталоги товаров. Выберите действие ниже или откройте каталог решений.", welcomeKeyboard);
+        await sendMessage(chatId, "Главное меню 👇 Выберите, что нужно сделать, или напишите вопрос обычным сообщением.", welcomeKeyboard);
         return json(res, 200, { ok: true, command: "start" });
       }
 
       const normalizedText = text.toLowerCase().replace(/^[^\p{L}\p{N}]+/u, "").trim();
-      if (normalizedText.includes("подобрать бота")) {
-        await sendMessage(chatId, "Отлично! 🏪 Для начала выберите сферу бизнеса кнопкой ниже.", businessKeyboard);
+      if (normalizedText.includes("подобрать бота") || normalizedText.includes("подобрать решение")) {
+        await sendMessage(chatId, "🏪 Напишите название или сферу бизнеса и что хотите автоматизировать. Если удобнее — выберите сферу ниже. Необязательно проходить все шаги: можно сразу описать задачу одним сообщением.", businessKeyboard);
         return json(res, 200, { ok: true, action: "choose_bot" });
       }
-      if (["салон красоты", "кафе / ресторан", "магазин", "услуги / другое"].some((v) => normalizedText.includes(v))) {
-        const business = normalizedText.includes("салон красоты") ? "Салон красоты" : normalizedText.includes("кафе / ресторан") ? "Кафе / ресторан" : normalizedText.includes("магазин") ? "Магазин" : "Услуги / другое";
-        await safeSaveLead({ type: "bot_selection", chat_id: String(chatId), user_name: cleanText(sender.name, 120), business, created_at: new Date().toISOString() });
-        await sendMessage(chatId, "Понял, сфера: «" + business + "». Что в первую очередь должен делать бот? Выберите вариант кнопкой. Если нужно несколько функций — напишите их сообщением.", goalKeyboard);
-        return json(res, 200, { ok: true, action: "choose_business", business });
-      }
-      if (["запись клиентов", "приём заявок", "каталог и продажи", "консультации и faq"].some((v) => normalizedText.includes(v))) {
-        const goal = normalizedText.includes("запись клиентов") ? "Запись клиентов" : normalizedText.includes("приём заявок") ? "Приём заявок" : normalizedText.includes("каталог и продажи") ? "Каталог и продажи" : "Консультации и FAQ";
+      if (["салон красоты", "кафе / ресторан", "магазин", "другое"].some((v) => normalizedText.includes(v))) {
+        const business = normalizedText.includes("салон красоты") ? "Салон красоты" : normalizedText.includes("кафе / ресторан") ? "Кафе / ресторан" : normalizedText.includes("магазин") ? "Магазин" : "Другое";
         const adminChatId = process.env.MAX_ADMIN_CHAT_ID;
         const senderName = cleanText(sender.name, 120) || "Покупатель";
+        await safeSaveLead({ type: "bot_selection", chat_id: String(chatId), user_name: senderName, business, created_at: new Date().toISOString() });
         if (adminChatId) {
-          try { await sendMessage(adminChatId, "Новая заявка на подбор бота\nОт: " + senderName + "\nЧат: " + chatId + "\nЗадача: " + goal); }
+          try { await sendMessage(adminChatId, "Запрос на подбор бота\nОт: " + senderName + "\nЧат: " + chatId + "\nСфера: " + business); }
           catch (notificationError) { console.error("MAX admin notification failed:", notificationError && notificationError.message ? notificationError.message : "unknown error"); }
         }
-        await safeSaveLead({ type: "bot_goal", chat_id: String(chatId), user_name: senderName, goal, created_at: new Date().toISOString() });
-        await sendMessage(chatId, "Отлично, записал задачу: «" + goal + "». Чтобы подобрать решение точнее, напишите название бизнеса и важные детали. Например: сколько специалистов, какие услуги или товары, нужна ли оплата/онлайн-запись. Либо нажмите «Связаться с менеджером».", welcomeKeyboard);
-        return json(res, 200, { ok: true, action: "choose_goal", goal });
+        await sendMessage(chatId, "Принял: " + business + ". Теперь просто напишите, что должен делать бот — например, запись клиентов, приём заявок, каталог или ответы на вопросы. Можно описать всё сразу, без дополнительных кнопок.", welcomeKeyboard);
+        return json(res, 200, { ok: true, action: "choose_business", business });
       }
-      if (normalizedText.includes("главное меню")) {
-        await sendMessage(chatId, "Главное меню 👇 Выберите, что нужно сделать.", welcomeKeyboard);
+      if (normalizedText.includes("главное меню") || normalizedText === "меню" || normalizedText === "🏠 меню") {
+        await sendMessage(chatId, "Главное меню 👇 Выберите действие или напишите задачу своими словами.", welcomeKeyboard);
         return json(res, 200, { ok: true, action: "menu" });
       }
-      if (normalizedText.includes("узнать цены")) {
+      if (normalizedText.includes("узнать цены") || normalizedText === "цены") {
         await sendMessage(chatId, "💰 Ориентировочные цены: бот для салона красоты — от 7 900 ₽, для кафе — от 9 900 ₽, бот-каталог для магазина — от 12 900 ₽. Итоговая стоимость зависит от функций и интеграций. Нажмите «Открыть каталог», чтобы посмотреть решения подробнее.", welcomeKeyboard);
         return json(res, 200, { ok: true, action: "prices" });
       }
@@ -209,7 +182,7 @@ module.exports = async function handler(req, res) {
         return json(res, 200, { ok: true, action: "how_it_works" });
       }
       if (normalizedText.includes("связаться с менеджером") || normalizedText === "менеджер") {
-        await sendMessage(chatId, "👨‍💼 Напишите одним сообщением, какой у вас бизнес и что хотите автоматизировать. Например: «Кофейня, нужно меню и приём предзаказов». Можно также выбрать сферу бизнеса кнопкой.", businessKeyboard);
+        await sendMessage(chatId, "👨‍💼 Напишите, какой у вас бизнес и что нужно сделать. Я передам запрос менеджеру. Можно сразу написать всё одним сообщением — ждать вопросов и нажимать дополнительные кнопки не нужно.");
         return json(res, 200, { ok: true, action: "manager" });
       }
 
