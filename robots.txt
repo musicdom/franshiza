@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+# Replace the placeholder below with the canonical production sitemap URL after the domain is configured.
