@@ -165,7 +165,7 @@ const productNextKeyboard = [{
 }];
 
 async function sendSalesProductCard(chatId, p) {
-  await sendMessage(chatId, "🧩 " + p.name + "\\n\\nДля кого: " + p.audience + "\\n\\nКакую задачу решает: " + p.problem + "\\n\\nОсновные функции:\\n• " + p.features.join("\\n• ") + "\\n\\nПример работы: " + p.demo + "\\n\\nЧто потребуется: " + p.requirements + "\\n\\nОграничения: " + p.limitations + "\\n\\nОриентировочная цена: " + p.price + "\\nОплата и автоматическая выдача пока не подключены: до начала работ подтверждаем состав и итоговую стоимость.", [{ type: "inline_keyboard", payload: { buttons: [
+  await sendMessage(chatId, "🧩 " + p.name + "\n\nДля кого: " + p.audience + "\n\nКакую задачу решает: " + p.problem + "\n\nОсновные функции:\n• " + p.features.join("\n• ") + "\n\nПример работы: " + p.demo + "\n\nЧто потребуется: " + p.requirements + "\n\nОграничения: " + p.limitations + "\n\nОриентировочная цена: " + p.price + "\nОплата и автоматическая выдача пока не подключены: до начала работ подтверждаем состав и итоговую стоимость.", [{ type: "inline_keyboard", payload: { buttons: [
     [{ type: "message", text: "▶️ Посмотреть демо" }, { type: "message", text: "💳 Узнать стоимость" }],
     [{ type: "message", text: "⭐ Сохранить решение" }, { type: "message", text: "🛒 Оформить заявку" }],
     [{ type: "message", text: "💬 Консультация" }, { type: "message", text: "⚖️ Сравнить варианты" }],
@@ -213,7 +213,7 @@ module.exports = async function handler(req, res) {
         return json(res, 200, { ok: true, product: productMatch.id });
       }
       await sales.recordEvent({ event: "bot_started", chat_id: String(chatId), product_id: product || null });
-      const greeting = "Привет! 👋 Помогу подобрать готового бота для бизнеса в MAX.\\n\\nМожно посмотреть каталог, пройти короткий подбор или посмотреть пример работы. Цены в каталоге ориентировочные; оплату и запуск согласуем отдельно.";
+      const greeting = "Привет! 👋 Помогу подобрать готового бота для бизнеса в MAX.\n\nМожно посмотреть каталог, пройти короткий подбор или посмотреть пример работы. Цены в каталоге ориентировочные; оплату и запуск согласуем отдельно.";
       await sendMessage(chatId, greeting, welcomeKeyboard);
       return json(res, 200, { ok: true });
     }
