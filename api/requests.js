@@ -15,6 +15,10 @@ module.exports = async function handler(req, res) {
   let config;
   try { config = getConfig(); } catch { return json(res, 503, { error: "SERVICE_NOT_CONFIGURED", message: "Приём заявок временно не настроен." }); }
 
+  if (!config.privacyApproved || !config.dataControllerName || !config.dataControllerContact) {
+    return json(res, 503, { error: "PRIVACY_SETUP_REQUIRED", message: "Приём заявок временно отключён до завершения настройки политики обработки данных." });
+  }
+
   const ipKey = crypto.createHash("sha256").update(clientIp(req)).digest("hex").slice(0, 32);
   try {
     if (!(await rateLimit(config, ipKey, 5, 900))) {
@@ -38,10 +42,12 @@ module.exports = async function handler(req, res) {
     const item = await saveRequest(config, { name, contact, business, comment, productId });
     let notification = { sent: false, reason: "MAX_NOT_CONFIGURED" };
     try { notification = await notifyMax(config, item); } catch { notification = { sent: false, reason: "MAX_API_ERROR" }; }
-    await updateRequest(config, item.id, {
-      notificationStatus: notification.sent ? "sent" : notification.reason,
-      notificationAttemptedAt: new Date().toISOString()
-    });
+    try {
+      await updateRequest(config, item.id, {
+        notificationStatus: notification.sent ? "sent" : notification.reason,
+        notificationAttemptedAt: new Date().toISOString()
+      });
+    } catch { /* The saved request remains valid even if delivery metadata cannot be updated. */ }
     return json(res, 201, { ok: true, id: item.id, message: "Заявка сохранена.", notification: notification.sent ? "sent" : "pending" });
   } catch {
     return json(res, 503, { error: "TEMPORARY_FAILURE", message: "Не удалось сохранить заявку. Попробуйте позже." });
