@@ -131,7 +131,7 @@ module.exports = async function handler(req, res) {
         created_at: new Date().toISOString()
       });
 
-      const command = text.toLowerCase().trim().replace(/^\\/+/, "").split(/\\s+/)[0];
+      const command = text.toLowerCase().trim().replace(/^\/+/, "").split(/\s+/)[0];
       if (command === "id" || command === "chatid" || command === "мойid") {
         await sendMessage(chatId, `ID этого чата: ${chatId}`);
         return json(res, 200, { ok: true, command: "id" });
@@ -141,7 +141,7 @@ module.exports = async function handler(req, res) {
         return json(res, 200, { ok: true, command: "start" });
       }
 
-      const normalizedText = text.toLowerCase().replace(/^[^\\p{L}\\p{N}]+/u, "").trim();
+      const normalizedText = text.toLowerCase().replace(/^[^\p{L}\p{N}]+/u, "").trim();
       if (normalizedText.includes("подобрать бота")) {
         await sendMessage(chatId, "Отлично! 🏪 Напишите, какая у вас сфера бизнеса и что бот должен делать.\\n\\nНапример: «Салон красоты — запись клиентов», «Магазин — каталог и заявки», «Кафе — меню и бронирование». Мы передадим запрос менеджеру для подбора сценария.");
         return json(res, 200, { ok: true, action: "choose_bot" });
