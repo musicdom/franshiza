@@ -1,4 +1,5 @@
 const { requestMax } = require("../lib/max-api");
+const sales = require("../lib/sales");
 
 function json(res, status, body) {
   res.status(status).setHeader("Content-Type", "application/json; charset=utf-8");
@@ -57,13 +58,12 @@ function cleanText(value, max = 2000) {
 
 const welcomeKeyboard = [{
   type: "inline_keyboard",
-  payload: {
-    buttons: [
-      [{ type: "message", text: "🏪 Подобрать решение" }, { type: "message", text: "💰 Цены" }],
-      [{ type: "open_app", text: "🚀 Каталог решений", web_app: "se14711525_bot" }],
-      [{ type: "message", text: "👨‍💼 Менеджер" }]
-    ]
-  }
+  payload: { buttons: [
+    [{ type: "message", text: "🛍 Каталог решений" }, { type: "message", text: "🎯 Подобрать бота" }],
+    [{ type: "message", text: "👀 Демонстрации" }, { type: "message", text: "💬 Задать вопрос" }],
+    [{ type: "message", text: "📦 Мои заявки" }, { type: "message", text: "🔔 Уведомления" }],
+    [{ type: "open_app", text: "🌐 Открыть сайт-каталог", web_app: "se14711525_bot" }]
+  ] }
 }];
 
 const businessKeyboard = [{
@@ -163,6 +163,15 @@ const productNextKeyboard = [{
   }
 }];
 
+async function sendSalesProductCard(chatId, p) {
+  await sendMessage(chatId, "🧩 " + p.name + "\\n\\nДля кого: " + p.audience + "\\n\\nКакую задачу решает: " + p.problem + "\\n\\nОсновные функции:\\n• " + p.features.join("\\n• ") + "\\n\\nПример работы: " + p.demo + "\\n\\nЧто потребуется: " + p.requirements + "\\n\\nОграничения: " + p.limitations + "\\n\\nОриентировочная цена: " + p.price + "\\nОплата и автоматическая выдача пока не подключены: до начала работ подтверждаем состав и итоговую стоимость.", [{ type: "inline_keyboard", payload: { buttons: [
+    [{ type: "message", text: "▶️ Посмотреть демо" }, { type: "message", text: "💳 Узнать стоимость" }],
+    [{ type: "message", text: "⭐ Сохранить решение" }, { type: "message", text: "🛒 Оформить заявку" }],
+    [{ type: "message", text: "💬 Консультация" }, { type: "message", text: "⚖️ Сравнить варианты" }],
+    [{ type: "message", text: "🏠 Главное меню" }]
+  ] } }]);
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -194,11 +203,16 @@ module.exports = async function handler(req, res) {
         payload: payload || null,
         created_at: new Date().toISOString()
       });
-      const scenario = product ? getProductScenario(product) : null;
-      const greeting = scenario
-        ? "Здравствуйте! 👋 Вы выбрали: " + scenario.title + ".\n\nВот конкретный сценарий: " + scenario.summary + "\n\nЧто можно включить:\n" + scenario.features + "\n\nВыберите, что хотите обсудить. После нажатия уточню детали именно по этому решению. Можно также написать свой вопрос сообщением."
-        : "Здравствуйте! 👋 Я помогу подобрать готового бота для вашего бизнеса в MAX. Выберите действие ниже или сразу напишите, что вам нужно.";
-      await sendMessage(chatId, greeting, scenario ? productKeyboard(scenario) : welcomeKeyboard);
+      const productMatch = sales.PRODUCTS.find((item) => product && (product.toLowerCase().includes(item.name.toLowerCase()) || product.toLowerCase() === item.id));
+      if (productMatch) {
+        await sales.saveSession(chatId, { stage: "sales_product", product_id: productMatch.id, last_product_id: productMatch.id, business: productMatch.category, consent_marketing: false, last_activity: new Date().toISOString() });
+        await sales.recordEvent({ event: "product_viewed", chat_id: String(chatId), product_id: productMatch.id });
+        await sendSalesProductCard(chatId, productMatch);
+        return json(res, 200, { ok: true, product: productMatch.id });
+      }
+      await sales.recordEvent({ event: "bot_started", chat_id: String(chatId), product_id: product || null });
+      const greeting = "Привет! 👋 Помогу подобрать готового бота для бизнеса в MAX.\\n\\nМожно посмотреть каталог, пройти короткий подбор или посмотреть пример работы. Цены в каталоге ориентировочные; оплату и запуск согласуем отдельно.";
+      await sendMessage(chatId, greeting, welcomeKeyboard);
       return json(res, 200, { ok: true });
     }
 
