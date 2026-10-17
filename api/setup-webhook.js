@@ -1,4 +1,4 @@
-const API = "https://platform-api2.max.ru";
+const { requestMax } = require("../lib/max-api");
 
 function json(res, status, body) {
   res.status(status).setHeader("Content-Type", "application/json; charset=utf-8");
@@ -86,24 +86,21 @@ module.exports = async function handler(req, res) {
   const webhookUrl = `https://${host}/api/webhook`;
 
   try {
-    const response = await fetch(`${API}/subscriptions`, {
+    const response = await requestMax({
+      token,
       method: "POST",
-      headers: {
-        Authorization: token,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
+      apiPath: "/subscriptions",
+      body: {
         url: webhookUrl,
         update_types: ["bot_started", "message_created"],
         secret
-      })
+      }
     });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok || result.success === false) {
+    if (!response.ok || response.data.success === false) {
       console.error("MAX webhook subscription failed:", response.status);
       return json(res, 502, { ok: false, error: "MAX rejected webhook subscription", status: response.status });
     }
-    return json(res, 200, { ok: true, webhook_url: webhookUrl, result });
+    return json(res, 200, { ok: true, webhook_url: webhookUrl, result: response.data });
   } catch (error) {
     const causeCode = error && error.cause && error.cause.code ? error.cause.code : "";
     const errorName = error && error.name ? error.name : "UnknownError";
