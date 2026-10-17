@@ -224,6 +224,13 @@ module.exports = async function handler(req, res) {
       const body = message.body || {};
       const text = cleanText(body.text);
       if (sender.is_bot || !chatId || !text) return json(res, 200, { ok: true, ignored: true });
+      const messageId = body.mid || message.mid || message.message_id || update.message_id;
+      if (messageId) {
+        try {
+          const accepted = await sales.redis(["SET", "maxbiz:processed:" + String(messageId), "1", "NX", "EX", "86400"]);
+          if (accepted !== "OK") return json(res, 200, { ok: true, duplicate: true });
+        } catch (dedupeError) { console.error("Message deduplication unavailable"); }
+      }
 
       try { await sales.recordEvent({ event: "message_received", chat_id: String(chatId), user_id: sender.user_id ? String(sender.user_id) : null }); } catch (eventError) { console.error("Event recording failed"); }
 
