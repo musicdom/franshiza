@@ -37,6 +37,17 @@ module.exports = async function handler(req, res) {
           skipped++;
           continue;
         }
+        const offsetMinutes = Number.isFinite(Number(session.timezone_offset_minutes)) ? Number(session.timezone_offset_minutes) : Number(process.env.REMINDER_DEFAULT_UTC_OFFSET_MINUTES || 0);
+        const localClock = new Date(now + offsetMinutes * 60000);
+        const localHour = localClock.getUTCHours();
+        if (localHour < 9 || localHour >= 20) {
+          const nextSend = new Date(localClock);
+          if (localHour >= 20) nextSend.setUTCDate(nextSend.getUTCDate() + 1);
+          nextSend.setUTCHours(9, 0, 0, 0);
+          await sales.redis(["ZADD", "maxbiz:reminders:pending", String(nextSend.getTime() - offsetMinutes * 60000), id]);
+          skipped++;
+          continue;
+        }
         const context = session.stage === "sales_lead_details"
           ? "Оформление заявки осталось незавершённым."
           : session.stage === "sales_product"
