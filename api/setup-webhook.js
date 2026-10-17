@@ -105,7 +105,13 @@ module.exports = async function handler(req, res) {
     }
     return json(res, 200, { ok: true, webhook_url: webhookUrl, result });
   } catch (error) {
-    console.error("MAX webhook setup failed:", error && error.message ? error.message : "unknown error");
-    return json(res, 502, { ok: false, error: "Could not reach MAX API" });
+    const causeCode = error && error.cause && error.cause.code ? error.cause.code : "";
+    const errorName = error && error.name ? error.name : "UnknownError";
+    console.error("MAX webhook setup failed:", errorName, causeCode);
+    return json(res, 502, {
+      ok: false,
+      error: "Could not reach MAX API",
+      diagnostic: causeCode || errorName
+    });
   }
 };
