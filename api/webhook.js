@@ -59,8 +59,14 @@ const welcomeKeyboard = [{
   type: "inline_keyboard",
   payload: {
     buttons: [
+      [{ type: "open_app", text: "🚀 Открыть каталог", web_app: "se14711525_bot" }],
       [
-        { type: "open_app", text: "🚀 Открыть мини-приложение", web_app: "se14711525_bot" }
+        { type: "message", text: "🏪 Подобрать бота" },
+        { type: "message", text: "💰 Узнать цены" }
+      ],
+      [
+        { type: "message", text: "⚙️ Как это работает" },
+        { type: "message", text: "👨‍💼 Связаться с менеджером" }
       ]
     ]
   }
@@ -125,14 +131,32 @@ module.exports = async function handler(req, res) {
         created_at: new Date().toISOString()
       });
 
-      const command = text.toLowerCase().trim().replace(/^\/+/, "").split(/\s+/)[0];
+      const command = text.toLowerCase().trim().replace(/^\\/+/, "").split(/\\s+/)[0];
       if (command === "id" || command === "chatid" || command === "мойid") {
         await sendMessage(chatId, `ID этого чата: ${chatId}`);
         return json(res, 200, { ok: true, command: "id" });
       }
-      if (command === "старт" || command === "start") {
-        await sendMessage(chatId, "Здравствуйте! 👋 Это «Франшиза» — готовые идеи и боты для бизнеса в MAX.\n\nПомогаем автоматизировать:\n• Приём заявок и запись клиентов\n• Продажи и консультации\n• Ответы на частые вопросы\n• Каталог товаров и услуг\n\nВыберите раздел ниже или напишите сферу бизнеса и задачу. Например: «Салон красоты — нужна онлайн-запись». Подберём подходящее решение и расскажем о запуске.", welcomeKeyboard);
+      if (command === "старт" || command === "start" || command === "menu") {
+        await sendMessage(chatId, "Здравствуйте! 👋 Это «Франшиза» — готовые идеи и боты для бизнеса в MAX.\\n\\nПомогаем автоматизировать заявки, запись клиентов, продажи, консультации и каталоги товаров.\\n\\nВыберите действие ниже или откройте каталог решений.", welcomeKeyboard);
         return json(res, 200, { ok: true, command: "start" });
+      }
+
+      const normalizedText = text.toLowerCase().replace(/^[^\\p{L}\\p{N}]+/u, "").trim();
+      if (normalizedText.includes("подобрать бота")) {
+        await sendMessage(chatId, "Отлично! 🏪 Напишите, какая у вас сфера бизнеса и что бот должен делать.\\n\\nНапример: «Салон красоты — запись клиентов», «Магазин — каталог и заявки», «Кафе — меню и бронирование». Мы передадим запрос менеджеру для подбора сценария.");
+        return json(res, 200, { ok: true, action: "choose_bot" });
+      }
+      if (normalizedText.includes("узнать цены")) {
+        await sendMessage(chatId, "💰 Ориентировочные цены: бот для салона красоты — от 7 900 ₽, для кафе — от 9 900 ₽, бот-каталог для магазина — от 12 900 ₽.\\n\\nИтоговая стоимость зависит от функций и интеграций. Нажмите «Открыть каталог», чтобы посмотреть решения подробнее.", welcomeKeyboard);
+        return json(res, 200, { ok: true, action: "prices" });
+      }
+      if (normalizedText.includes("как это работает")) {
+        await sendMessage(chatId, "⚙️ Как всё проходит:\\n1. Рассказываете о бизнесе и задаче.\\n2. Согласуем функции, сроки и стоимость.\\n3. Подготавливаем решение и помогаем запустить.\\n\\nОплата — после согласования состава работ. Чтобы начать, нажмите «Подобрать бота» или напишите свою задачу.");
+        return json(res, 200, { ok: true, action: "how_it_works" });
+      }
+      if (normalizedText.includes("связаться с менеджером")) {
+        await sendMessage(chatId, "👨‍💼 Напишите одним сообщением, какой у вас бизнес и что хотите автоматизировать. Ваш запрос сохранится как заявка, и мы сможем обсудить подходящее решение.");
+        return json(res, 200, { ok: true, action: "manager" });
       }
 
       const adminChatId = process.env.MAX_ADMIN_CHAT_ID;
