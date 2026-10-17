@@ -28,40 +28,13 @@ dialog.product-dialog{width:min(570px,calc(100% - 28px));max-width:none;max-heig
 @media(max-width:800px){.demo-layout{grid-template-columns:1fr;gap:25px}.demo-phone{justify-self:center}.demo-intro h3{font-size:20px}}
 
 
-/* Scenario picker */
-.picker-section{background:radial-gradient(ellipse at 85% 48%,#263321 0,transparent 40%),#121512}
-.picker-layout{display:grid;grid-template-columns:1fr .9fr;gap:22px;align-items:stretch;margin-top:32px}
-.picker-controls{border:1px solid var(--line);border-radius:22px;padding:25px;background:#171a18}
-.picker-label{font-size:12px;font-weight:900;color:#f4f6f1;margin-bottom:14px}
-.picker-label-second{margin-top:27px}
-.picker-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
-.picker-option{min-height:48px;text-align:left;padding:12px 13px;border:1px solid #343c33;border-radius:12px;background:#1c201c;color:#dce2d8;font-size:12px;font-weight:750;transition:border-color .18s,background .18s,color .18s}
-.picker-option:hover{border-color:#829b68}
-.picker-option.is-active{background:#29351f;border-color:var(--lime);color:var(--lime);box-shadow:inset 0 0 0 1px #c8ff5f25}
-.picker-result{display:flex;flex-direction:column;border-radius:22px;padding:25px;background:#f1f3ed;color:#171a16;min-width:0}
-.picker-result-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.picker-result-icon{display:grid;place-items:center;width:43px;height:43px;border-radius:14px;background:#dfe9d1;color:#26351a;font-size:23px}
-.picker-result-tag{font-size:9px;letter-spacing:.12em;font-weight:900;color:#58772f}
-.picker-eyebrow{font-size:10px;font-weight:850;text-transform:uppercase;letter-spacing:.12em;color:#718064;margin:23px 0 0}
-.picker-result h3{font-size:26px;line-height:1.08;letter-spacing:-.045em;margin:9px 0 10px}
-.picker-result>p:not(.picker-eyebrow):not(.picker-footnote){font-size:12px;line-height:1.75;color:#5e6759;margin:0}
-.picker-list{display:grid;gap:9px;list-style:none;margin:18px 0 22px;padding:0}
-.picker-list li{position:relative;padding-left:23px;font-size:11px;line-height:1.5;color:#30372d}
-.picker-list li:before{content:"✓";position:absolute;left:0;top:0;color:#527b25;font-weight:900}
-.picker-result-bottom{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:auto;padding-top:18px;border-top:1px solid #dce1d5}
-.picker-result-bottom small{display:block;color:#737d6c;font-size:9px;margin-bottom:5px}
-.picker-result-bottom strong{font-size:18px;letter-spacing:-.04em}
-.picker-result-bottom .btn{white-space:nowrap;font-size:11px;padding:13px 14px}
-.picker-footnote{font-size:9px;line-height:1.6;color:#7a8374;margin:15px 0 0}
-@media(max-width:760px){.picker-layout{grid-template-columns:1fr;gap:14px}.picker-controls,.picker-result{padding:19px}.picker-options{gap:8px}.picker-option{font-size:11px;padding:11px 10px;min-height:46px}.picker-result h3{font-size:24px}.picker-result-bottom{align-items:flex-start;flex-direction:column}.picker-result-bottom .btn{width:100%}}
-
 </style>
 </head>
 <body>
 <div class="announcement">Бизнес-боты в MAX · Подбор · Настройка · Запуск</div>
 <div class="wrap"><nav class="nav" aria-label="Основная навигация">
 <a class="brand" href="#" aria-label="MAX Бизнес — главная"><span class="brand-mark">✳</span><span>MAX <small>БИЗНЕС-СИСТЕМЫ</small></span></a>
-<div class="navlinks"><a href="#catalog">Каталог</a><a href="#benefits">Преимущества</a><a href="#steps">Как заказать</a><a class="btn primary nav-cta" href="#contact">Подобрать бота <span class="arrow">↗</span></a></div>
+<div class="navlinks"><a href="#demo">Демо</a><a href="#catalog">Каталог</a><a href="#steps">Как заказать</a><a class="btn primary nav-cta" href="#contact">Обсудить в MAX <span class="arrow">↗</span></a></div>
 </nav></div>
 <header class="hero"><div class="wrap hero-inner">
 <div><span class="pill"><span class="pill-dot"></span> Боты и автоматизация в MAX</span>
@@ -85,38 +58,6 @@ dialog.product-dialog{width:min(570px,calc(100% - 28px));max-width:none;max-heig
 <div class="demo-layout"><div class="demo-intro"><h3>Сценарий за несколько нажатий</h3><p>Такой диалог помогает клиенту быстро объяснить, что ему нужно, а бизнесу — получить обращение в удобном формате.</p><div class="demo-points"><div class="demo-point"><span>✓</span>Понятные вопросы вместо длинной переписки</div><div class="demo-point"><span>✓</span>Ответы клиента собираются по шагам</div><div class="demo-point"><span>✓</span>В конце можно обсудить похожее решение</div></div></div>
 <div class="demo-phone" aria-label="Интерактивная демонстрация бота"><div class="demo-phone-head"><div class="demo-bot-identity"><span class="demo-avatar">✳</span><span>MAX Бизнес<small class="demo-online" style="display:block;margin-top:3px">ДЕМО-БОТ · ИНТЕРАКТИВНЫЙ ПРИМЕР</small></span></div><span class="status">● ДЕМО</span></div><div class="demo-chat" id="demo-chat" aria-live="polite"><div class="demo-message">Здравствуйте! Давайте уточним ваш запрос. Что вас интересует?</div></div><div class="demo-options" id="demo-options"><button class="demo-choice" type="button" data-demo="booking">Запись на услугу</button><button class="demo-choice" type="button" data-demo="product">Товар или заказ</button><button class="demo-choice" type="button" data-demo="consultation">Консультация</button></div><div class="demo-result" id="demo-result" hidden><a id="demo-order" href="https://max.ru/se14711525_bot?start=consultation" target="_blank" rel="noopener noreferrer">Обсудить такой бот в MAX ↗</a><button class="demo-reset" id="demo-reset" type="button">Пройти сценарий ещё раз</button></div><p class="demo-disclaimer">Данные из демо никуда не отправляются и не сохраняются. Реальный сценарий согласуем отдельно.</p></div></div></div></section>
 
-
-<section class="section picker-section" id="picker"><div class="wrap">
- <div class="section-head"><div><div class="overline">Быстрый подбор</div><h2>Какой бот подойдёт<br>именно вашему бизнесу?</h2></div><p>Выберите сферу и задачу — покажем пример подходящего сценария. Это отправная точка для обсуждения, а не готовая смета.</p></div>
- <div class="picker-layout" id="scenario-picker">
-  <div class="picker-controls">
-   <div class="picker-label">1. Чем вы занимаетесь?</div>
-   <div class="picker-options" role="group" aria-label="Сфера бизнеса">
-    <button class="picker-option is-active" type="button" data-niche="beauty" aria-pressed="true">✿ Салон / услуги</button>
-    <button class="picker-option" type="button" data-niche="food" aria-pressed="false">◒ Кафе / магазин</button>
-    <button class="picker-option" type="button" data-niche="auto" aria-pressed="false">⌁ Автосервис</button>
-    <button class="picker-option" type="button" data-niche="estate" aria-pressed="false">⌂ Недвижимость</button>
-    <button class="picker-option" type="button" data-niche="school" aria-pressed="false">▱ Онлайн-школа</button>
-    <button class="picker-option" type="button" data-niche="other" aria-pressed="false">＋ Другая сфера</button>
-   </div>
-   <div class="picker-label picker-label-second">2. Что хотите улучшить?</div>
-   <div class="picker-options picker-goals" role="group" aria-label="Задача бизнеса">
-    <button class="picker-option is-active" type="button" data-goal="leads" aria-pressed="true">Собирать заявки</button>
-    <button class="picker-option" type="button" data-goal="booking" aria-pressed="false">Запись клиентов</button>
-    <button class="picker-option" type="button" data-goal="sales" aria-pressed="false">Принимать заказы</button>
-    <button class="picker-option" type="button" data-goal="faq" aria-pressed="false">Отвечать на вопросы</button>
-   </div>
-  </div>
-  <div class="picker-result" aria-live="polite">
-   <div class="picker-result-top"><span class="picker-result-icon" id="picker-icon">✿</span><span class="picker-result-tag">ПРИМЕР РЕШЕНИЯ</span></div>
-   <p class="picker-eyebrow">Возможный сценарий</p><h3 id="picker-title">Бот для салона красоты</h3>
-   <p id="picker-copy">Клиент выбирает услугу и удобное время, отвечает на несколько вопросов, а салон получает структурированную заявку.</p>
-   <ul class="picker-list" id="picker-list"><li>Выбор услуги и мастера</li><li>Предпочтительное время визита</li><li>Передача обращения администратору</li></ul>
-   <div class="picker-result-bottom"><div><small>Ориентир за настройку</small><strong id="picker-price">от 7 900 ₽</strong></div><a class="btn primary" id="picker-order" href="https://max.ru/se14711525_bot?start=consultation" target="_blank" rel="noopener noreferrer">Обсудить в MAX <span class="arrow">↗</span></a></div>
-   <p class="picker-footnote">Функции, сроки и итоговую стоимость согласуем до начала работ. Цена зависит от сценария и интеграций.</p>
-  </div>
- </div>
-</div></section>
 
 <section class="section catalog-section" id="catalog"><div class="wrap"><div class="section-head"><div><div class="overline">Каталог решений</div><h2>Выберите задачу.<br>Мы подберём бота.</h2></div><p>Найдите подходящий сценарий по сфере бизнеса. Обсудим детали, ограничения и состав работ до начала разработки.</p></div>
 <div class="catalog-tools"><label class="search"><span>⌕</span><input id="catalog-search" type="search" placeholder="Поиск: салон, заявки, магазин…" aria-label="Поиск по каталогу"></label><div class="filters" role="group" aria-label="Фильтр каталога"><button class="filter" type="button" data-filter="all" aria-pressed="true">Все</button><button class="filter" type="button" data-filter="service" aria-pressed="false">Услуги</button><button class="filter" type="button" data-filter="sales" aria-pressed="false">Продажи</button><button class="filter" type="button" data-filter="leads" aria-pressed="false">Заявки</button><button class="filter" type="button" data-filter="education" aria-pressed="false">Обучение</button></div><span class="result-count" id="result-count">9 решений</span></div>
@@ -150,19 +91,6 @@ dialog.product-dialog{width:min(570px,calc(100% - 28px));max-width:none;max-heig
 </dialog>
 
 
-<section class="section scenarios" id="examples"><div class="wrap"><div class="section-head"><div><div class="overline">Примеры работы</div><h2>Не просто бот.<br>Понятный сценарий.</h2></div><p>Вот как может выглядеть путь клиента в MAX. Это примеры логики — конкретные функции, интеграции и автоматические действия подтверждаем до заказа.</p></div>
-<div class="scenario-grid">
-<article class="scenario-card"><div class="scenario-head"><span class="scenario-icon">✿</span><div><h3>Салон красоты</h3><p class="scenario-sub">Запись без долгой переписки</p></div></div><div class="scenario-flow"><div class="scenario-step"><b>1</b><span>Клиент выбирает услугу и желаемое время.</span></div><div class="scenario-step"><b>2</b><span>Бот уточняет имя и контакт, показывает дальнейшие шаги.</span></div><div class="scenario-step"><b>3</b><span>Администратор получает запрос и подтверждает запись.</span></div></div><div class="scenario-result"><strong>Результат:</strong> меньше одинаковых вопросов и собранные данные для записи.</div><a class="scenario-cta" href="https://max.ru/se14711525_bot?start=product%3A%D0%91%D0%BE%D1%82%20%D0%B4%D0%BB%D1%8F%20%D1%81%D0%B0%D0%BB%D0%BE%D0%BD%D0%B0%20%D0%BA%D1%80%D0%B0%D1%81%D0%BE%D1%82%D1%8B" target="_blank" rel="noopener noreferrer">Обсудить этот сценарий ↗</a></article>
-<article class="scenario-card"><div class="scenario-head"><span class="scenario-icon">◒</span><div><h3>Кафе и доставка</h3><p class="scenario-sub">Меню и запросы на заказ</p></div></div><div class="scenario-flow"><div class="scenario-step"><b>1</b><span>Гость открывает меню и выбирает интересующие позиции.</span></div><div class="scenario-step"><b>2</b><span>Бот собирает состав запроса и контактные данные.</span></div><div class="scenario-step"><b>3</b><span>Сотрудник получает заявку и подтверждает детали заказа.</span></div></div><div class="scenario-result"><strong>Результат:</strong> клиенту проще разобраться с предложением, команде — обработать запрос.</div><a class="scenario-cta" href="https://max.ru/se14711525_bot?start=product%3A%D0%91%D0%BE%D1%82%20%D0%B4%D0%BB%D1%8F%20%D0%BA%D0%B0%D1%84%D0%B5%20%D0%B8%20%D1%80%D0%B5%D1%81%D1%82%D0%BE%D1%80%D0%B0%D0%BD%D0%B0" target="_blank" rel="noopener noreferrer">Обсудить этот сценарий ↗</a></article>
-<article class="scenario-card"><div class="scenario-head"><span class="scenario-icon">▤</span><div><h3>Магазин</h3><p class="scenario-sub">Витрина и заявки на покупку</p></div></div><div class="scenario-flow"><div class="scenario-step"><b>1</b><span>Покупатель знакомится с категориями и товарами.</span></div><div class="scenario-step"><b>2</b><span>Уточняет характеристики и оставляет запрос по товару.</span></div><div class="scenario-step"><b>3</b><span>Продавец получает обращение и связывается с покупателем.</span></div></div><div class="scenario-result"><strong>Результат:</strong> каталог доступен в чате, интерес к товару превращается в заявку.</div><a class="scenario-cta" href="https://max.ru/se14711525_bot?start=product%3A%D0%91%D0%BE%D1%82-%D0%BA%D0%B0%D1%82%D0%B0%D0%BB%D0%BE%D0%B3%20%D0%B4%D0%BB%D1%8F%20%D0%BC%D0%B0%D0%B3%D0%B0%D0%B7%D0%B8%D0%BD%D0%B0" target="_blank" rel="noopener noreferrer">Обсудить этот сценарий ↗</a></article>
-<article class="scenario-card"><div class="scenario-head"><span class="scenario-icon">⌁</span><div><h3>Автосервис</h3><p class="scenario-sub">Заявка на обслуживание</p></div></div><div class="scenario-flow"><div class="scenario-step"><b>1</b><span>Водитель выбирает тип услуги и указывает марку авто.</span></div><div class="scenario-step"><b>2</b><span>Описывает проблему и удобное время для визита.</span></div><div class="scenario-step"><b>3</b><span>Мастер-приёмщик получает детали обращения.</span></div></div><div class="scenario-result"><strong>Результат:</strong> первичная информация собрана до разговора с клиентом.</div><a class="scenario-cta" href="https://max.ru/se14711525_bot?start=product%3A%D0%91%D0%BE%D1%82%20%D0%B4%D0%BB%D1%8F%20%D0%B0%D0%B2%D1%82%D0%BE%D1%81%D0%B5%D1%80%D0%B2%D0%B8%D1%81%D0%B0" target="_blank" rel="noopener noreferrer">Обсудить этот сценарий ↗</a></article>
-<article class="scenario-card"><div class="scenario-head"><span class="scenario-icon">⌂</span><div><h3>Недвижимость</h3><p class="scenario-sub">Первичный отбор клиентов</p></div></div><div class="scenario-flow"><div class="scenario-step"><b>1</b><span>Клиент выбирает покупку или аренду и тип объекта.</span></div><div class="scenario-step"><b>2</b><span>Указывает бюджет, район и основные требования.</span></div><div class="scenario-step"><b>3</b><span>Риелтор получает параметры и продолжает подбор.</span></div></div><div class="scenario-result"><strong>Результат:</strong> менеджер начинает общение с уже собранными вводными.</div><a class="scenario-cta" href="https://max.ru/se14711525_bot?start=product%3A%D0%91%D0%BE%D1%82%20%D0%B4%D0%BB%D1%8F%20%D0%BD%D0%B5%D0%B4%D0%B2%D0%B8%D0%B6%D0%B8%D0%BC%D0%BE%D1%81%D1%82%D0%B8" target="_blank" rel="noopener noreferrer">Обсудить этот сценарий ↗</a></article>
-<article class="scenario-card"><div class="scenario-head"><span class="scenario-icon">▱</span><div><h3>Онлайн-школа</h3><p class="scenario-sub">Знакомство с программой</p></div></div><div class="scenario-flow"><div class="scenario-step"><b>1</b><span>Потенциальный ученик выбирает направление обучения.</span></div><div class="scenario-step"><b>2</b><span>Получает описание программы и ответы на базовые вопросы.</span></div><div class="scenario-step"><b>3</b><span>Оставляет заявку на консультацию по обучению.</span></div></div><div class="scenario-result"><strong>Результат:</strong> заинтересованный ученик передаётся команде с понятным запросом.</div><a class="scenario-cta" href="https://max.ru/se14711525_bot?start=product%3A%D0%91%D0%BE%D1%82%20%D0%B4%D0%BB%D1%8F%20%D0%BE%D0%BD%D0%BB%D0%B0%D0%B9%D0%BD-%D1%88%D0%BA%D0%BE%D0%BB%D1%8B" target="_blank" rel="noopener noreferrer">Обсудить этот сценарий ↗</a></article>
-</div><div class="custom"><div><h3>Вашей сферы нет в примерах?</h3><p>Бот может собирать заявки и для других ниш: доставки, услуг, консультантов, обучения и B2B. Сначала уточним задачу и подтвердим реализуемость.</p></div><a class="btn" href="https://max.ru/se14711525_bot?start=consultation" target="_blank" rel="noopener noreferrer">Подобрать сценарий <span class="arrow">↗</span></a></div></div></section>
-
-<section class="section benefits" id="benefits"><div class="wrap"><div class="section-head"><div><div class="overline">Почему с нами удобно</div><h2>Технологии — без<br>лишней сложности.</h2></div><p>Начинаем с бизнес-задачи, а не с технических терминов. Вы заранее понимаете, что войдёт в решение и как будет проходить запуск.</p></div>
-<div class="benefit-grid"><article class="benefit"><div class="benefit-icon">◎</div><h3>Под вашу задачу</h3><p>Сценарий строится вокруг процессов и запросов вашей компании.</p></article><article class="benefit"><div class="benefit-icon">₽</div><h3>Понятная стоимость</h3><p>До начала согласуем функции, ограничения и бюджет.</p></article><article class="benefit"><div class="benefit-icon">↗</div><h3>Проверка перед запуском</h3><p>Пройдём согласованные сценарии и проверим работу решения.</p></article><article class="benefit"><div class="benefit-icon">✳</div><h3>Связь с человеком</h3><p>Обсуждаете заказ напрямую с продавцом — без оплаты вслепую на сайте.</p></article></div>
-</div></section>
 <section class="section" id="steps"><div class="wrap"><div class="section-head"><div><div class="overline">Как заказать</div><h2>От идеи до запуска<br>в три шага.</h2></div><p>Сначала обсуждаем задачу и договариваемся о результате. Никаких автоматических списаний или оплаты до согласования.</p></div>
 <div class="steps"><article class="step"><div class="step-no">ШАГ 01</div><h3>Расскажите о бизнесе</h3><p>Опишите сферу, что хотите автоматизировать и как клиенты взаимодействуют с вами сейчас.</p></article><article class="step"><div class="step-no">ШАГ 02</div><h3>Согласуйте решение</h3><p>Обсудим функции, ограничения, интеграции, сроки и итоговую стоимость.</p></article><article class="step"><div class="step-no">ШАГ 03</div><h3>Проверьте и запустите</h3><p>Подготовим согласованный сценарий и объясним, как начать им пользоваться.</p></article></div>
 </div></section>
@@ -320,48 +248,7 @@ dialog.product-dialog{width:min(570px,calc(100% - 28px));max-width:none;max-heig
 })();
 </script>
 
-<script>
-(function(){
- const root=document.getElementById('scenario-picker');
- if(!root)return;
- const niches={
-  beauty:{icon:'✿',title:'Бот для салона красоты',product:'Бот для салона красоты',price:'от 7 900 ₽',copy:'Клиент выбирает услугу и удобное время, отвечает на несколько вопросов, а салон получает структурированную заявку.',features:['Выбор услуги и мастера','Предпочтительное время визита','Передача обращения администратору']},
-  food:{icon:'◒',title:'Бот для кафе и магазина',product:'Бот для кафе и ресторана',price:'от 9 900 ₽',copy:'Клиент изучает меню или ассортимент, уточняет детали и оставляет запрос на заказ либо связь с сотрудником.',features:['Меню или каталог с описаниями','Сбор состава заказа или вопроса','Передача обращения сотруднику']},
-  auto:{icon:'⌁',title:'Бот для автосервиса',product:'Бот для автосервиса',price:'от 7 900 ₽',copy:'Клиент указывает автомобиль, описывает проблему и желаемое время визита — мастер получает исходные данные до разговора.',features:['Марка и модель автомобиля','Описание проблемы или услуги','Предпочтительное время визита']},
-  estate:{icon:'⌂',title:'Бот для недвижимости',product:'Бот для недвижимости',price:'от 12 900 ₽',copy:'Бот уточняет цель обращения, тип объекта и бюджет, чтобы передать специалисту более конкретный запрос.',features:['Тип объекта и цель обращения','Бюджет и предпочтения','Передача запроса менеджеру']},
-  school:{icon:'▱',title:'Бот для онлайн-школы',product:'Бот для онлайн-школы',price:'от 14 900 ₽',copy:'Потенциальный ученик знакомится с программой, получает ответы на частые вопросы и оставляет заявку на консультацию.',features:['Информация о программе обучения','Ответы на типовые вопросы','Сбор заявок заинтересованных учеников']},
-  other:{icon:'＋',title:'Бизнес-ассистент в MAX',product:'Бизнес-ассистент в MAX',price:'от 5 900 ₽',copy:'Подберём небольшой сценарий под вашу сферу: от ответов на повторяющиеся вопросы до первичного сбора обращений.',features:['Уточнение вашей задачи','Согласованный набор вопросов и ответов','Передача сложных обращений человеку']}
- };
- const goals={
-  leads:'Сценарий нацелен на сбор заявок: бот задаёт клиенту нужные вопросы и передаёт ответы команде.',
-  booking:'Сценарий нацелен на запись: бот уточняет услугу и предпочтительное время, а подтверждение визита остаётся за сотрудником, если отдельная интеграция не настроена.',
-  sales:'Сценарий нацелен на заказ: бот помогает выбрать товар или услугу и передаёт детали заказа сотруднику.',
-  faq:'Сценарий нацелен на частые вопросы: бот показывает согласованную информацию и направляет нестандартные вопросы сотруднику.'
- };
- let activeNiche='beauty',activeGoal='leads';
- function render(){
-  const item=niches[activeNiche];
-  root.querySelector('#picker-icon').textContent=item.icon;
-  root.querySelector('#picker-title').textContent=item.title;
-  root.querySelector('#picker-copy').textContent=goals[activeGoal]+' '+item.copy;
-  root.querySelector('#picker-price').textContent=item.price;
-  const list=root.querySelector('#picker-list');
-  list.replaceChildren(...item.features.map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));
-  root.querySelector('#picker-order').href='https://max.ru/se14711525_bot?start='+encodeURIComponent('product:'+item.product);
- }
- root.querySelectorAll('[data-niche]').forEach(button=>button.addEventListener('click',()=>{
-  activeNiche=button.dataset.niche;
-  root.querySelectorAll('[data-niche]').forEach(b=>{const selected=b===button;b.classList.toggle('is-active',selected);b.setAttribute('aria-pressed',String(selected));});
-  render();
- }));
- root.querySelectorAll('[data-goal]').forEach(button=>button.addEventListener('click',()=>{
-  activeGoal=button.dataset.goal;
-  root.querySelectorAll('[data-goal]').forEach(b=>{const selected=b===button;b.classList.toggle('is-active',selected);b.setAttribute('aria-pressed',String(selected));});
-  render();
- }));
- render();
-})();
-</script>
+
 
 </body>
 </html>
