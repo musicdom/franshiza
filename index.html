@@ -23,6 +23,10 @@ dialog.product-dialog{width:min(570px,calc(100% - 28px));max-width:none;max-heig
 @media(max-width:900px){.scenario-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.scenario-grid{grid-template-columns:1fr}.scenario-card{padding:20px}}
 
+
+.demo-section{background:#171a18;border-top:1px solid #252b24;border-bottom:1px solid #252b24}.demo-layout{display:grid;grid-template-columns:.9fr 1.1fr;gap:40px;align-items:center;margin-top:30px}.demo-intro h3{font-size:22px;line-height:1.15;letter-spacing:-.04em;margin:0 0 12px}.demo-intro p{font-size:12px;line-height:1.8;color:var(--muted);margin:0}.demo-points{display:grid;gap:10px;margin-top:23px}.demo-point{display:flex;gap:10px;align-items:center;font-size:11px;color:#d4dbd0}.demo-point span{display:grid;place-items:center;width:24px;height:24px;flex:none;border-radius:8px;background:#293323;color:var(--lime)}.demo-phone{overflow:hidden;border:1px solid #3a4337;border-radius:23px;background:#101310;box-shadow:0 25px 65px #0003;max-width:520px;width:100%;justify-self:end}.demo-phone-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px;border-bottom:1px solid #2a3028;background:#1b1f1b}.demo-bot-identity{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:850}.demo-avatar{display:grid;place-items:center;width:35px;height:35px;border-radius:12px;background:var(--lime);color:#13170f;font-size:18px}.demo-online{font-size:9px;color:#a7b29f}.demo-chat{padding:20px 17px 16px;min-height:225px;display:flex;flex-direction:column;gap:12px}.demo-message{align-self:flex-start;max-width:92%;padding:12px 13px;border:1px solid #30372e;border-radius:4px 15px 15px 15px;background:#1d221d;color:#e7ece2;font-size:11px;line-height:1.7;white-space:pre-line}.demo-message.user{align-self:flex-end;border-color:#9ac447;background:#c8ff5f;color:#18200e;border-radius:15px 4px 15px 15px}.demo-options{display:flex;flex-wrap:wrap;gap:7px;padding:0 17px 18px}.demo-choice{border:1px solid #58694a;border-radius:100px;padding:9px 12px;background:#20271d;color:#e7f2d9;font-size:10px;font-weight:800;transition:background .15s,border-color .15s}.demo-choice:hover{background:#303e25;border-color:var(--lime)}.demo-choice:disabled{opacity:.5;cursor:default}.demo-result{padding:0 17px 18px}.demo-result a{display:flex;justify-content:center;align-items:center;gap:8px;width:100%;padding:13px;border-radius:12px;background:var(--lime);color:#13170f;font-size:11px;font-weight:900}.demo-reset{margin-top:9px;width:100%;padding:9px;border:1px solid #353d32;border-radius:10px;background:transparent;color:#aeb9a6;font-size:10px}.demo-disclaimer{font-size:9px;line-height:1.7;color:#879181;padding:0 17px 15px}
+@media(max-width:800px){.demo-layout{grid-template-columns:1fr;gap:25px}.demo-phone{justify-self:center}.demo-intro h3{font-size:20px}}
+
 </style>
 </head>
 <body>
@@ -48,6 +52,11 @@ dialog.product-dialog{width:min(570px,calc(100% - 28px));max-width:none;max-heig
 </div><div class="floating two"><span class="float-icon">↗</span><span>Клиенту проще<b>Команде спокойнее</b></span></div></div>
 </div></header>
 <main>
+
+<section class="section demo-section" id="demo"><div class="wrap"><div class="section-head"><div><div class="overline">Попробуйте сами</div><h2>Пройдите мини-диалог<br>с бизнес-ботом.</h2></div><p>Выберите ответы и посмотрите, как бот может собрать запрос клиента. Это интерактивный макет, а не подключённый к реальным заказам бот.</p></div>
+<div class="demo-layout"><div class="demo-intro"><h3>Сценарий за несколько нажатий</h3><p>Такой диалог помогает клиенту быстро объяснить, что ему нужно, а бизнесу — получить обращение в удобном формате.</p><div class="demo-points"><div class="demo-point"><span>✓</span>Понятные вопросы вместо длинной переписки</div><div class="demo-point"><span>✓</span>Ответы клиента собираются по шагам</div><div class="demo-point"><span>✓</span>В конце можно обсудить похожее решение</div></div></div>
+<div class="demo-phone" aria-label="Интерактивная демонстрация бота"><div class="demo-phone-head"><div class="demo-bot-identity"><span class="demo-avatar">✳</span><span>MAX Бизнес<small class="demo-online" style="display:block;margin-top:3px">ДЕМО-БОТ · ИНТЕРАКТИВНЫЙ ПРИМЕР</small></span></div><span class="status">● ДЕМО</span></div><div class="demo-chat" id="demo-chat" aria-live="polite"><div class="demo-message">Здравствуйте! Давайте уточним ваш запрос. Что вас интересует?</div></div><div class="demo-options" id="demo-options"><button class="demo-choice" type="button" data-demo="booking">Запись на услугу</button><button class="demo-choice" type="button" data-demo="product">Товар или заказ</button><button class="demo-choice" type="button" data-demo="consultation">Консультация</button></div><div class="demo-result" id="demo-result" hidden><a id="demo-order" href="https://max.ru/se14711525_bot?start=consultation" target="_blank" rel="noopener noreferrer">Обсудить такой бот в MAX ↗</a><button class="demo-reset" id="demo-reset" type="button">Пройти сценарий ещё раз</button></div><p class="demo-disclaimer">Данные из демо никуда не отправляются и не сохраняются. Реальный сценарий согласуем отдельно.</p></div></div></div></section>
+
 <section class="section catalog-section" id="catalog"><div class="wrap"><div class="section-head"><div><div class="overline">Каталог решений</div><h2>Выберите задачу.<br>Мы подберём бота.</h2></div><p>Найдите подходящий сценарий по сфере бизнеса. Обсудим детали, ограничения и состав работ до начала разработки.</p></div>
 <div class="catalog-tools"><label class="search"><span>⌕</span><input id="catalog-search" type="search" placeholder="Поиск: салон, заявки, магазин…" aria-label="Поиск по каталогу"></label><div class="filters" role="group" aria-label="Фильтр каталога"><button class="filter" type="button" data-filter="all" aria-pressed="true">Все</button><button class="filter" type="button" data-filter="service" aria-pressed="false">Услуги</button><button class="filter" type="button" data-filter="sales" aria-pressed="false">Продажи</button><button class="filter" type="button" data-filter="leads" aria-pressed="false">Заявки</button><button class="filter" type="button" data-filter="education" aria-pressed="false">Обучение</button></div><span class="result-count" id="result-count">9 решений</span></div>
 <div class="catalog" id="catalog-grid">
@@ -137,6 +146,77 @@ dialog.product-dialog{width:min(570px,calc(100% - 28px));max-width:none;max-heig
  }
  buttons.forEach(button=>button.addEventListener('click',()=>applyFilter(button.dataset.filter)));
  search.addEventListener('input',()=>applyFilter(activeCategory));
+
+
+ const demoChat=document.getElementById('demo-chat');
+ const demoOptions=document.getElementById('demo-options');
+ const demoResult=document.getElementById('demo-result');
+ const demoOrder=document.getElementById('demo-order');
+ const demoFlows={
+  booking:{name:'Запись на услугу',steps:[
+   {prompt:'Какую услугу хотите выбрать?',options:['Стрижка / укладка','Маникюр','Другая услуга']},
+   {prompt:'Когда вам удобнее?',options:['Сегодня','Завтра','Хочу уточнить время']},
+   {prompt:'Отлично! В реальном сценарии бот соберёт контакт и передаст запрос администратору для подтверждения записи.',options:['Понятно, спасибо']}
+  ],product:'Бот для салона красоты'},
+  product:{name:'Товар или заказ',steps:[
+   {prompt:'Что вас интересует?',options:['Посмотреть каталог','Уточнить наличие','Задать вопрос продавцу']},
+   {prompt:'Как удобнее продолжить?',options:['Оставить заявку','Связаться с продавцом']},
+   {prompt:'Готово! В реальном сценарии бот передаст продавцу выбранный запрос и согласованные контактные данные.',options:['Понятно, спасибо']}
+  ],product:'Бот-каталог для магазина'},
+  consultation:{name:'Консультация',steps:[
+   {prompt:'По какой теме нужна консультация?',options:['Подбор решения','Стоимость и сроки','Другой вопрос']},
+   {prompt:'Какой формат связи вам подходит?',options:['Написать в MAX','Попросить связаться со мной']},
+   {prompt:'Спасибо! В реальном сценарии запрос будет подготовлен для специалиста, чтобы он мог продолжить разговор.',options:['Понятно, спасибо']}
+  ],product:'Бизнес-ассистент в MAX'}
+ };
+ let demoFlow=null, demoStep=0;
+ function demoMessage(text,isUser){
+  const el=document.createElement('div');el.className='demo-message'+(isUser?' user':'');el.textContent=text;demoChat.appendChild(el);
+ }
+ function renderDemoOptions(options){
+  demoOptions.replaceChildren();
+  options.forEach(option=>{
+   const button=document.createElement('button');button.type='button';button.className='demo-choice';button.textContent=option;
+   button.addEventListener('click',()=>{
+    demoMessage(option,true);
+    if(!demoFlow){demoFlow=demoFlows[button.dataset.demo];}
+    if(demoStep===0&&!demoFlow){
+     return;
+    }
+    demoOptions.replaceChildren();
+    demoStep++;
+    const step=demoFlow.steps[demoStep-1];
+    if(step){
+     demoMessage(step.prompt,false);
+     if(demoStep<demoFlow.steps.length){renderDemoOptions(step.options);}
+     else{
+      demoOptions.hidden=true;demoResult.hidden=false;
+      demoOrder.href='https://max.ru/se14711525_bot?start='+encodeURIComponent('product:'+demoFlow.product);
+     }
+    }
+   });
+   demoOptions.appendChild(button);
+  });
+ }
+ function startDemo(type){
+  demoFlow=demoFlows[type]||null;demoStep=0;demoChat.replaceChildren();demoOptions.hidden=false;demoResult.hidden=true;
+  if(!demoFlow){
+   demoMessage('Здравствуйте! Давайте уточним ваш запрос. Что вас интересует?',false);
+   renderDemoOptions([{label:'Запись на услугу',value:'booking'},{label:'Товар или заказ',value:'product'},{label:'Консультация',value:'consultation'}].map(x=>x.label));
+   Array.from(demoOptions.children).forEach((button,index)=>button.dataset.demo=['booking','product','consultation'][index]);
+   return;
+  }
+  demoMessage('Вы выбрали: '+demoFlow.name+'. Давайте уточним детали.',false);
+  demoMessage(demoFlow.steps[0].prompt,false);
+  renderDemoOptions(demoFlow.steps[0].options);
+ }
+ function resetDemo(){
+  demoFlow=null;demoStep=0;demoChat.replaceChildren();demoOptions.hidden=false;demoResult.hidden=true;
+  demoMessage('Здравствуйте! Давайте уточним ваш запрос. Что вас интересует?',false);
+  renderDemoOptions(['Запись на услугу','Товар или заказ','Консультация']);
+  Array.from(demoOptions.children).forEach((button,index)=>button.dataset.demo=['booking','product','consultation'][index]);
+ }
+ resetDemo();
 
  const productInfo={
   "Бот для салона красоты":{price:"от 7 900 ₽",copy:"Помогает клиенту выбрать услугу и оставить запрос на запись, а администратору — получить структурированное обращение.",features:["Список услуг и базовые ответы","Запрос желаемой даты и времени","Передача заявки администратору","Текст подтверждения клиенту"]},
