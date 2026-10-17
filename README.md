@@ -28,6 +28,34 @@
 - Убедитесь, что каждый заявленный бот действительно доступен для разработки и запуска. Сайт является витриной; сам по себе он не создаёт, не хостит и не продаёт автоматически работающих ботов.
 - Для онлайн-оплаты, личного кабинета или автоматической выдачи потребуются отдельные интеграции; текущая версия направляет покупателя к продавцу.
 
+## Серверная часть MAX на Vercel
+
+В репозитории добавлены Vercel Functions:
+
+- `/api/webhook` — принимает события `bot_started` и `message_created`, отвечает покупателю и сохраняет заявки в Redis, если Redis REST-переменные настроены.
+- `/api/setup-webhook` — защищённо регистрирует HTTPS webhook в MAX.
+
+### Переменные окружения Vercel
+
+Добавьте для Production:
+
+- `MAX_BOT_TOKEN` — токен бота MAX (секрет).
+- `MAX_WEBHOOK_SECRET` — случайный секрет длиной 5–256 символов, только латинские буквы, цифры, дефис или подчёркивание. Этот же секрет защищает endpoint настройки.
+- `WEBHOOK_BASE_URL` — стабильный домен Vercel без протокола, например `franshiza.vercel.app` (укажите фактический Production-домен своего проекта).
+- Redis REST URL и token: `KV_REST_API_URL` + `KV_REST_API_TOKEN` либо `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`.
+- Необязательно: `MAX_ADMIN_CHAT_ID` — ID чата, куда отправлять уведомления о новых сообщениях покупателей. Не задавайте его, пока не знаете правильный ID.
+
+После добавления/изменения переменных выполните Redeploy. Затем зарегистрируйте webhook одним POST-запросом к Production-домену, передав `MAX_WEBHOOK_SECRET` в заголовке Authorization:
+
+```bash
+curl -X POST "https://ВАШ-ДОМЕН/api/setup-webhook" \
+  -H "Authorization: Bearer ВАШ_MAX_WEBHOOK_SECRET"
+```
+
+При успехе endpoint вернёт `{"ok":true,...}`. Не публикуйте токен или секрет в GitHub, сообщениях или скриншотах.
+
+Важно: GitHub Pages остаётся только статической витриной. API-функции работают на домене Vercel. В MAX должны быть включены доступ и модерация бота, а домен webhook должен поддерживать HTTPS с доверенным сертификатом. Документация MAX: [Webhook](https://dev.max.ru/docs-api/methods/POST/subscriptions), [отправка сообщений](https://dev.max.ru/docs-api/methods/POST/messages), [события и диплинки](https://dev.max.ru/docs/chatbots/bots-coding/prepare).
+
 ## Файлы
 
 - `index.html` — весь интерфейс, стили и логика фильтрации.
