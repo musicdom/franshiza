@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#101713">
+  <title>Заявки — Franshiza Admin</title>
+  <link rel="stylesheet" href="./admin.css">
+  <script src="./admin.js" defer></script>
+</head>
+<body>
+  <main class="admin-shell">
+    <header class="admin-header">
+      <a class="brand" href="./"><span class="brand-mark">f.</span><span>franshiza<small>PRIVATE ADMIN</small></span></a>
+      <a class="back-link" href="./">← Вернуться на сайт</a>
+    </header>
+    <section class="login-panel panel" id="login-panel">
+      <p class="eyebrow">ЗАКРЫТЫЙ ДОСТУП</p>
+      <h1>Управление заявками</h1>
+      <p class="muted">Войдите с паролем администратора, заданным в настройках хостинга.</p>
+      <form id="login-form">
+        <label for="admin-password">Пароль администратора</label>
+        <input id="admin-password" type="password" autocomplete="current-password" minlength="16" required>
+        <button class="button" type="submit">Войти</button>
+        <p class="notice" id="login-message" role="alert"></p>
+      </form>
+    </section>
+    <section class="dashboard" id="dashboard" hidden>
+      <div class="dashboard-title">
+        <div><p class="eyebrow">ВХОД ВЫПОЛНЕН</p><h1>Заявки</h1><p class="muted">Данные доступны только после серверной проверки сессии.</p></div>
+        <div class="actions"><button class="button secondary" id="refresh-button" type="button">Обновить</button><button class="button secondary" id="logout-button" type="button">Выйти</button></div>
+      </div>
+      <div class="summary panel"><span>Всего загружено</span><strong id="request-count">0</strong><span class="muted">Последние заявки · хранение до 180 дней</span></div>
+      <p class="notice" id="dashboard-message" role="status"></p>
+      <div class="request-list" id="request-list"></div>
+      <div class="empty panel" id="empty-state" hidden><h2>Пока нет заявок</h2><p class="muted">Новые обращения появятся здесь после подключения хранилища и публикации backend.</p></div>
+    </section>
+    <footer><span>Franshiza · Private admin</span><span>Не пересылайте данные заявок посторонним.</span></footer>
+  </main>
+</body>
+</html>
