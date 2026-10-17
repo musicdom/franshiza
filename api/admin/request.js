@@ -1,6 +1,6 @@
-const { getConfig } = require("../_lib/config");
-const { json, method, requireSameOrigin, requireAdmin } = require("../_lib/http");
-const { getRequest, updateRequest } = require("../_lib/store");
+const { getConfig } = require("../../lib/server/config");
+const { json, method, requireSameOrigin, requireAdmin } = require("../../lib/server/http");
+const { getRequest, updateRequest } = require("../../lib/server/store");
 
 const ALLOWED = new Set(["new", "in_progress", "done", "archived"]);
 
