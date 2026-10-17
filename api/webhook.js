@@ -60,12 +60,7 @@ const welcomeKeyboard = [{
   payload: {
     buttons: [
       [
-        { type: "link", text: "🤖 Каталог решений", url: "https://musicdom.github.io/franshiza/#catalog" },
-        { type: "link", text: "⚙️ Как это работает", url: "https://musicdom.github.io/franshiza/#steps" }
-      ],
-      [
-        { type: "link", text: "💬 Задать вопрос", url: "https://musicdom.github.io/franshiza/#contact" },
-        { type: "link", text: "❓ FAQ", url: "https://musicdom.github.io/franshiza/#faq" }
+        { type: "open_app", text: "🚀 Открыть мини-приложение", web_app: "se14711525_bot" }
       ]
     ]
   }
