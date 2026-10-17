@@ -48,7 +48,7 @@ form.addEventListener('submit',async event=>{
   const data=await response.json().catch(()=>({}));
   secretInput.value='';
   if(response.ok&&data.ok){result.textContent='Готово: webhook зарегистрирован.\\nАдрес: '+data.webhook_url;}
-  else{result.textContent='Не получилось (код '+response.status+'): '+(data.error||'неизвестная ошибка')+(data.status?'\\nОтвет MAX: '+data.status:'');}
+  else{result.textContent='Не получилось (код '+response.status+'): '+(data.error||'неизвестная ошибка')+(data.status?'\\nОтвет MAX: '+data.status:'')+(data.diagnostic?'\\nДиагностика: '+data.diagnostic:'');}
  }catch(e){secretInput.value='';result.textContent='Не удалось связаться с Vercel. Проверь интернет и попробуй ещё раз.';}
  finally{submit.disabled=false;submit.textContent='Подключить webhook';}
 });
