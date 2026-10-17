@@ -120,6 +120,16 @@ function productKeyboard(scenario) {
   }];
 }
 
+const productNextKeyboard = [{
+  type: "inline_keyboard",
+  payload: {
+    buttons: [
+      [{ type: "message", text: "📩 Оставить заявку" }, { type: "message", text: "💰 Цена и сроки" }],
+      [{ type: "message", text: "👨‍💼 Менеджер" }]
+    ]
+  }
+}];
+
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -226,8 +236,20 @@ module.exports = async function handler(req, res) {
           : normalizedText.includes("настроить ответы") || normalizedText.includes("услуги и вопросы") || normalizedText.includes("список услуг") || normalizedText.includes("описание услуг")
           ? "⚙️ Напишите список услуг или частых вопросов, на которые бот должен отвечать. Если список ещё не готов, просто опишите бизнес и основные вопросы клиентов."
           : "📋 Отлично. Напишите, что именно должен делать бот, какие данные собирать и куда передавать заявку. Можно описать задачу свободным текстом.";
-        await sendMessage(chatId, followup, welcomeKeyboard);
+        await sendMessage(chatId, followup, productNextKeyboard);
         return json(res, 200, { ok: true, action: "product_scenario", selection: action });
+      }
+
+      if (normalizedText.includes("оставить заявку")) {
+        const senderName = cleanText(sender.name, 120) || "Покупатель";
+        await safeSaveLead({ type: "product_quote_request", chat_id: String(chatId), user_name: senderName, request: "Пользователь нажал «Оставить заявку» после выбора решения", created_at: new Date().toISOString() });
+        const adminChatId = process.env.MAX_ADMIN_CHAT_ID;
+        if (adminChatId) {
+          try { await sendMessage(adminChatId, "Заявка по выбранному решению\nОт: " + senderName + "\nЧат: " + chatId + "\nКлиент нажал «Оставить заявку». Ожидает уточнения деталей."); }
+          catch (notificationError) { console.error("MAX admin notification failed:", notificationError && notificationError.message ? notificationError.message : "unknown error"); }
+        }
+        await sendMessage(chatId, "📩 Напишите одним сообщением название компании и какие функции нужны. Если уже выбрали решение в каталоге, повторно выбирать его не нужно — мы видим ваш запрос. После сообщения передадим детали менеджеру.", productNextKeyboard);
+        return json(res, 200, { ok: true, action: "product_quote_request" });
       }
 
       if (normalizedText.includes("подобрать бота") || normalizedText.includes("подобрать решение")) {
