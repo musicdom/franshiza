@@ -38,19 +38,23 @@ module.exports = async function handler(req, res) {
     }
     if (req.method === "POST" && body.action !== "dashboard") return json(res, 400, { ok: false, error: "Unknown action" });
     const leads = await sales.listLeads(200);
-    const ids = await sales.listEventIds(2000);
+    const ids = await sales.listEventIds(250);
     const events = [];
     for (const id of ids || []) { const item = await sales.getJson(`maxbiz:event:${id}`); if (item) events.push(item); }
     const count = (name) => events.filter(e => e.event === name).length;
+    const rate = (numerator, denominator) => denominator ? Math.round(numerator * 100 / denominator) + "%" : "—";
     const metrics = {
       "Заявки": leads.length,
       "Новые заявки": leads.filter(l => l.status === "new").length,
-      "Запуски бота": count("bot_started"),
+      "Запуски бота (последние события)": count("bot_started"),
       "Просмотры продуктов": count("product_viewed"),
       "Показы рекомендаций": count("recommendation_shown"),
+      "Конверсия запуска в просмотр": rate(count("product_viewed"), count("bot_started")),
       "Открытия демо": count("demo_opened"),
       "Просмотры цены": count("price_viewed"),
+      "Начало оформления": count("checkout_started"),
       "Отправлено напоминаний": count("reminder_sent"),
+      "Переходы из напоминаний": count("reminder_clicked"),
       "Отписки": count("notification_opted_out")
     };
     return json(res, 200, { ok: true, metrics, leads, events: events.slice(0, 100) });
