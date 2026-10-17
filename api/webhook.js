@@ -1,5 +1,6 @@
 const { requestMax } = require("../lib/max-api");
 const sales = require("../lib/sales");
+const salesFlow = require("../lib/sales-flow");
 
 function json(res, status, body) {
   res.status(status).setHeader("Content-Type", "application/json; charset=utf-8");
@@ -244,6 +245,8 @@ module.exports = async function handler(req, res) {
       }
 
       const normalizedText = text.toLowerCase().replace(/^[^\p{L}\p{N}]+/u, "").trim();
+      const salesResult = await salesFlow.handleSalesMessage({ chatId, sender, text, normalizedText, sendMessage, welcomeKeyboard });
+      if (salesResult && salesResult.handled) return json(res, 200, { ok: true, ...salesResult });
 
       if (normalizedText.includes("главное меню") || normalizedText === "меню" || normalizedText === "🏠 меню") {
         await clearChatSession(chatId);
