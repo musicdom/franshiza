@@ -37,7 +37,8 @@ module.exports = async function handler(req, res) {
           skipped++;
           continue;
         }
-        const offsetMinutes = Number.isFinite(Number(session.timezone_offset_minutes)) ? Number(session.timezone_offset_minutes) : Number(process.env.REMINDER_DEFAULT_UTC_OFFSET_MINUTES || 0);
+        const configuredOffset = session.timezone_offset_minutes == null ? Number(process.env.REMINDER_DEFAULT_UTC_OFFSET_MINUTES || 0) : Number(session.timezone_offset_minutes);
+        const offsetMinutes = Number.isFinite(configuredOffset) && configuredOffset >= -720 && configuredOffset <= 840 ? configuredOffset : 0;
         const localClock = new Date(now + offsetMinutes * 60000);
         const localHour = localClock.getUTCHours();
         if (localHour < 9 || localHour >= 20) {
