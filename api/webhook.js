@@ -234,7 +234,7 @@ module.exports = async function handler(req, res) {
         return json(res, 200, { ok: true, product: productMatch.id });
       }
       await sales.recordEvent({ event: "bot_started", chat_id: String(chatId), product_id: product || null });
-      const greeting = "Привет! 👋 Помогу подобрать готового бота для бизнеса в MAX.\n\nМожно посмотреть каталог, пройти короткий подбор или посмотреть пример работы. Цены в каталоге ориентировочные; оплату и запуск согласуем отдельно.";
+      const greeting = "Привет! 👋 Это «Франшиза — готовые идеи для MAX».\n\nЗдесь можно выбрать готовое решение для бизнеса, посмотреть пример работы или подобрать бота под свою задачу.\n\nС чего начнём?";
       await sendMessage(chatId, greeting, welcomeKeyboard);
       return json(res, 200, { ok: true });
     }
