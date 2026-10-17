@@ -60,9 +60,9 @@ function cleanText(value, max = 2000) {
 const welcomeKeyboard = [{
   type: "inline_keyboard",
   payload: { buttons: [
-    [{ type: "callback", text: "🛍 Каталог решений", payload: String("🛍 Каталог решений") }, { type: "callback", text: "🎯 Подобрать бота", payload: String("🎯 Подобрать бота") }],
-    [{ type: "callback", text: "👀 Демонстрации", payload: String("👀 Демонстрации") }, { type: "callback", text: "💬 Задать вопрос", payload: String("💬 Задать вопрос") }],
-    [{ type: "callback", text: "📦 Мои заявки", payload: String("📦 Мои заявки") }, { type: "callback", text: "🔔 Уведомления", payload: String("🔔 Уведомления") }],
+    [{ type: "message", text: "🛍 Каталог решений" }, { type: "message", text: "🎯 Подобрать бота" }],
+    [{ type: "message", text: "👀 Демонстрации" }, { type: "message", text: "💬 Задать вопрос" }],
+    [{ type: "message", text: "📦 Мои заявки" }, { type: "message", text: "🔔 Уведомления" }],
     [{ type: "open_app", text: "🌐 Открыть сайт-каталог", web_app: "se14711525_bot" }]
   ] }
 }];
@@ -71,9 +71,9 @@ const businessKeyboard = [{
   type: "inline_keyboard",
   payload: {
     buttons: [
-      [{ type: "callback", text: "💇 Салон красоты", payload: String("💇 Салон красоты") }, { type: "callback", text: "🍽️ Кафе / ресторан", payload: String("🍽️ Кафе / ресторан") }],
-      [{ type: "callback", text: "🛍️ Магазин", payload: String("🛍️ Магазин") }, { type: "callback", text: "🏢 Другое", payload: String("🏢 Другое") }],
-      [{ type: "callback", text: "🏠 Меню", payload: String("🏠 Меню") }]
+      [{ type: "message", text: "💇 Салон красоты" }, { type: "message", text: "🍽️ Кафе / ресторан" }],
+      [{ type: "message", text: "🛍️ Магазин" }, { type: "message", text: "🏢 Другое" }],
+      [{ type: "message", text: "🏠 Меню" }]
     ]
   }
 }];
@@ -110,15 +110,15 @@ async function clearChatSession(chatId) {
   catch (error) { console.error("MAX session clear failed:", error && error.message ? error.message : "unknown error"); }
 }
 const goalKeyboard = [{ type: "inline_keyboard", payload: { buttons: [
-  [{ type: "callback", text: "📅 Запись клиентов", payload: String("📅 Запись клиентов") }, { type: "callback", text: "📩 Приём заявок", payload: String("📩 Приём заявок") }],
-  [{ type: "callback", text: "🛍️ Каталог / заказы", payload: String("🛍️ Каталог / заказы") }, { type: "callback", text: "💬 Ответы на вопросы", payload: String("💬 Ответы на вопросы") }],
-  [{ type: "callback", text: "⚙️ Несколько функций", payload: String("⚙️ Несколько функций") }],
-  [{ type: "callback", text: "🏠 Главное меню", payload: String("🏠 Главное меню") }]
+  [{ type: "message", text: "📅 Запись клиентов" }, { type: "message", text: "📩 Приём заявок" }],
+  [{ type: "message", text: "🛍️ Каталог / заказы" }, { type: "message", text: "💬 Ответы на вопросы" }],
+  [{ type: "message", text: "⚙️ Несколько функций" }],
+  [{ type: "message", text: "🏠 Главное меню" }]
 ] } }];
 const detailKeyboard = [{ type: "inline_keyboard", payload: { buttons: [
-  [{ type: "callback", text: "🤝 Помогите определиться", payload: String("🤝 Помогите определиться") }],
-  [{ type: "callback", text: "💰 Цена и сроки", payload: String("💰 Цена и сроки") }, { type: "callback", text: "👨‍💼 Менеджер", payload: String("👨‍💼 Менеджер") }],
-  [{ type: "callback", text: "🏠 Главное меню", payload: String("🏠 Главное меню") }]
+  [{ type: "message", text: "🤝 Помогите определиться" }],
+  [{ type: "message", text: "💰 Цена и сроки" }, { type: "message", text: "👨‍💼 Менеджер" }],
+  [{ type: "message", text: "🏠 Главное меню" }]
 ] } }];
 
 function getProductScenario(product) {
@@ -146,9 +146,9 @@ function productKeyboard(scenario) {
     type: "inline_keyboard",
     payload: {
       buttons: [
-        [{ type: "callback", text: scenario.buttons[0], payload: String(scenario.buttons[0]) }],
-        [{ type: "callback", text: scenario.buttons[1], payload: String(scenario.buttons[1]) }],
-        [{ type: "callback", text: scenario.buttons[2], payload: String(scenario.buttons[2]) }, { type: "callback", text: "👨‍💼 Менеджер", payload: String("👨‍💼 Менеджер") }]
+        [{ type: "message", text: scenario.buttons[0] }],
+        [{ type: "message", text: scenario.buttons[1] }],
+        [{ type: "message", text: scenario.buttons[2] }, { type: "message", text: "👨‍💼 Менеджер" }]
       ]
     }
   }];
@@ -158,18 +158,18 @@ const productNextKeyboard = [{
   type: "inline_keyboard",
   payload: {
     buttons: [
-      [{ type: "callback", text: "📩 Оставить заявку", payload: String("📩 Оставить заявку") }, { type: "callback", text: "💰 Цена и сроки", payload: String("💰 Цена и сроки") }],
-      [{ type: "callback", text: "👨‍💼 Менеджер", payload: String("👨‍💼 Менеджер") }]
+      [{ type: "message", text: "📩 Оставить заявку" }, { type: "message", text: "💰 Цена и сроки" }],
+      [{ type: "message", text: "👨‍💼 Менеджер" }]
     ]
   }
 }];
 
 async function sendSalesProductCard(chatId, p) {
   await sendMessage(chatId, "🧩 " + p.name + "\n\nДля кого: " + p.audience + "\n\nКакую задачу решает: " + p.problem + "\n\nОсновные функции:\n• " + p.features.join("\n• ") + "\n\nПример работы: " + p.demo + "\n\nЧто потребуется: " + p.requirements + "\n\nОграничения: " + p.limitations + "\n\nОриентировочная цена: " + p.price + "\nОплата и автоматическая выдача пока не подключены: до начала работ подтверждаем состав и итоговую стоимость.", [{ type: "inline_keyboard", payload: { buttons: [
-    [{ type: "callback", text: "▶️ Посмотреть демо", payload: String("▶️ Посмотреть демо") }, { type: "callback", text: "💳 Узнать стоимость", payload: String("💳 Узнать стоимость") }],
-    [{ type: "callback", text: "⭐ Сохранить решение", payload: String("⭐ Сохранить решение") }, { type: "callback", text: "🛒 Оформить заявку", payload: String("🛒 Оформить заявку") }],
-    [{ type: "callback", text: "💬 Консультация", payload: String("💬 Консультация") }, { type: "callback", text: "⚖️ Сравнить варианты", payload: String("⚖️ Сравнить варианты") }],
-    [{ type: "callback", text: "🏠 Главное меню", payload: String("🏠 Главное меню") }]
+    [{ type: "message", text: "▶️ Посмотреть демо" }, { type: "message", text: "💳 Узнать стоимость" }],
+    [{ type: "message", text: "⭐ Сохранить решение" }, { type: "message", text: "🛒 Оформить заявку" }],
+    [{ type: "message", text: "💬 Консультация" }, { type: "message", text: "⚖️ Сравнить варианты" }],
+    [{ type: "message", text: "🏠 Главное меню" }]
   ] } }]);
 }
 
