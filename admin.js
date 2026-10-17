@@ -140,7 +140,7 @@
       showDashboard();
     } catch (error) {
       if (error.status === 401) showLogin(error.message);
-      else dashboardMessage.textContent = error.message;
+      else showLogin(error.message);
     } finally {
       $("refresh-button").disabled = false;
     }
