@@ -92,7 +92,7 @@ module.exports = async function handler(req, res) {
       apiPath: "/subscriptions",
       body: {
         url: webhookUrl,
-        update_types: ["bot_started", "message_created"],
+        update_types: ["bot_started", "message_created", "message_callback"],
         secret
       }
     });
