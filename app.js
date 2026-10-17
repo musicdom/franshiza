@@ -50,7 +50,60 @@ document.addEventListener("click",e=>{const request=e.target.closest("[data-requ
 $("dialog-close").addEventListener("click",closeProduct);$("request-close").addEventListener("click",closeRequest);
 productDialog.addEventListener("click",e=>{if(e.target===productDialog)closeProduct()});requestDialog.addEventListener("click",e=>{if(e.target===requestDialog)closeRequest()});
 $("dialog-content").addEventListener("click",e=>{const b=e.target.closest("[data-request]");if(b){closeProduct();openRequest(b.dataset.request)}});
-$("request-form").addEventListener("submit",e=>{e.preventDefault();const name=$("customer-name").value.trim(),contact=$("customer-contact").value.trim(),consent=$("customer-consent").checked;if(!name||!contact||!consent){$("form-error").textContent=!name?"Укажите имя.":!contact?"Укажите контакт для связи.":"Необходимо подтвердить согласие.";return}if(name.length<2||contact.length<3){$("form-error").textContent="Проверьте имя и контакт для связи.";return}const summary=[`Запрос: ${$("request-product").value}`,`Имя: ${name}`,`Контакт: ${contact}`,`Бизнес: ${$("customer-business").value.trim()||"не указан"}`,`Комментарий: ${$("customer-comment").value.trim()||"не указан"}`].join("\n");$("form-error").textContent="";$("form-result").hidden=false;$("form-result").innerHTML="Проверка формы пройдена, но заявка <strong>не отправлена</strong>: серверный backend не подключён. Данные остаются только в этой вкладке. Ниже можно скопировать текст запроса.";const copy=document.createElement("button");copy.type="button";copy.className="card-button";copy.textContent="Скопировать текст запроса";copy.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(summary);copy.textContent="Скопировано"}catch{const area=document.createElement("textarea");area.value=summary;area.setAttribute("readonly","");document.body.append(area);area.select();const ok=document.execCommand("copy");area.remove();copy.textContent=ok?"Скопировано":"Выделите текст вручную"}});$("form-result").append(copy)});
+$("request-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const button = $("request-form").querySelector('button[type="submit"]');
+  const name = $("customer-name").value.trim();
+  const contact = $("customer-contact").value.trim();
+  const business = $("customer-business").value.trim();
+  const comment = $("customer-comment").value.trim();
+  const consent = $("customer-consent").checked;
+  if (!name || !contact || !consent) {
+    $("form-error").textContent = !name ? "Укажите имя." : !contact ? "Укажите контакт для связи." : "Необходимо подтвердить согласие.";
+    return;
+  }
+  if (name.length < 2 || contact.length < 3) {
+    $("form-error").textContent = "Проверьте имя и контакт для связи.";
+    return;
+  }
+  $("form-error").textContent = "";
+  $("form-result").hidden = false;
+  $("form-result").textContent = "Отправляем заявку…";
+  button.disabled = true;
+  try {
+    const response = await fetch("/api/requests", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name,
+        contact,
+        business,
+        comment,
+        productId: $("request-product").value,
+        consent
+      })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result.ok !== true) {
+      throw new Error(result.message || "Заявка не отправлена. Попробуйте позже.");
+    }
+    $("form-result").replaceChildren();
+    const success = document.createElement("p");
+    success.textContent = "Заявка сохранена. Номер обращения: " + result.id + ". Мы свяжемся по указанному контакту после обработки.";
+    const delivery = document.createElement("p");
+    delivery.textContent = result.notification === "sent"
+      ? "Уведомление отправлено администратору в MAX."
+      : "Заявка сохранена, но уведомление в MAX пока не подтверждено.";
+    $("form-result").append(success, delivery);
+    $("request-form").reset();
+    $("request-product").value = "custom-solution";
+  } catch (error) {
+    $("form-result").textContent = error.message || "Не удалось отправить заявку. Попробуйте позже.";
+  } finally {
+    button.disabled = false;
+  }
+});
 $("menu-toggle").addEventListener("click",()=>{const nav=document.querySelector(".nav"),open=nav.classList.toggle("open");$("menu-toggle").setAttribute("aria-expanded",String(open));$("menu-toggle").setAttribute("aria-label",open?"Закрыть меню":"Открыть меню")});
 document.querySelectorAll(".nav a").forEach(a=>a.addEventListener("click",()=>{document.querySelector(".nav").classList.remove("open");$("menu-toggle").setAttribute("aria-expanded","false")}));
 document.addEventListener("keydown",e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){e.preventDefault();search.focus()}if(e.key==="Escape")document.body.classList.remove("dialog-open")});
