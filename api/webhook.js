@@ -37,14 +37,14 @@ async function saveLead(lead) {
   return id;
 }
 
-async function sendMessage(chatId, text) {
+async function sendMessage(chatId, text, attachments = []) {
   const token = process.env.MAX_BOT_TOKEN;
   if (!token) throw new Error("MAX_BOT_TOKEN is not configured");
   const response = await requestMax({
     token,
     method: "POST",
     apiPath: `/messages?chat_id=${encodeURIComponent(String(chatId))}`,
-    body: { text }
+    body: { text, ...(attachments.length ? { attachments } : {}) }
   });
   if (!response.ok) {
     throw new Error(`MAX send message failed: ${response.status} ${response.raw.slice(0, 200)}`);
@@ -54,6 +54,22 @@ async function sendMessage(chatId, text) {
 function cleanText(value, max = 2000) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
+
+const welcomeKeyboard = [{
+  type: "inline_keyboard",
+  payload: {
+    buttons: [
+      [
+        { type: "link", text: "🤖 Каталог решений", url: "https://musicdom.github.io/franshiza/#catalog" },
+        { type: "link", text: "⚙️ Как это работает", url: "https://musicdom.github.io/franshiza/#steps" }
+      ],
+      [
+        { type: "link", text: "💬 Задать вопрос", url: "https://musicdom.github.io/franshiza/#contact" },
+        { type: "link", text: "❓ FAQ", url: "https://musicdom.github.io/franshiza/#faq" }
+      ]
+    ]
+  }
+}];
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
@@ -89,9 +105,11 @@ module.exports = async function handler(req, res) {
       const greeting = product
         ? `Здравствуйте! 👋 Вы выбрали решение «${product}».
 
-Расскажите, для какого бизнеса нужен бот и что он должен делать. Мы подберём сценарий, объясним запуск и сориентируем по срокам и стоимости.`
-        : "Здравствуйте! 👋 Это MAX Бизнес — подбираем готовых ботов и автоматизацию для компаний.\n\nЧто можно автоматизировать:\n• Приём заявок и запись клиентов\n• Продажи и консультации\n• Ответы на частые вопросы\n• Каталог товаров или услуг\n\nНапишите сферу бизнеса и задачу. Например: «Салон красоты — нужна онлайн-запись». Мы подберём подходящее решение и расскажем о сроках и стоимости.";
-      await sendMessage(chatId, greeting);
+Это «Франшиза» — готовые идеи и боты для бизнеса в MAX.
+
+Расскажите, для какого бизнеса нужен бот и что он должен делать. Подберём сценарий и сориентируем по срокам и стоимости.`
+        : "Здравствуйте! 👋 Это «Франшиза» — готовые идеи и боты для бизнеса в MAX.\n\nПомогаем автоматизировать:\n• Приём заявок и запись клиентов\n• Продажи и консультации\n• Ответы на частые вопросы\n• Каталог товаров и услуг\n\nВыберите раздел ниже или напишите сферу бизнеса и задачу. Например: «Салон красоты — нужна онлайн-запись». Подберём подходящее решение и расскажем о запуске.";
+      await sendMessage(chatId, greeting, welcomeKeyboard);
       return json(res, 200, { ok: true });
     }
 
@@ -118,7 +136,7 @@ module.exports = async function handler(req, res) {
         return json(res, 200, { ok: true, command: "id" });
       }
       if (command === "старт" || command === "start") {
-        await sendMessage(chatId, "Здравствуйте! 👋 Это MAX Бизнес — подбираем готовых ботов и автоматизацию для компаний.\n\nЧто можно автоматизировать:\n• Приём заявок и запись клиентов\n• Продажи и консультации\n• Ответы на частые вопросы\n• Каталог товаров или услуг\n\nНапишите сферу бизнеса и задачу. Например: «Салон красоты — нужна онлайн-запись». Мы подберём подходящее решение и расскажем о сроках и стоимости.");
+        await sendMessage(chatId, "Здравствуйте! 👋 Это «Франшиза» — готовые идеи и боты для бизнеса в MAX.\n\nПомогаем автоматизировать:\n• Приём заявок и запись клиентов\n• Продажи и консультации\n• Ответы на частые вопросы\n• Каталог товаров и услуг\n\nВыберите раздел ниже или напишите сферу бизнеса и задачу. Например: «Салон красоты — нужна онлайн-запись». Подберём подходящее решение и расскажем о запуске.", welcomeKeyboard);
         return json(res, 200, { ok: true, command: "start" });
       }
 
