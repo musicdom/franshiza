@@ -55,8 +55,8 @@ module.exports = async function handler(req, res) {
           ? "Вы смотрели карточку решения."
           : "Вы начали подбор решения для бизнеса.";
         await sendMessage(reminder.chat_id, context + " Если актуально, можно продолжить с сохранённого шага. Это напоминание можно отключить в настройках.", [{ type: "inline_keyboard", payload: { buttons: [
-          [{ type: "message", text: "🎯 Продолжить подбор" }, { type: "message", text: "🛍 Каталог решений" }],
-          [{ type: "message", text: "🔕 Отключить уведомления" }]
+          [{ type: "callback", text: "🎯 Продолжить подбор", payload: String("🎯 Продолжить подбор") }, { type: "callback", text: "🛍 Каталог решений", payload: String("🛍 Каталог решений") }],
+          [{ type: "callback", text: "🔕 Отключить уведомления", payload: String("🔕 Отключить уведомления") }]
         ] } }]);
         await sales.saveSession(reminder.chat_id, { ...session, last_reminder_at: new Date().toISOString() });
         await sales.recordEvent({ event: "reminder_sent", chat_id: String(reminder.chat_id), reminder_type: reminder.type });
