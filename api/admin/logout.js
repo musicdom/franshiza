@@ -1,5 +1,5 @@
-const { getConfig } = require("../_lib/config");
-const { json, method, requireSameOrigin, clearSessionCookie, requireAdmin } = require("../_lib/http");
+const { getConfig } = require("../../lib/server/config");
+const { json, method, requireSameOrigin, clearSessionCookie, requireAdmin } = require("../../lib/server/http");
 
 module.exports = async function handler(req, res) {
   if (!method(req, res, ["POST"])) return;
