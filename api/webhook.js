@@ -111,6 +111,12 @@ module.exports = async function handler(req, res) {
         created_at: new Date().toISOString()
       });
 
+      const command = text.toLowerCase().trim().replace(/^\\/+/, "").split(/\\s+/)[0];
+      if (command === "старт" || command === "start") {
+        await sendMessage(chatId, "Привет! 👋 Это MAX Бизнес.\n\nПомогаем подобрать готового бота для бизнеса и автоматизировать работу.\n\nНапиши, для какой сферы нужен бот и что он должен делать — подберём подходящее решение.");
+        return json(res, 200, { ok: true, command: "start" });
+      }
+
       const adminChatId = process.env.MAX_ADMIN_CHAT_ID;
       if (adminChatId) {
         const senderName = cleanText(sender.name, 120) || "Покупатель";
