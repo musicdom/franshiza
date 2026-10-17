@@ -72,6 +72,38 @@ const welcomeKeyboard = [{
   }
 }];
 
+const businessKeyboard = [{
+  type: "inline_keyboard",
+  payload: {
+    buttons: [
+      [{ type: "message", text: "💇 Салон красоты" }, { type: "message", text: "🍽️ Кафе / ресторан" }],
+      [{ type: "message", text: "🛍️ Магазин" }, { type: "message", text: "🏢 Услуги / другое" }],
+      [{ type: "message", text: "⬅️ Главное меню" }]
+    ]
+  }
+}];
+
+const goalKeyboard = [{
+  type: "inline_keyboard",
+  payload: {
+    buttons: [
+      [{ type: "message", text: "📅 Запись клиентов" }, { type: "message", text: "📩 Приём заявок" }],
+      [{ type: "message", text: "🛒 Каталог и продажи" }, { type: "message", text: "💬 Консультации и FAQ" }],
+      [{ type: "message", text: "👨‍💼 Менеджер" }, { type: "message", text: "⬅️ Главное меню" }]
+    ]
+  }
+}];
+
+async function safeSaveLead(lead) {
+  try {
+    await saveLead(lead);
+    return true;
+  } catch (error) {
+    console.error("MAX lead storage failed:", error && error.message ? error.message : "unknown error");
+    return false;
+  }
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -93,7 +125,7 @@ module.exports = async function handler(req, res) {
       if (!chatId) return json(res, 200, { ok: true, ignored: "missing chat id" });
       const payload = cleanText(update.payload, 128);
       const product = payload.startsWith("product:") ? cleanText(payload.slice(8), 100) : "";
-      await saveLead({
+      await safeSaveLead({
         type: "bot_started",
         chat_id: String(chatId),
         user_id: update.user && update.user.user_id ? String(update.user.user_id) : null,
@@ -121,7 +153,7 @@ module.exports = async function handler(req, res) {
       const text = cleanText(body.text);
       if (sender.is_bot || !chatId || !text) return json(res, 200, { ok: true, ignored: true });
 
-      await saveLead({
+      await safeSaveLead({
         type: "message_created",
         chat_id: String(chatId),
         user_id: sender.user_id ? String(sender.user_id) : null,
@@ -143,8 +175,30 @@ module.exports = async function handler(req, res) {
 
       const normalizedText = text.toLowerCase().replace(/^[^\p{L}\p{N}]+/u, "").trim();
       if (normalizedText.includes("подобрать бота")) {
-        await sendMessage(chatId, "Отлично! 🏪 Напишите, какая у вас сфера бизнеса и что бот должен делать. Например: «Салон красоты — запись клиентов», «Магазин — каталог и заявки», «Кафе — меню и бронирование». Мы передадим запрос менеджеру для подбора сценария.");
+        await sendMessage(chatId, "Отлично! 🏪 Для начала выберите сферу бизнеса кнопкой ниже.", businessKeyboard);
         return json(res, 200, { ok: true, action: "choose_bot" });
+      }
+      if (["салон красоты", "кафе / ресторан", "магазин", "услуги / другое"].some((v) => normalizedText.includes(v))) {
+        const business = normalizedText.includes("салон красоты") ? "Салон красоты" : normalizedText.includes("кафе / ресторан") ? "Кафе / ресторан" : normalizedText.includes("магазин") ? "Магазин" : "Услуги / другое";
+        await safeSaveLead({ type: "bot_selection", chat_id: String(chatId), user_name: cleanText(sender.name, 120), business, created_at: new Date().toISOString() });
+        await sendMessage(chatId, "Понял, сфера: «" + business + "». Что в первую очередь должен делать бот? Выберите вариант кнопкой. Если нужно несколько функций — напишите их сообщением.", goalKeyboard);
+        return json(res, 200, { ok: true, action: "choose_business", business });
+      }
+      if (["запись клиентов", "приём заявок", "каталог и продажи", "консультации и faq"].some((v) => normalizedText.includes(v))) {
+        const goal = normalizedText.includes("запись клиентов") ? "Запись клиентов" : normalizedText.includes("приём заявок") ? "Приём заявок" : normalizedText.includes("каталог и продажи") ? "Каталог и продажи" : "Консультации и FAQ";
+        const adminChatId = process.env.MAX_ADMIN_CHAT_ID;
+        const senderName = cleanText(sender.name, 120) || "Покупатель";
+        if (adminChatId) {
+          try { await sendMessage(adminChatId, "Новая заявка на подбор бота\nОт: " + senderName + "\nЧат: " + chatId + "\nЗадача: " + goal); }
+          catch (notificationError) { console.error("MAX admin notification failed:", notificationError && notificationError.message ? notificationError.message : "unknown error"); }
+        }
+        await safeSaveLead({ type: "bot_goal", chat_id: String(chatId), user_name: senderName, goal, created_at: new Date().toISOString() });
+        await sendMessage(chatId, "Отлично, записал задачу: «" + goal + "». Чтобы подобрать решение точнее, напишите название бизнеса и важные детали. Например: сколько специалистов, какие услуги или товары, нужна ли оплата/онлайн-запись. Либо нажмите «Связаться с менеджером».", welcomeKeyboard);
+        return json(res, 200, { ok: true, action: "choose_goal", goal });
+      }
+      if (normalizedText.includes("главное меню")) {
+        await sendMessage(chatId, "Главное меню 👇 Выберите, что нужно сделать.", welcomeKeyboard);
+        return json(res, 200, { ok: true, action: "menu" });
       }
       if (normalizedText.includes("узнать цены")) {
         await sendMessage(chatId, "💰 Ориентировочные цены: бот для салона красоты — от 7 900 ₽, для кафе — от 9 900 ₽, бот-каталог для магазина — от 12 900 ₽. Итоговая стоимость зависит от функций и интеграций. Нажмите «Открыть каталог», чтобы посмотреть решения подробнее.", welcomeKeyboard);
@@ -154,8 +208,8 @@ module.exports = async function handler(req, res) {
         await sendMessage(chatId, "⚙️ Как всё проходит: 1. Рассказываете о бизнесе и задаче. 2. Согласуем функции, сроки и стоимость. 3. Подготавливаем решение и помогаем запустить. Оплата — после согласования состава работ. Чтобы начать, нажмите «Подобрать бота» или напишите свою задачу.");
         return json(res, 200, { ok: true, action: "how_it_works" });
       }
-      if (normalizedText.includes("связаться с менеджером")) {
-        await sendMessage(chatId, "👨‍💼 Напишите одним сообщением, какой у вас бизнес и что хотите автоматизировать. Ваш запрос сохранится как заявка, и мы сможем обсудить подходящее решение.");
+      if (normalizedText.includes("связаться с менеджером") || normalizedText === "менеджер") {
+        await sendMessage(chatId, "👨‍💼 Напишите одним сообщением, какой у вас бизнес и что хотите автоматизировать. Например: «Кофейня, нужно меню и приём предзаказов». Можно также выбрать сферу бизнеса кнопкой.", businessKeyboard);
         return json(res, 200, { ok: true, action: "manager" });
       }
 
