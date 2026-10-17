@@ -1,7 +1,7 @@
-const { getConfig } = require("./_lib/config");
-const { json, method, requireSameOrigin, clientIp } = require("./_lib/http");
-const { rateLimit, saveRequest, updateRequest } = require("./_lib/store");
-const { notifyMax } = require("./_lib/notify-max");
+const { getConfig } = require("../lib/server/config");
+const { json, method, requireSameOrigin, clientIp } = require("../lib/server/http");
+const { rateLimit, saveRequest, updateRequest } = require("../lib/server/store");
+const { notifyMax } = require("../lib/server/notify-max");
 const crypto = require("node:crypto");
 
 function textField(value, max) {
