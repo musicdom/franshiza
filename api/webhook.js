@@ -238,7 +238,7 @@ module.exports = async function handler(req, res) {
       }
 
       const session = await getChatSession(chatId);
-      if (session && session.stage === "goal" && !["салон красоты", "кафе / ресторан", "магазин", "другое"].some((v) => normalizedText.includes(v))) {
+      if (session && session.stage === "goal" && !normalizedText.includes("цена и сроки") && !normalizedText.includes("менеджер") && !["салон красоты", "кафе / ресторан", "магазин", "другое"].some((v) => normalizedText.includes(v))) {
         const goalOptions = [["запись клиентов", "Запись клиентов"], ["приём заявок", "Приём заявок"], ["каталог", "Каталог / заказы"], ["ответы на вопросы", "Ответы на вопросы"], ["несколько функций", "Несколько функций"], ["помогите определиться", "Помогите определиться"]];
         const selectedGoal = goalOptions.find(([key]) => normalizedText.includes(key));
         if (selectedGoal) {
@@ -255,7 +255,7 @@ module.exports = async function handler(req, res) {
         return json(res, 200, { ok: true, action: "goal_text_received" });
       }
 
-      if (session && session.stage === "details") {
+      if (session && session.stage === "details" && !normalizedText.includes("цена и сроки") && !normalizedText.includes("менеджер")) {
         if (normalizedText.includes("помогите определиться")) {
           await sendMessage(chatId, "Ничего страшного — поможем составить сценарий. Обычно бот: 1) приветствует клиента, 2) предлагает нужное действие, 3) задаёт 2–4 уточняющих вопроса, 4) сохраняет заявку и уведомляет вас. Напишите сферу бизнеса и какой результат важнее всего: больше заявок, запись, продажи или ответы на частые вопросы.", detailKeyboard);
           return json(res, 200, { ok: true, action: "scenario_help" });
