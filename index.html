@@ -55,7 +55,7 @@
 <div class="benefit-grid"><article class="benefit"><div class="benefit-icon">🎯</div><h3>Под вашу задачу</h3><p>Согласуем сценарии под реальные процессы вашей компании.</p></article><article class="benefit"><div class="benefit-icon">🧾</div><h3>Понятный объём работ</h3><p>До старта обсудим функции, ограничения и стоимость.</p></article><article class="benefit"><div class="benefit-icon">🛠️</div><h3>Настройка и проверка</h3><p>Проверим согласованные пользовательские сценарии перед запуском.</p></article><article class="benefit"><div class="benefit-icon">🤝</div><h3>Связь с человеком</h3><p>Вы обсуждаете заказ напрямую с продавцом, без автоматической оплаты на сайте.</p></article></div>
 </div></section>
 <section class="section" id="steps"><div class="container"><div class="section-head"><div><div class="kicker">КАК ЗАКАЗАТЬ</div><h2>Всего три понятных шага</h2></div><p>Без оплаты вслепую: сначала определяем задачу и согласуем решение.</p></div><div class="steps"><article class="step"><span class="step-no">01</span><h3>Расскажите о бизнесе</h3><p>Опишите сферу, что хотите автоматизировать и как клиенты взаимодействуют с вами сейчас.</p></article><article class="step"><span class="step-no">02</span><h3>Согласуйте решение</h3><p>Обсудим сценарии, необходимую настройку, сроки и итоговую стоимость.</p></article><article class="step"><span class="step-no">03</span><h3>Проверьте и запустите</h3><p>После согласования подготовим решение и объясним, как начать им пользоваться.</p></article></div></div></section>
-<section class="contact" id="contact"><div class="container"><div class="contact-panel"><div><div class="kicker">ЕСТЬ ЗАДАЧА?</div><h2>Подберём решение для вашего бизнеса</h2><p>Выберите подходящее решение в каталоге. Контакт продавца добавим после того, как вы укажете правильного бота MAX. Пока сайт не перенаправляет на сторонние аккаунты.</p></div><a class="btn" href="#catalog">Вернуться в каталог <span>↗</span></a></div></div></section>
+<section class="contact" id="contact"><div class="container"><div class="contact-panel"><div><div class="kicker">ЕСТЬ ЗАДАЧА?</div><h2>Подберём решение для вашего бизнеса</h2><p>Напишите продавцу в MAX, чтобы обсудить сценарий, сроки и стоимость. При переходе из карточки к боту будет передано название выбранного решения.</p></div><a class="btn" href="https://max.ru/se14711525_bot?start=consultation" target="_blank" rel="noopener noreferrer">Обсудить в MAX <span>↗</span></a></div></div></section>
 </main>
 <div class="container"><footer class="footer"><span><strong>MAX Бизнес</strong> · Готовые цифровые решения</span><span>Демонстрационные примеры. Функции и стоимость подтверждаются при согласовании заказа.</span></footer></div>
 <script>
@@ -77,7 +77,7 @@
  }
  buttons.forEach(button=>button.addEventListener('click',()=>applyFilter(button.dataset.filter)));
  search.addEventListener('input',()=>applyFilter(activeCategory));
- document.querySelectorAll('[data-product]').forEach(link=>link.addEventListener('click',()=>{try{sessionStorage.setItem('maxBusinessProduct',link.dataset.product)}catch(e){}}));
+ document.querySelectorAll('[data-product]').forEach(link=>{link.href='https://max.ru/se14711525_bot?start='+encodeURIComponent('product:'+link.dataset.product);link.target='_blank';link.rel='noopener noreferrer';});
 })();
 </script>
 </body>
