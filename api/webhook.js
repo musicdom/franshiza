@@ -204,6 +204,7 @@ module.exports = async function handler(req, res) {
         payload: payload || null,
         created_at: new Date().toISOString()
       });
+      await sales.recordEvent({ event: "bot_started", chat_id: String(chatId), product_id: product || null });
       const productMatch = sales.PRODUCTS.find((item) => product && (product.toLowerCase().includes(item.name.toLowerCase()) || product.toLowerCase() === item.id));
       if (productMatch) {
         await sales.saveSession(chatId, { stage: "sales_product", product_id: productMatch.id, last_product_id: productMatch.id, business: productMatch.category, consent_marketing: false, last_activity: new Date().toISOString() });
@@ -224,15 +225,7 @@ module.exports = async function handler(req, res) {
       const text = cleanText(body.text);
       if (sender.is_bot || !chatId || !text) return json(res, 200, { ok: true, ignored: true });
 
-      await safeSaveLead({
-        type: "message_created",
-        chat_id: String(chatId),
-        user_id: sender.user_id ? String(sender.user_id) : null,
-        user_name: cleanText(sender.name, 120),
-        username: cleanText(sender.username, 120),
-        text,
-        created_at: new Date().toISOString()
-      });
+      try { await sales.recordEvent({ event: "message_received", chat_id: String(chatId), user_id: sender.user_id ? String(sender.user_id) : null }); } catch (eventError) { console.error("Event recording failed"); }
 
       const command = text.toLowerCase().trim().replace(/^\/+/, "").split(/\s+/)[0];
       if (command === "id" || command === "chatid" || command === "мойid") {
