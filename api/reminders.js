@@ -6,10 +6,28 @@ function json(res, status, body) {
   res.setHeader("Cache-Control", "no-store");
   res.end(JSON.stringify(body));
 }
+function normalizeButtonAttachments(attachments = []) {
+  return attachments.map((attachment) => {
+    if (!attachment || attachment.type !== "inline_keyboard" || !attachment.payload || !Array.isArray(attachment.payload.buttons)) return attachment;
+    return {
+      ...attachment,
+      payload: {
+        ...attachment.payload,
+        buttons: attachment.payload.buttons.map((row) => Array.isArray(row) ? row.map((button) => {
+          if (!button || button.type !== "callback") return button;
+          // MAX message buttons send their visible text as message_created events.
+          // This keeps the menu functional even if callback delivery is delayed or misconfigured.
+          return { type: "message", text: String(button.text || button.payload || "") };
+        }) : row)
+      }
+    };
+  });
+}
+
 async function sendMessage(chatId, text, attachments = []) {
   const token = process.env.MAX_BOT_TOKEN;
   if (!token) throw new Error("MAX_BOT_TOKEN is not configured");
-  const response = await requestMax({ token, method: "POST", apiPath: `/messages?chat_id=${encodeURIComponent(String(chatId))}`, body: { text, ...(attachments.length ? { attachments } : {}) } });
+  const response = await requestMax({ token, method: "POST", apiPath: `/messages?chat_id=${encodeURIComponent(String(chatId))}`, body: { text, ...(attachments.length ? { attachments: normalizeButtonAttachments(attachments) } : {}) } });
   if (!response.ok) throw new Error("MAX send failed: " + response.status);
 }
 module.exports = async function handler(req, res) {
