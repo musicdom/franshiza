@@ -72,6 +72,7 @@
           method: "PATCH",
           body: JSON.stringify({ id: item.id, status: select.value })
         });
+        item.status = select.value;
         dashboardMessage.textContent = "Статус заявки обновлён.";
       } catch (error) {
         dashboardMessage.textContent = error.message;
