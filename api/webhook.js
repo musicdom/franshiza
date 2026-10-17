@@ -13,7 +13,7 @@ function getRedisConfig() {
 
 async function redisCommand(parts) {
   const redis = getRedisConfig();
-  if (!redis) return false;
+  if (!redis) throw new Error("Lead storage is not configured");
   const response = await fetch(redis.url, {
     method: "POST",
     headers: {
@@ -29,10 +29,12 @@ async function redisCommand(parts) {
 }
 
 async function saveLead(lead) {
+  if (!getRedisConfig()) throw new Error("Lead storage is not configured");
   const id = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   await redisCommand(["SET", `maxbiz:lead:${id}`, JSON.stringify(lead), "EX", "2592000"]);
   await redisCommand(["LPUSH", "maxbiz:leads", id]);
   await redisCommand(["LTRIM", "maxbiz:leads", "0", "499"]);
+  return id;
 }
 
 async function sendMessage(chatId, text) {
@@ -118,7 +120,13 @@ module.exports = async function handler(req, res) {
       if (adminChatId) {
         const senderName = cleanText(sender.name, 120) || "Покупатель";
         const product = cleanText(body.text, 1200);
-        await sendMessage(adminChatId, `Новая заявка с сайта MAX Бизнес\nОт: ${senderName}\nЧат: ${chatId}\nСообщение: ${product}`);
+        try {
+          await sendMessage(adminChatId, `Новая заявка с сайта MAX Бизнес\nОт: ${senderName}\nЧат: ${chatId}\nСообщение: ${product}`);
+        } catch (notificationError) {
+          console.error("MAX admin notification failed:", notificationError && notificationError.message ? notificationError.message : "unknown error");
+        }
+      } else {
+        console.warn("MAX_ADMIN_CHAT_ID is not configured; lead saved without admin notification");
       }
 
       await sendMessage(chatId, "Спасибо, сообщение получил. Заявка сохранена. Мы уточним детали и обсудим подходящее решение.");
