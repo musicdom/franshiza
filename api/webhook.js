@@ -1,4 +1,4 @@
-const API = "https://platform-api2.max.ru";
+const { requestMax } = require("../lib/max-api");
 
 function json(res, status, body) {
   res.status(status).setHeader("Content-Type", "application/json; charset=utf-8");
@@ -38,17 +38,14 @@ async function saveLead(lead) {
 async function sendMessage(chatId, text) {
   const token = process.env.MAX_BOT_TOKEN;
   if (!token) throw new Error("MAX_BOT_TOKEN is not configured");
-  const response = await fetch(`${API}/messages?chat_id=${encodeURIComponent(String(chatId))}`, {
+  const response = await requestMax({
+    token,
     method: "POST",
-    headers: {
-      Authorization: token,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ text })
+    apiPath: `/messages?chat_id=${encodeURIComponent(String(chatId))}`,
+    body: { text }
   });
   if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(`MAX send message failed: ${response.status} ${detail.slice(0, 200)}`);
+    throw new Error(`MAX send message failed: ${response.status} ${response.raw.slice(0, 200)}`);
   }
 }
 
