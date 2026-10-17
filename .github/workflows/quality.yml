@@ -1,0 +1,25 @@
+name: Quality checks
+
+on:
+  push:
+    branches:
+      - main
+      - feat/premium-max-business-platform
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check JavaScript syntax
+        run: npm run check
+      - name: Run catalog integrity tests
+        run: npm test
