@@ -241,6 +241,14 @@ module.exports = async function handler(req, res) {
         return json(res, 200, { ok: true, command: "id" });
       }
       if (command === "старт" || command === "start" || command === "menu") {
+        // Reset stale funnel stages so old lead/question flows cannot capture new menu interactions.
+        const previousSession = await sales.getSession(chatId).catch(() => null);
+        await sales.saveSession(chatId, {
+          ...(previousSession || {}),
+          stage: "main_menu",
+          purchase_intent: false,
+          last_activity: new Date().toISOString()
+        }).catch((error) => console.error("MAX start session reset failed:", error && error.message ? error.message : "unknown error"));
         await sendMessage(chatId, "Главное меню 👇 Выберите, что нужно сделать, или напишите вопрос обычным сообщением.", welcomeKeyboard);
         return json(res, 200, { ok: true, command: "start" });
       }
