@@ -187,7 +187,7 @@ module.exports = async function handler(req, res) {
 
   const update = req.body && typeof req.body === "object" ? req.body : {};
   const type = update.update_type;
-  const chatId = update.chat_id || (update.message && update.message.recipient && update.message.recipient.chat_id);
+  const chatId = update.chat_id || (update.message && update.message.recipient && update.message.recipient.chat_id) || (update.callback && update.callback.message && update.callback.message.recipient && update.callback.message.recipient.chat_id) || (update.callback && update.callback.message && update.callback.message.chat_id);
 
   try {
     if (type === "bot_started") {
