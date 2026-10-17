@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /api/admin/
+# robots.txt is not an access control mechanism; admin APIs enforce server-side sessions.
+# Add a sitemap URL only after the production domain is confirmed.
