@@ -87,6 +87,39 @@ async function safeSaveLead(lead) {
   }
 }
 
+async function getChatSession(chatId) {
+  try {
+    const redis = getRedisConfig();
+    if (!redis) return null;
+    const response = await fetch(redis.url, { method: "POST", headers: { Authorization: `Bearer ${redis.token}`, "Content-Type": "application/json" }, body: JSON.stringify(["GET", `maxbiz:session:${chatId}`]) });
+    if (!response.ok) return null;
+    const result = await response.json();
+    return result.result ? JSON.parse(result.result) : null;
+  } catch (error) {
+    console.error("MAX session read failed:", error && error.message ? error.message : "unknown error");
+    return null;
+  }
+}
+async function setChatSession(chatId, session) {
+  try { await redisCommand(["SET", `maxbiz:session:${chatId}`, JSON.stringify(session), "EX", "86400"]); }
+  catch (error) { console.error("MAX session write failed:", error && error.message ? error.message : "unknown error"); }
+}
+async function clearChatSession(chatId) {
+  try { await redisCommand(["DEL", `maxbiz:session:${chatId}`]); }
+  catch (error) { console.error("MAX session clear failed:", error && error.message ? error.message : "unknown error"); }
+}
+const goalKeyboard = [{ type: "inline_keyboard", payload: { buttons: [
+  [{ type: "message", text: "📅 Запись клиентов" }, { type: "message", text: "📩 Приём заявок" }],
+  [{ type: "message", text: "🛍️ Каталог / заказы" }, { type: "message", text: "💬 Ответы на вопросы" }],
+  [{ type: "message", text: "⚙️ Несколько функций" }],
+  [{ type: "message", text: "🏠 Главное меню" }]
+] } }];
+const detailKeyboard = [{ type: "inline_keyboard", payload: { buttons: [
+  [{ type: "message", text: "🤝 Помогите определиться" }],
+  [{ type: "message", text: "💰 Цена и сроки" }, { type: "message", text: "👨‍💼 Менеджер" }],
+  [{ type: "message", text: "🏠 Главное меню" }]
+] } }];
+
 function getProductScenario(product) {
   const scenarios = [
     { match: ["салон красоты"], title: "Бот для салона красоты", summary: "Клиент выбирает услугу, указывает удобное время и оставляет заявку администратору.", features: "• Выбор услуги\n• Желаемые дата и время\n• Передача заявки администратору", buttons: ["📅 Настроить запись", "💇 Список услуг", "💰 Цена и сроки"] },
@@ -197,6 +230,49 @@ module.exports = async function handler(req, res) {
       }
 
       const normalizedText = text.toLowerCase().replace(/^[^\p{L}\p{N}]+/u, "").trim();
+
+      if (normalizedText.includes("главное меню") || normalizedText === "меню" || normalizedText === "🏠 меню") {
+        await clearChatSession(chatId);
+        await sendMessage(chatId, "Главное меню 👇 Выберите действие или напишите задачу своими словами.", welcomeKeyboard);
+        return json(res, 200, { ok: true, action: "menu" });
+      }
+
+      const session = await getChatSession(chatId);
+      if (session && session.stage === "goal" && !["салон красоты", "кафе / ресторан", "магазин", "другое"].some((v) => normalizedText.includes(v))) {
+        const goalOptions = [["запись клиентов", "Запись клиентов"], ["приём заявок", "Приём заявок"], ["каталог", "Каталог / заказы"], ["ответы на вопросы", "Ответы на вопросы"], ["несколько функций", "Несколько функций"], ["помогите определиться", "Помогите определиться"]];
+        const selectedGoal = goalOptions.find(([key]) => normalizedText.includes(key));
+        if (selectedGoal) {
+          session.goal = selectedGoal[1];
+          session.stage = "details";
+          await setChatSession(chatId, session);
+          await sendMessage(chatId, "Отлично, записал задачу: " + session.goal + ".\n\nТеперь опишите детали одним сообщением:\n1. Что именно должен делать бот?\n2. Какие данные собирать у клиента?\n3. Куда передавать заявку — вам в MAX, сотруднику или в таблицу/CRM?\n\nЕсли пока не знаете, напишите «Помогите определиться» — подскажем подходящий вариант.", detailKeyboard);
+          return json(res, 200, { ok: true, action: "goal_selected", goal: session.goal });
+        }
+        session.goal = cleanText(text, 1000);
+        session.stage = "details";
+        await setChatSession(chatId, session);
+        await sendMessage(chatId, "Понял задачу: «" + session.goal + "».\n\nТеперь уточним детали. Напишите одним сообщением, что бот должен делать по шагам, какие данные собирать и куда передавать заявки. Можно написать своими словами — необязательно отвечать по пунктам.", detailKeyboard);
+        return json(res, 200, { ok: true, action: "goal_text_received" });
+      }
+
+      if (session && session.stage === "details") {
+        if (normalizedText.includes("помогите определиться")) {
+          await sendMessage(chatId, "Ничего страшного — поможем составить сценарий. Обычно бот: 1) приветствует клиента, 2) предлагает нужное действие, 3) задаёт 2–4 уточняющих вопроса, 4) сохраняет заявку и уведомляет вас. Напишите сферу бизнеса и какой результат важнее всего: больше заявок, запись, продажи или ответы на частые вопросы.", detailKeyboard);
+          return json(res, 200, { ok: true, action: "scenario_help" });
+        }
+        const senderName = cleanText(sender.name, 120) || "Покупатель";
+        const details = cleanText(text, 1800);
+        const request = { type: "bot_build_request", chat_id: String(chatId), user_id: sender.user_id ? String(sender.user_id) : null, user_name: senderName, business: session.business || "Не указано", goal: session.goal || "Не указано", details, created_at: new Date().toISOString() };
+        await safeSaveLead(request);
+        const adminChatId = process.env.MAX_ADMIN_CHAT_ID;
+        if (adminChatId) {
+          try { await sendMessage(adminChatId, "🆕 Заявка на разработку бота\nОт: " + senderName + "\nЧат: " + chatId + "\nСфера: " + request.business + "\nЗадача: " + request.goal + "\nДетали: " + details + "\n\nЧтобы ответить, откройте чат с клиентом по ID: " + chatId); }
+          catch (notificationError) { console.error("MAX admin notification failed:", notificationError && notificationError.message ? notificationError.message : "unknown error"); }
+        }
+        await clearChatSession(chatId);
+        await sendMessage(chatId, "✅ Спасибо! Я собрал описание задачи и передал запрос менеджеру.\n\nСфера: " + request.business + "\nЗадача: " + request.goal + "\nДетали: " + details + "\n\nЕсли хотите добавить телефон или удобное время для связи — отправьте следующим сообщением. Также можно открыть каталог или вернуться в меню.", welcomeKeyboard);
+        return json(res, 200, { ok: true, action: "request_submitted" });
+      }
       const productActionLabels = [
         "настроить запись", "список услуг", "меню и заказы", "бронирование столика",
         "каталог товаров", "заявки на покупку", "запись в сервис", "заявка по авто",
@@ -265,7 +341,11 @@ module.exports = async function handler(req, res) {
           try { await sendMessage(adminChatId, "Запрос на подбор бота\nОт: " + senderName + "\nЧат: " + chatId + "\nСфера: " + business); }
           catch (notificationError) { console.error("MAX admin notification failed:", notificationError && notificationError.message ? notificationError.message : "unknown error"); }
         }
-        await sendMessage(chatId, "Принял: " + business + ". Теперь просто напишите, что должен делать бот — например, запись клиентов, приём заявок, каталог или ответы на вопросы. Можно описать всё сразу, без дополнительных кнопок.", welcomeKeyboard);
+        await setChatSession(chatId, { stage: "goal", business, started_at: new Date().toISOString() });
+        const prompt = business === "Другое"
+          ? "Хорошо, подберём сценарий под ваш бизнес. Сначала выберите главную задачу бота ниже. Если нужно несколько функций — выберите этот вариант. Можно также написать задачу обычным сообщением."
+          : "Принял: " + business + ". Что бот должен делать в первую очередь? Выберите подходящий вариант ниже. Если задач несколько, выберите «Несколько функций» или опишите всё сообщением.";
+        await sendMessage(chatId, prompt, goalKeyboard);
         return json(res, 200, { ok: true, action: "choose_business", business });
       }
       if (normalizedText.includes("главное меню") || normalizedText === "меню" || normalizedText === "🏠 меню") {
