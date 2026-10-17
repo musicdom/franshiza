@@ -53,6 +53,27 @@ async function sendMessage(chatId, text, attachments = []) {
   }
 }
 
+async function answerCallback(callback) {
+  const callbackId = cleanText(callback && callback.callback_id, 500);
+  if (!callbackId) {
+    console.warn("MAX callback has no callback_id");
+    return false;
+  }
+  const token = process.env.MAX_BOT_TOKEN;
+  if (!token) throw new Error("MAX_BOT_TOKEN is not configured");
+  const response = await requestMax({
+    token,
+    method: "POST",
+    apiPath: `/answers?callback_id=${encodeURIComponent(callbackId)}`,
+    body: { notification: "Готово, выполняю действие…" }
+  });
+  if (!response.ok || response.data.success === false) {
+    console.error("MAX callback acknowledgement failed:", response.status, response.raw.slice(0, 200));
+    return false;
+  }
+  return true;
+}
+
 function cleanText(value, max = 2000) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
@@ -221,6 +242,10 @@ module.exports = async function handler(req, res) {
     if (type === "message_created" || type === "message_callback") {
       const isCallback = type === "message_callback";
       const message = update.message || {};
+      if (isCallback) {
+        try { await answerCallback(update.callback || {}); }
+        catch (callbackError) { console.error("MAX callback acknowledgement failed:", callbackError && callbackError.message ? callbackError.message : "unknown error"); }
+      }
       const sender = isCallback ? (update.callback && update.callback.user) || {} : message.sender || {};
       const body = isCallback ? { text: update.callback && update.callback.payload } : message.body || {};
       const text = cleanText(body.text);
