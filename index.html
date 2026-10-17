@@ -27,6 +27,34 @@ dialog.product-dialog{width:min(570px,calc(100% - 28px));max-width:none;max-heig
 .demo-section{background:#171a18;border-top:1px solid #252b24;border-bottom:1px solid #252b24}.demo-layout{display:grid;grid-template-columns:.9fr 1.1fr;gap:40px;align-items:center;margin-top:30px}.demo-intro h3{font-size:22px;line-height:1.15;letter-spacing:-.04em;margin:0 0 12px}.demo-intro p{font-size:12px;line-height:1.8;color:var(--muted);margin:0}.demo-points{display:grid;gap:10px;margin-top:23px}.demo-point{display:flex;gap:10px;align-items:center;font-size:11px;color:#d4dbd0}.demo-point span{display:grid;place-items:center;width:24px;height:24px;flex:none;border-radius:8px;background:#293323;color:var(--lime)}.demo-phone{overflow:hidden;border:1px solid #3a4337;border-radius:23px;background:#101310;box-shadow:0 25px 65px #0003;max-width:520px;width:100%;justify-self:end}.demo-phone-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px;border-bottom:1px solid #2a3028;background:#1b1f1b}.demo-bot-identity{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:850}.demo-avatar{display:grid;place-items:center;width:35px;height:35px;border-radius:12px;background:var(--lime);color:#13170f;font-size:18px}.demo-online{font-size:9px;color:#a7b29f}.demo-chat{padding:20px 17px 16px;min-height:225px;display:flex;flex-direction:column;gap:12px}.demo-message{align-self:flex-start;max-width:92%;padding:12px 13px;border:1px solid #30372e;border-radius:4px 15px 15px 15px;background:#1d221d;color:#e7ece2;font-size:11px;line-height:1.7;white-space:pre-line}.demo-message.user{align-self:flex-end;border-color:#9ac447;background:#c8ff5f;color:#18200e;border-radius:15px 4px 15px 15px}.demo-options{display:flex;flex-wrap:wrap;gap:7px;padding:0 17px 18px}.demo-choice{border:1px solid #58694a;border-radius:100px;padding:9px 12px;background:#20271d;color:#e7f2d9;font-size:10px;font-weight:800;transition:background .15s,border-color .15s}.demo-choice:hover{background:#303e25;border-color:var(--lime)}.demo-choice:disabled{opacity:.5;cursor:default}.demo-result{padding:0 17px 18px}.demo-result a{display:flex;justify-content:center;align-items:center;gap:8px;width:100%;padding:13px;border-radius:12px;background:var(--lime);color:#13170f;font-size:11px;font-weight:900}.demo-reset{margin-top:9px;width:100%;padding:9px;border:1px solid #353d32;border-radius:10px;background:transparent;color:#aeb9a6;font-size:10px}.demo-disclaimer{font-size:9px;line-height:1.7;color:#879181;padding:0 17px 15px}
 @media(max-width:800px){.demo-layout{grid-template-columns:1fr;gap:25px}.demo-phone{justify-self:center}.demo-intro h3{font-size:20px}}
 
+
+/* Scenario picker */
+.picker-section{background:radial-gradient(ellipse at 85% 48%,#263321 0,transparent 40%),#121512}
+.picker-layout{display:grid;grid-template-columns:1fr .9fr;gap:22px;align-items:stretch;margin-top:32px}
+.picker-controls{border:1px solid var(--line);border-radius:22px;padding:25px;background:#171a18}
+.picker-label{font-size:12px;font-weight:900;color:#f4f6f1;margin-bottom:14px}
+.picker-label-second{margin-top:27px}
+.picker-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.picker-option{min-height:48px;text-align:left;padding:12px 13px;border:1px solid #343c33;border-radius:12px;background:#1c201c;color:#dce2d8;font-size:12px;font-weight:750;transition:border-color .18s,background .18s,color .18s}
+.picker-option:hover{border-color:#829b68}
+.picker-option.is-active{background:#29351f;border-color:var(--lime);color:var(--lime);box-shadow:inset 0 0 0 1px #c8ff5f25}
+.picker-result{display:flex;flex-direction:column;border-radius:22px;padding:25px;background:#f1f3ed;color:#171a16;min-width:0}
+.picker-result-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.picker-result-icon{display:grid;place-items:center;width:43px;height:43px;border-radius:14px;background:#dfe9d1;color:#26351a;font-size:23px}
+.picker-result-tag{font-size:9px;letter-spacing:.12em;font-weight:900;color:#58772f}
+.picker-eyebrow{font-size:10px;font-weight:850;text-transform:uppercase;letter-spacing:.12em;color:#718064;margin:23px 0 0}
+.picker-result h3{font-size:26px;line-height:1.08;letter-spacing:-.045em;margin:9px 0 10px}
+.picker-result>p:not(.picker-eyebrow):not(.picker-footnote){font-size:12px;line-height:1.75;color:#5e6759;margin:0}
+.picker-list{display:grid;gap:9px;list-style:none;margin:18px 0 22px;padding:0}
+.picker-list li{position:relative;padding-left:23px;font-size:11px;line-height:1.5;color:#30372d}
+.picker-list li:before{content:"✓";position:absolute;left:0;top:0;color:#527b25;font-weight:900}
+.picker-result-bottom{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:auto;padding-top:18px;border-top:1px solid #dce1d5}
+.picker-result-bottom small{display:block;color:#737d6c;font-size:9px;margin-bottom:5px}
+.picker-result-bottom strong{font-size:18px;letter-spacing:-.04em}
+.picker-result-bottom .btn{white-space:nowrap;font-size:11px;padding:13px 14px}
+.picker-footnote{font-size:9px;line-height:1.6;color:#7a8374;margin:15px 0 0}
+@media(max-width:760px){.picker-layout{grid-template-columns:1fr;gap:14px}.picker-controls,.picker-result{padding:19px}.picker-options{gap:8px}.picker-option{font-size:11px;padding:11px 10px;min-height:46px}.picker-result h3{font-size:24px}.picker-result-bottom{align-items:flex-start;flex-direction:column}.picker-result-bottom .btn{width:100%}}
+
 </style>
 </head>
 <body>
@@ -56,6 +84,39 @@ dialog.product-dialog{width:min(570px,calc(100% - 28px));max-width:none;max-heig
 <section class="section demo-section" id="demo"><div class="wrap"><div class="section-head"><div><div class="overline">Попробуйте сами</div><h2>Пройдите мини-диалог<br>с бизнес-ботом.</h2></div><p>Выберите ответы и посмотрите, как бот может собрать запрос клиента. Это интерактивный макет, а не подключённый к реальным заказам бот.</p></div>
 <div class="demo-layout"><div class="demo-intro"><h3>Сценарий за несколько нажатий</h3><p>Такой диалог помогает клиенту быстро объяснить, что ему нужно, а бизнесу — получить обращение в удобном формате.</p><div class="demo-points"><div class="demo-point"><span>✓</span>Понятные вопросы вместо длинной переписки</div><div class="demo-point"><span>✓</span>Ответы клиента собираются по шагам</div><div class="demo-point"><span>✓</span>В конце можно обсудить похожее решение</div></div></div>
 <div class="demo-phone" aria-label="Интерактивная демонстрация бота"><div class="demo-phone-head"><div class="demo-bot-identity"><span class="demo-avatar">✳</span><span>MAX Бизнес<small class="demo-online" style="display:block;margin-top:3px">ДЕМО-БОТ · ИНТЕРАКТИВНЫЙ ПРИМЕР</small></span></div><span class="status">● ДЕМО</span></div><div class="demo-chat" id="demo-chat" aria-live="polite"><div class="demo-message">Здравствуйте! Давайте уточним ваш запрос. Что вас интересует?</div></div><div class="demo-options" id="demo-options"><button class="demo-choice" type="button" data-demo="booking">Запись на услугу</button><button class="demo-choice" type="button" data-demo="product">Товар или заказ</button><button class="demo-choice" type="button" data-demo="consultation">Консультация</button></div><div class="demo-result" id="demo-result" hidden><a id="demo-order" href="https://max.ru/se14711525_bot?start=consultation" target="_blank" rel="noopener noreferrer">Обсудить такой бот в MAX ↗</a><button class="demo-reset" id="demo-reset" type="button">Пройти сценарий ещё раз</button></div><p class="demo-disclaimer">Данные из демо никуда не отправляются и не сохраняются. Реальный сценарий согласуем отдельно.</p></div></div></div></section>
+
+
+<section class="section picker-section" id="picker"><div class="wrap">
+ <div class="section-head"><div><div class="overline">Быстрый подбор</div><h2>Какой бот подойдёт<br>именно вашему бизнесу?</h2></div><p>Выберите сферу и задачу — покажем пример подходящего сценария. Это отправная точка для обсуждения, а не готовая смета.</p></div>
+ <div class="picker-layout" id="scenario-picker">
+  <div class="picker-controls">
+   <div class="picker-label">1. Чем вы занимаетесь?</div>
+   <div class="picker-options" role="group" aria-label="Сфера бизнеса">
+    <button class="picker-option is-active" type="button" data-niche="beauty" aria-pressed="true">✿ Салон / услуги</button>
+    <button class="picker-option" type="button" data-niche="food" aria-pressed="false">◒ Кафе / магазин</button>
+    <button class="picker-option" type="button" data-niche="auto" aria-pressed="false">⌁ Автосервис</button>
+    <button class="picker-option" type="button" data-niche="estate" aria-pressed="false">⌂ Недвижимость</button>
+    <button class="picker-option" type="button" data-niche="school" aria-pressed="false">▱ Онлайн-школа</button>
+    <button class="picker-option" type="button" data-niche="other" aria-pressed="false">＋ Другая сфера</button>
+   </div>
+   <div class="picker-label picker-label-second">2. Что хотите улучшить?</div>
+   <div class="picker-options picker-goals" role="group" aria-label="Задача бизнеса">
+    <button class="picker-option is-active" type="button" data-goal="leads" aria-pressed="true">Собирать заявки</button>
+    <button class="picker-option" type="button" data-goal="booking" aria-pressed="false">Запись клиентов</button>
+    <button class="picker-option" type="button" data-goal="sales" aria-pressed="false">Принимать заказы</button>
+    <button class="picker-option" type="button" data-goal="faq" aria-pressed="false">Отвечать на вопросы</button>
+   </div>
+  </div>
+  <div class="picker-result" aria-live="polite">
+   <div class="picker-result-top"><span class="picker-result-icon" id="picker-icon">✿</span><span class="picker-result-tag">ПРИМЕР РЕШЕНИЯ</span></div>
+   <p class="picker-eyebrow">Возможный сценарий</p><h3 id="picker-title">Бот для салона красоты</h3>
+   <p id="picker-copy">Клиент выбирает услугу и удобное время, отвечает на несколько вопросов, а салон получает структурированную заявку.</p>
+   <ul class="picker-list" id="picker-list"><li>Выбор услуги и мастера</li><li>Предпочтительное время визита</li><li>Передача обращения администратору</li></ul>
+   <div class="picker-result-bottom"><div><small>Ориентир за настройку</small><strong id="picker-price">от 7 900 ₽</strong></div><a class="btn primary" id="picker-order" href="https://max.ru/se14711525_bot?start=consultation" target="_blank" rel="noopener noreferrer">Обсудить в MAX <span class="arrow">↗</span></a></div>
+   <p class="picker-footnote">Функции, сроки и итоговую стоимость согласуем до начала работ. Цена зависит от сценария и интеграций.</p>
+  </div>
+ </div>
+</div></section>
 
 <section class="section catalog-section" id="catalog"><div class="wrap"><div class="section-head"><div><div class="overline">Каталог решений</div><h2>Выберите задачу.<br>Мы подберём бота.</h2></div><p>Найдите подходящий сценарий по сфере бизнеса. Обсудим детали, ограничения и состав работ до начала разработки.</p></div>
 <div class="catalog-tools"><label class="search"><span>⌕</span><input id="catalog-search" type="search" placeholder="Поиск: салон, заявки, магазин…" aria-label="Поиск по каталогу"></label><div class="filters" role="group" aria-label="Фильтр каталога"><button class="filter" type="button" data-filter="all" aria-pressed="true">Все</button><button class="filter" type="button" data-filter="service" aria-pressed="false">Услуги</button><button class="filter" type="button" data-filter="sales" aria-pressed="false">Продажи</button><button class="filter" type="button" data-filter="leads" aria-pressed="false">Заявки</button><button class="filter" type="button" data-filter="education" aria-pressed="false">Обучение</button></div><span class="result-count" id="result-count">9 решений</span></div>
@@ -258,5 +319,49 @@ dialog.product-dialog{width:min(570px,calc(100% - 28px));max-width:none;max-heig
 
 })();
 </script>
+
+<script>
+(function(){
+ const root=document.getElementById('scenario-picker');
+ if(!root)return;
+ const niches={
+  beauty:{icon:'✿',title:'Бот для салона красоты',product:'Бот для салона красоты',price:'от 7 900 ₽',copy:'Клиент выбирает услугу и удобное время, отвечает на несколько вопросов, а салон получает структурированную заявку.',features:['Выбор услуги и мастера','Предпочтительное время визита','Передача обращения администратору']},
+  food:{icon:'◒',title:'Бот для кафе и магазина',product:'Бот для кафе и ресторана',price:'от 9 900 ₽',copy:'Клиент изучает меню или ассортимент, уточняет детали и оставляет запрос на заказ либо связь с сотрудником.',features:['Меню или каталог с описаниями','Сбор состава заказа или вопроса','Передача обращения сотруднику']},
+  auto:{icon:'⌁',title:'Бот для автосервиса',product:'Бот для автосервиса',price:'от 7 900 ₽',copy:'Клиент указывает автомобиль, описывает проблему и желаемое время визита — мастер получает исходные данные до разговора.',features:['Марка и модель автомобиля','Описание проблемы или услуги','Предпочтительное время визита']},
+  estate:{icon:'⌂',title:'Бот для недвижимости',product:'Бот для недвижимости',price:'от 12 900 ₽',copy:'Бот уточняет цель обращения, тип объекта и бюджет, чтобы передать специалисту более конкретный запрос.',features:['Тип объекта и цель обращения','Бюджет и предпочтения','Передача запроса менеджеру']},
+  school:{icon:'▱',title:'Бот для онлайн-школы',product:'Бот для онлайн-школы',price:'от 14 900 ₽',copy:'Потенциальный ученик знакомится с программой, получает ответы на частые вопросы и оставляет заявку на консультацию.',features:['Информация о программе обучения','Ответы на типовые вопросы','Сбор заявок заинтересованных учеников']},
+  other:{icon:'＋',title:'Бизнес-ассистент в MAX',product:'Бизнес-ассистент в MAX',price:'от 5 900 ₽',copy:'Подберём небольшой сценарий под вашу сферу: от ответов на повторяющиеся вопросы до первичного сбора обращений.',features:['Уточнение вашей задачи','Согласованный набор вопросов и ответов','Передача сложных обращений человеку']}
+ };
+ const goals={
+  leads:'Сценарий нацелен на сбор заявок: бот задаёт клиенту нужные вопросы и передаёт ответы команде.',
+  booking:'Сценарий нацелен на запись: бот уточняет услугу и предпочтительное время, а подтверждение визита остаётся за сотрудником, если отдельная интеграция не настроена.',
+  sales:'Сценарий нацелен на заказ: бот помогает выбрать товар или услугу и передаёт детали заказа сотруднику.',
+  faq:'Сценарий нацелен на частые вопросы: бот показывает согласованную информацию и направляет нестандартные вопросы сотруднику.'
+ };
+ let activeNiche='beauty',activeGoal='leads';
+ function render(){
+  const item=niches[activeNiche];
+  root.querySelector('#picker-icon').textContent=item.icon;
+  root.querySelector('#picker-title').textContent=item.title;
+  root.querySelector('#picker-copy').textContent=goals[activeGoal]+' '+item.copy;
+  root.querySelector('#picker-price').textContent=item.price;
+  const list=root.querySelector('#picker-list');
+  list.replaceChildren(...item.features.map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));
+  root.querySelector('#picker-order').href='https://max.ru/se14711525_bot?start='+encodeURIComponent('product:'+item.product);
+ }
+ root.querySelectorAll('[data-niche]').forEach(button=>button.addEventListener('click',()=>{
+  activeNiche=button.dataset.niche;
+  root.querySelectorAll('[data-niche]').forEach(b=>{const selected=b===button;b.classList.toggle('is-active',selected);b.setAttribute('aria-pressed',String(selected));});
+  render();
+ }));
+ root.querySelectorAll('[data-goal]').forEach(button=>button.addEventListener('click',()=>{
+  activeGoal=button.dataset.goal;
+  root.querySelectorAll('[data-goal]').forEach(b=>{const selected=b===button;b.classList.toggle('is-active',selected);b.setAttribute('aria-pressed',String(selected));});
+  render();
+ }));
+ render();
+})();
+</script>
+
 </body>
 </html>
