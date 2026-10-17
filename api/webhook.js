@@ -111,6 +111,10 @@ module.exports = async function handler(req, res) {
       });
 
       const command = text.toLowerCase().trim().replace(/^\/+/, "").split(/\s+/)[0];
+      if (command === "id" || command === "chatid" || command === "мойid") {
+        await sendMessage(chatId, `ID этого чата: ${chatId}`);
+        return json(res, 200, { ok: true, command: "id" });
+      }
       if (command === "старт" || command === "start") {
         await sendMessage(chatId, "Привет! 👋 Это MAX Бизнес.\n\nПомогаем подобрать готового бота для бизнеса и автоматизировать работу.\n\nНапиши, для какой сферы нужен бот и что он должен делать — подберём подходящее решение.");
         return json(res, 200, { ok: true, command: "start" });
