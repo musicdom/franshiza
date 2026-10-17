@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101713">
+  <meta name="description" content="Готовые цифровые решения для бизнеса в MAX: боты, мини-приложения и автоматизация заявок, продаж и клиентского сервиса.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Франшиза — цифровые решения для бизнеса в MAX">
+  <meta property="og:description" content="Подберите бизнес-бота или мини-приложение под свою задачу. Демонстрации, состав решения и понятный следующий шаг.">
+  <title>Франшиза — цифровые решения для бизнеса в MAX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="Франшиза — главная"><span class="brand-mark">f.</span><span>franshiza<span class="brand-dot">/</span><small>MAX BUSINESS SOLUTIONS</small></span></a>
+    <nav class="nav" aria-label="Основная навигация"><a href="#catalog">Каталог</a><a href="#process">Как это работает</a><a href="#faq">Вопросы</a></nav>
+    <a class="button button-small button-dark" href="#catalog">Подобрать решение <span aria-hidden="true">↗</span></a>
+    <button class="menu-toggle" id="menu-toggle" aria-label="Открыть меню" aria-expanded="false">☰</button>
+  </header>
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="status-dot"></span> ЦИФРОВЫЕ ПРОДУКТЫ ДЛЯ БИЗНЕСА</div>
+        <h1>Ваш бизнес.<br><span>Новые возможности</span><br>в MAX.</h1>
+        <p class="hero-lead">Боты и мини-приложения, которые помогают принимать заявки, показывать товары, записывать клиентов и упрощать ежедневную работу.</p>
+        <div class="hero-actions"><a class="button button-accent" href="#catalog">Выбрать решение <span>↘</span></a><a class="button button-ghost" href="#showcase">Посмотреть демо <span>▷</span></a></div>
+        <div class="hero-footnote"><span class="tiny-line"></span> Подбор по бизнес-задаче, без лишней сложности</div>
+      </div>
+      <div class="hero-art" id="showcase" aria-label="Концептуальная демонстрация бизнес-интерфейса">
+        <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+        <div class="showcase-label"><span class="status-dot"></span> PRODUCT ECOSYSTEM <span>01 — 03</span></div>
+        <div class="mock-window mock-back"><div class="mock-top"><span class="mock-avatar">S</span><span><b>Studio / запись</b><small>Сценарий клиента</small></span><span class="mock-menu">···</span></div><div class="mock-lines"><i></i><i></i><i></i></div><div class="mock-pill">Выбрать время <b>↗</b></div></div>
+        <div class="mock-window mock-main"><div class="mock-top"><span class="max-symbol">M</span><span><b>Ваш бизнес в MAX</b><small>Демонстрационный интерфейс</small></span><span class="live-pill">DEMO</span></div><div class="mock-greeting">Добро пожаловать<br><strong>Чем можем помочь?</strong></div><div class="mock-action"><span class="action-icon">▦</span><span><b>Каталог товаров</b><small>Выбор и описание</small></span><span class="arrow">↗</span></div><div class="mock-action"><span class="action-icon">◷</span><span><b>Оставить заявку</b><small>Контакт без звонка</small></span><span class="arrow">↗</span></div><div class="mock-action"><span class="action-icon">▤</span><span><b>Мои обращения</b><small>Следующий шаг</small></span><span class="arrow">↗</span></div><div class="mock-bottom"><span></span><span></span><span></span><span></span></div></div>
+        <div class="float-note note-top"><span class="note-icon">↗</span><span><b>От задачи к решению</b><small>Понятный сценарий</small></span></div>
+        <div class="float-note note-bottom"><span class="note-check">✓</span><span><b>Прозрачный состав</b><small>Без скрытых обещаний</small></span></div>
+        <div class="hero-art-caption">Интерфейс-концепт · не действующий бот</div>
+      </div>
+      <div class="hero-index"><span>01</span><span class="index-line"></span><span>РЕШЕНИЯ ДЛЯ ПРЕДПРИНИМАТЕЛЕЙ</span></div>
+    </section>
+    <section class="trust-strip" aria-label="Принципы платформы"><div><span>01</span><b>Под задачу</b><small>Сначала бизнес-цель</small></div><div><span>02</span><b>Понятный состав</b><small>Что входит в решение</small></div><div><span>03</span><b>Честный статус</b><small>Готовность без приукрашивания</small></div><div><span>04</span><b>Гибкий запуск</b><small>От продукта до адаптации</small></div></section>
+    <section class="catalog-section section-wrap" id="catalog">
+      <div class="section-heading"><div><div class="eyebrow">КАТАЛОГ РЕШЕНИЙ <span class="eyebrow-line"></span></div><h2>Что нужно <span>вашему бизнесу?</span></h2><p>Выберите отрасль или найдите решение по конкретной задаче.</p></div><div class="catalog-count"><strong id="result-count">24</strong><span>направления<br>для старта</span></div></div>
+      <div class="catalog-tools">
+        <label class="searchbox"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Например, запись, заказы, CRM…" aria-label="Поиск по каталогу"><kbd>⌘ K</kbd></label>
+        <label class="select-wrap"><span class="sr-only">Категория</span><select id="category-filter"><option value="">Все отрасли</option></select></label>
+        <label class="select-wrap"><span class="sr-only">Тип решения</span><select id="type-filter"><option value="">Все типы</option><option>Бот</option><option>Мини-приложение</option><option>Автоматизация</option><option>Каталог</option></select></label>
+        <label class="select-wrap"><span class="sr-only">Статус</span><select id="status-filter"><option value="">Любой статус</option><option value="concept">Концепция</option><option value="development">В разработке</option><option value="ready">Готов</option></select></label>
+        <button class="reset-button" id="reset-filters">Сбросить <span>↺</span></button>
+      </div>
+      <div class="active-filters" id="active-filters" aria-live="polite"></div>
+      <div class="product-grid" id="product-grid"></div>
+      <div class="empty-state" id="empty-state" hidden><span>⌕</span><h3>Ничего не найдено</h3><p>Попробуйте изменить запрос или сбросить фильтры.</p><button class="button button-dark" id="empty-reset">Сбросить фильтры</button></div>
+      <div class="catalog-footer"><span>Не нашли подходящий сценарий?</span><button class="text-link" data-request="custom-solution">Обсудить индивидуальное решение <span>↗</span></button></div>
+    </section>
+    <section class="process-section" id="process"><div class="section-wrap"><div class="eyebrow">ПРОСТОЙ ПУТЬ К ЗАПУСКУ <span class="eyebrow-line"></span></div><div class="process-heading"><h2>От задачи —<br><span>к работающему сценарию.</span></h2><p>Понимаем, что нужно бизнесу, согласуем состав и только потом переходим к внедрению.</p></div><div class="process-grid"><article><span class="step-number">01 / ОБСУЖДЕНИЕ</span><div class="step-symbol">⌕</div><h3>Определяем задачу</h3><p>Разбираемся, что нужно улучшить: заявки, запись, продажи или обслуживание.</p></article><article><span class="step-number">02 / ПОДБОР</span><div class="step-symbol">◫</div><h3>Выбираем формат</h3><p>Показываем подходящий сценарий, состав решения и доступные демонстрации.</p></article><article><span class="step-number">03 / ВНЕДРЕНИЕ</span><div class="step-symbol">↗</div><h3>Согласуем запуск</h3><p>Уточняем интеграции, сроки и стоимость до начала работ.</p></article></div></div></section>
+    <section class="cta-section section-wrap"><div class="cta-panel"><div><div class="eyebrow">ЕСТЬ ЗАДАЧА — НАЙДЁМ ФОРМАТ</div><h2>Не подстраивайте бизнес<br>под технологию.</h2><p>Подберём отправную точку под ваши процессы и ограничения.</p></div><button class="button button-accent" data-request="custom-solution">Обсудить задачу <span>↗</span></button><div class="cta-decoration">f.</div></div></section>
+    <section class="faq-section section-wrap" id="faq"><div><div class="eyebrow">ЧАСТЫЕ ВОПРОСЫ <span class="eyebrow-line"></span></div><h2>Перед тем как<br><span>начать.</span></h2></div><div class="faq-list"><details><summary>Все решения уже готовы к запуску?<span>+</span></summary><p>Нет. Статус указан в каждой карточке: «Готов», «В разработке» или «Концепция». Концепция описывает предполагаемый сценарий, а не существующий работающий продукт.</p></details><details><summary>Сколько стоит внедрение?<span>+</span></summary><p>Стоимость зависит от состава, интеграций и требований бизнеса. Пока цена не согласована, указано «Стоимость по запросу» — фиксированная цена не выдумывается.</p></details><details><summary>Можно адаптировать решение под мою компанию?<span>+</span></summary><p>Да, индивидуальная адаптация может быть отдельным этапом. Конкретный объём работ и доступность интеграций согласуются до старта.</p></details><details><summary>Заявка уже отправляется менеджеру?<span>+</span></summary><p>На текущем этапе серверный приём заявок не подключён. Форма работает в демонстрационном режиме и прямо сообщает об этом; введённые данные не отправляются и не сохраняются.</p></details><details><summary>Это официальная интеграция с MAX?<span>+</span></summary><p>Витрина подготовлена для предложения решений под MAX, но подключение каждого бота, Mini App и внешнего сервиса требует отдельной технической проверки. Наличие интеграции не заявляется без проверки.</p></details></div></section>
+  </main>
+  <footer class="footer"><a class="brand brand-footer" href="./"><span class="brand-mark">f.</span><span>franshiza<small>MAX BUSINESS SOLUTIONS</small></span></a><span>Каталог цифровых решений для бизнеса</span><a href="#catalog">Вернуться к каталогу ↑</a><small class="footer-note">Демонстрационная версия платформы. Состав и готовность продуктов указаны в карточках.</small></footer>
+  <dialog class="product-dialog" id="product-dialog" aria-labelledby="dialog-title"><button class="dialog-close" id="dialog-close" aria-label="Закрыть">×</button><div id="dialog-content"></div></dialog>
+  <dialog class="request-dialog" id="request-dialog" aria-labelledby="request-title"><button class="dialog-close" id="request-close" aria-label="Закрыть">×</button><div class="eyebrow">СЛЕДУЮЩИЙ ШАГ</div><h2 id="request-title">Обсудим вашу задачу</h2><p class="dialog-intro">Заполните поля, чтобы подготовить запрос. Серверный приём заявок пока не подключён: данные не будут отправлены или сохранены.</p><form id="request-form" novalidate><input type="hidden" id="request-product"><label>Ваше имя<input id="customer-name" name="name" autocomplete="name" required maxlength="100" placeholder="Как к вам обращаться?"></label><label>Контакт для связи<input id="customer-contact" name="contact" required maxlength="200" placeholder="Телефон, MAX или email"></label><label>Бизнес или отрасль<input id="customer-business" name="business" maxlength="160" placeholder="Например, студия красоты"></label><label>Что нужно сделать?<textarea id="customer-comment" name="comment" rows="3" maxlength="1500" placeholder="Кратко опишите задачу"></textarea></label><label class="consent"><input type="checkbox" id="customer-consent" required><span>Я согласен(на) на обработку указанных данных для подготовки обращения. <strong>Демонстрационная форма: фактическая отправка не производится.</strong></span></label><p class="form-error" id="form-error" role="alert"></p><button class="button button-accent form-submit" type="submit">Подготовить запрос <span>↗</span></button><div class="form-result" id="form-result" role="status" hidden></div></form></dialog>
+</body>
+</html>
