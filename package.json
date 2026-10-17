@@ -4,7 +4,7 @@
   "private": true,
   "description": "Static storefront for business solution concepts for MAX",
   "scripts": {
-    "check": "node --check app.js",
+    "check": "node --check app.js && node --check admin.js && node --check api/requests.js && node --check api/admin/login.js && node --check api/admin/logout.js && node --check api/admin/requests.js && node --check api/admin/request.js && node --check lib/server/config.js && node --check lib/server/http.js && node --check lib/server/store.js && node --check lib/server/notify-max.js",
     "test": "node --test",
     "verify": "npm run check && npm test"
   },
