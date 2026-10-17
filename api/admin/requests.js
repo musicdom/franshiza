@@ -1,6 +1,6 @@
-const { getConfig } = require("../_lib/config");
-const { json, method, requireAdmin } = require("../_lib/http");
-const { listRequests } = require("../_lib/store");
+const { getConfig } = require("../../lib/server/config");
+const { json, method, requireAdmin } = require("../../lib/server/http");
+const { listRequests } = require("../../lib/server/store");
 
 module.exports = async function handler(req, res) {
   if (!method(req, res, ["GET"])) return;
