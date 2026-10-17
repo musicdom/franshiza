@@ -28,7 +28,10 @@ module.exports = async function handler(req, res) {
     return json(res, 503, { ok: false, error: "Set WEBHOOK_BASE_URL to the stable HTTPS Vercel domain" });
   }
 
-  const host = configuredHost.replace(/^https?:\\/\\//, "").replace(/\\/$/, "");
+  let host = configuredHost.trim();
+  if (host.startsWith("https://")) host = host.slice(8);
+  if (host.startsWith("http://")) host = host.slice(7);
+  if (host.endsWith("/")) host = host.slice(0, -1);
   const webhookUrl = `https://${host}/api/webhook`;
 
   try {
