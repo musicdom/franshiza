@@ -1,0 +1,14 @@
+{
+  "name": "franshiza-max-business-solutions",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Static storefront for business solution concepts for MAX",
+  "scripts": {
+    "check": "node --check app.js",
+    "test": "node --test",
+    "verify": "npm run check && npm test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
