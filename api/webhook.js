@@ -83,6 +83,7 @@ const welcomeKeyboard = [{
   payload: { buttons: [
     [{ type: "callback", text: "🛍 Каталог решений", payload: String("🛍 Каталог решений") }, { type: "callback", text: "🎯 Подобрать бота", payload: String("🎯 Подобрать бота") }],
     [{ type: "callback", text: "👀 Демонстрации", payload: String("👀 Демонстрации") }, { type: "callback", text: "💬 Задать вопрос", payload: String("💬 Задать вопрос") }],
+    [{ type: "callback", text: "🚀 Запуск / перепродажа", payload: String("🚀 Запуск / перепродажа") }],
     [{ type: "callback", text: "📦 Мои заявки", payload: String("📦 Мои заявки") }, { type: "callback", text: "🔔 Уведомления", payload: String("🔔 Уведомления") }],
     [{ type: "open_app", text: "🌐 Открыть сайт-каталог", web_app: "se14711525_bot" }]
   ] }
@@ -234,7 +235,7 @@ module.exports = async function handler(req, res) {
         return json(res, 200, { ok: true, product: productMatch.id });
       }
       await sales.recordEvent({ event: "bot_started", chat_id: String(chatId), product_id: product || null });
-      const greeting = "Привет! 👋 Это «Франшиза — готовые идеи для MAX».\n\nЗдесь можно выбрать готовое решение для бизнеса, посмотреть пример работы или подобрать бота под свою задачу.\n\nС чего начнём?";
+      const greeting = "Привет! 👋 Это «Франшиза — готовые идеи для MAX».\n\nЗдесь вы можете выбрать готового бота для малого бизнеса, обсудить самостоятельный запуск или узнать условия перепродажи решений своим клиентам. Покажу возможности и ограничения, а заявку сохраню и передам менеджеру.\n\nС чего начнём?";
       await sendMessage(chatId, greeting, welcomeKeyboard);
       return json(res, 200, { ok: true });
     }
