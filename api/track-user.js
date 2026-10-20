@@ -104,7 +104,7 @@ module.exports = async function handler(req, res) {
     } catch (storageError) {
       console.error("TRACK USER storage warning:", storageError.message);
     }
-    const profile = identified ? "Кнопка ниже открывает профиль MAX" : "MAX не передал ID пользователя";
+    const profile = identified ? "[Открыть профиль](max://user/" + encodeURIComponent(id) + ")" : "MAX не передал ID пользователя";
     const text = [
       identified ? (returning ? "🔄 Повторное открытие мини-приложения «Гармоника»" : "🎵 Пользователь открыл мини-приложение «Гармоника»") : "⚠️ Открытие мини-приложения «Гармоника»: профиль MAX недоступен",
       "",
@@ -129,7 +129,7 @@ module.exports = async function handler(req, res) {
       token,
       method: "POST",
       apiPath: "/messages?" + recipientParam + "=" + encodeURIComponent(adminId),
-      body: { text, ...(identified ? { attachments: [{ type: "inline_keyboard", payload: { buttons: [[{ type: "link", text: "🔗 Открыть профиль MAX", url: "max://user/" + encodeURIComponent(id) }]] } }] } : {}) }
+      body: { text }
     });
     if (!sent.ok) {
       console.error("TRACK USER MAX send failed:", sent.status, String(sent.raw || "").slice(0, 500));
