@@ -167,6 +167,10 @@ async function fetchLegalPreview(t){
  t.previewUrl=data.previewUrl;
  t.previewTitle=data.title||t.title;
  t.previewArtist=data.artist||t.artist;
+ t.fullTrack=Boolean(data.fullTrack);
+ t.audioSource=data.source||"";
+ t.sourceUrl=data.sourceUrl||"";
+ t.licenseUrl=data.licenseUrl||"";
  return t;
 }
 async function preloadLegalPreviews(){
@@ -188,20 +192,20 @@ async function playAt(i){
  }
  if(t.previewUrl){
    audio.pause();audio.src=t.previewUrl;audio.load();
-   try{await audio.play();playing=true;updatePlayback();$("miniArtist").textContent=t.artist+" · лицензированное превью";$("songArtist").textContent=t.artist+" · лицензированное превью";toast("Запущено аудиопревью прямо из ленты.");}
+   try{await audio.play();playing=true;updatePlayback();$("miniArtist").textContent=t.artist+(t.fullTrack?" · полная запись":" · аудиопревью");$("songArtist").textContent=t.artist+(t.fullTrack?" · полная запись":" · аудиопревью");toast(t.fullTrack?"Запущена полная запись из открытого каталога.":"Запущено 30-секундное аудиопревью.");}
    catch(e){playing=false;updatePlayback();toast("WebView не запустил аудио. Нажми ▶ ещё раз.");}
    return;
  }
  playing=false;updatePlayback();
- toast("Готовлю легальное превью. Через пару секунд нажми песню ещё раз.");
+ toast("Ищу полную запись с открытой лицензией. Если её нет, будет доступно короткое превью.");
  fetchLegalPreview(t).then(async()=>{
    renderCatalog($("catalogSearch").value);
    audio.pause();audio.src=t.previewUrl;audio.load();
    try{
      await audio.play();playing=true;updatePlayback();
-     $("miniArtist").textContent=t.artist+" · лицензированное превью";
-     $("songArtist").textContent=t.artist+" · лицензированное превью";
-     toast("Превью загружено и запущено.");
+     $("miniArtist").textContent=t.artist+(t.fullTrack?" · полная запись":" · аудиопревью");
+     $("songArtist").textContent=t.artist+(t.fullTrack?" · полная запись":" · аудиопревью");
+     toast(t.fullTrack?"Полная запись загружена и запущена.":"Запущено 30-секундное превью.");
    }catch{
      toast("Превью загружено. Нажми песню ещё раз, если WebView заблокировал запуск.");
    }
@@ -243,7 +247,7 @@ function renderCatalog(query=""){
    const meta=document.createElement("span");meta.className="catalog-meta";
    const name=document.createElement("span");name.className="catalog-name";name.textContent=t.title;
    const artist=document.createElement("span");artist.className="catalog-artist";artist.textContent=t.artist;
-   const type=document.createElement("span");type.className="catalog-type";type.textContent=t.src?"▶ СВОБОДНЫЙ АУДИОПОТОК":(t.previewUrl?"▶ ЛЕГАЛЬНОЕ ПРЕВЬЮ":"♫ ИЩЕМ ДОСТУПНЫЙ АУДИОИСТОЧНИК");
+   const type=document.createElement("span");type.className="catalog-type";type.textContent=t.src?"▶ СВОБОДНЫЙ АУДИОПОТОК":(t.previewUrl?(t.fullTrack?"▶ ПОЛНАЯ ЗАПИСЬ":"▶ АУДИОПРЕВЬЮ"):"♫ ИЩЕМ ДОСТУПНЫЙ АУДИОИСТОЧНИК");
    meta.append(name,artist,type);const action=document.createElement("span");action.textContent="▶";action.style.color="var(--accent)";
    b.append(cover,meta,action);b.addEventListener("click",async()=>{await playAt(tracks.findIndex(x=>x.id===t.id));closeCatalog();});root.append(b);
  });
