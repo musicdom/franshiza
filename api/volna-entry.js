@@ -5,7 +5,7 @@ function json(res, status, body) {
   res.end(JSON.stringify(body));
 }
 function clean(value, max = 200) {
-  return typeof value === "string" ? value.replace(/[\\r\\n\\t]+/g, " ").trim().slice(0, max) : "";
+  return typeof value === "string" ? value.split(String.fromCharCode(10)).join(" ").split(String.fromCharCode(13)).join(" ").split(String.fromCharCode(9)).join(" ").trim().slice(0, max) : "";
 }
 function escapeText(value) {
   return String(value || "").replace(/[&<>]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[ch]));
