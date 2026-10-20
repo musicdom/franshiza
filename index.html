@@ -215,7 +215,7 @@ async function togglePlayback(){
  const t=current();
  if(audio.paused){
    try{await audio.play();playing=true;updatePlayback()}
-   catch(e){await playAt(index)}
+   catch(e){toast("Нажми ▶ ещё раз, чтобы разрешить воспроизведение.");}
  }else{audio.pause();playing=false;updatePlayback()}
 }
 function openSheet(){sheetOpen=true;document.body.classList.add("sheet-open");$("songSheet").setAttribute("aria-hidden","false")}
@@ -285,7 +285,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetOpen)closeShee
  }
  function notify(user){
    return fetch("/api/track-user",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user:user||{name:"Профиль MAX недоступен"}}),keepalive:true,cache:"no-store"})
-     .then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.error||("HTTP "+r.status));console.info("[ВОЛНА] Уведомление принято MAX API");return d;})
+     .then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error((d.error||"Ошибка сервера")+(d.status?" (MAX HTTP "+d.status+")":"")+" · HTTP "+r.status);console.info("[ВОЛНА] Уведомление принято MAX API");return d;})
      .catch(e=>{console.error("[ВОЛНА] Уведомление не отправлено:",e);toast("Уведомление админу не отправлено: "+(e.message||"ошибка сервера"));});
  }
  let sent=false,tries=0;
