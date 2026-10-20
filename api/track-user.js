@@ -34,10 +34,11 @@ module.exports = async function handler(req, res) {
     res.setHeader("Allow", "POST");
     return json(res, 405, { ok: false, error: "Method not allowed" });
   }
-  const user = req.body && req.body.user && typeof req.body.user === "object" ? req.body.user : null;
-  if (!user || !(user.id || user.user_id)) return json(res, 400, { ok: false, error: "MAX user profile is unavailable" });
-  const id = clean(String(user.id || user.user_id), 80);
-  const name = clean([user.first_name, user.last_name].filter(Boolean).join(" ") || user.name || user.username || "Пользователь MAX", 120);
+  const supplied = req.body && req.body.user && typeof req.body.user === "object" ? req.body.user : null;
+  const user = supplied || {};
+  const id = clean(String(user.id || user.user_id || ""), 80);
+  const identified = Boolean(id);
+  const name = clean([user.first_name, user.last_name].filter(Boolean).join(" ") || user.name || user.username || (identified ? "Пользователь MAX" : "Профиль MAX не передан"), 120);
   const username = clean(user.username, 80);
   const adminId = String(process.env.MAX_ADMIN_USER_ID || process.env.MAX_OWNER_USER_ID || "163701646");
   const token = process.env.MAX_BOT_TOKEN;
@@ -48,7 +49,7 @@ module.exports = async function handler(req, res) {
   try {
     let returning = false;
     try {
-      if (getRedisConfig()) {
+      if (identified && getRedisConfig()) {
         const key = "volna:user:tracked:" + id;
         returning = Boolean(await redis(["GET", key]));
         await redis(["SET", key, JSON.stringify({ id, name, username: username || null, last_opened_at: new Date().toISOString() }), "EX", "31536000"]);
@@ -56,12 +57,12 @@ module.exports = async function handler(req, res) {
     } catch (storageError) {
       console.error("TRACK USER storage warning:", storageError.message);
     }
-    const profile = "[Открыть профиль](max://user/" + encodeURIComponent(id) + ")";
+    const profile = identified ? "[Открыть профиль](max://user/" + encodeURIComponent(id) + ")" : "MAX не передал ID пользователя";
     const text = [
-      returning ? "🔄 Повторное открытие мини-приложения «Волна»" : "🎵 Новый пользователь открыл мини-приложение «Волна»",
+      identified ? (returning ? "🔄 Повторное открытие мини-приложения «Волна»" : "🎵 Пользователь открыл мини-приложение «Волна»") : "⚠️ Открытие мини-приложения «Волна»: профиль MAX недоступен",
       "",
       "👤 Имя: " + escapeText(name),
-      "🆔 ID: " + escapeText(id),
+      "🆔 ID: " + escapeText(id || "не получен"),
       "🔗 Профиль: " + profile,
       "📛 " + (username ? "@" + escapeText(username.replace(/^@/, "")) : "username отсутствует"),
       "🕐 " + new Date().toLocaleString("ru-RU", { timeZone: "Europe/Moscow" })
