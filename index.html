@@ -37,6 +37,8 @@
 #grabber{touch-action:none;cursor:grab}
 @media(min-width:600px){.catalog-panel{border-left:1px solid #ffffff15;border-right:1px solid #ffffff15}}
 
+/* Не блокируем приложение заставкой: сразу показываем главный экран. */
+.gate{display:none!important}
 </style>
 </head>
 <body>
@@ -48,7 +50,7 @@
   <div id="gateStatus" class="gate-status" aria-live="polite">Удерживай до завершения круга</div>
   <div class="gate-legal">Данные профиля передаются боту только если доступны мини-приложению.</div>
 </section>
-<div id="musicApp" hidden>
+<div id="musicApp">
 <main class="app">
   <header class="top"><div class="brand">ВОЛНА<b>.</b></div><button type="button" class="catalog-trigger" id="openCatalog">♫ Каталог</button><div class="profile"><div class="avatar" id="profileAvatar"><span id="profileInitial">♫</span></div><div class="profile-name" id="profileName">Твой аккаунт</div></div></header>
   <section class="center">
@@ -212,7 +214,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetOpen)closeShee
    if(tracked)return;
    const u=getUser();
    if(u&&(u.id||u.user_id)){tracked=true;const name=u.name||[u.first_name,u.last_name].filter(Boolean).join(" ")||u.username||"Твой аккаунт";$("profileName").textContent=name;$("profileInitial").textContent=(name[0]||"♫").toUpperCase();const photo=u.photo_url||u.avatar_url;if(photo){const img=document.createElement("img");img.src=photo;img.alt="";$("profileAvatar").replaceChildren(img)}notify(u);return}
-   tries++;if(tries<20)setTimeout(trackOnOpen,300);else console.warn("[ВОЛНА] MAX не передал профиль пользователя; уведомление с ID не отправлено.");
+   tries++;if(tries<20)setTimeout(trackOnOpen,300);else { console.warn("[ВОЛНА] MAX не передал профиль пользователя; отправляем хотя бы событие открытия."); notify({name:"Профиль MAX недоступен",username:"",id:""}); }
  }
  trackOnOpen();
 })();
