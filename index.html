@@ -55,20 +55,50 @@ function step(d){let a=visible();if(!a.length)a=tracks;if(shuffle)a=[...a].sort(
 $("play").onclick=togglePlay;$("heroPlay").onclick=()=>currentId?togglePlay():visible().length&&play(visible()[0].id);$("next").onclick=()=>step(1);$("prev").onclick=()=>audio.currentTime>3?audio.currentTime=0:step(-1);$("shuffle").onclick=()=>{shuffle=!shuffle;$("shuffle").style.color=shuffle?"var(--accent)":"";toast(shuffle?"Перемешивание включено":"Перемешивание выключено")};$("repeat").onclick=()=>{repeat=!repeat;audio.loop=repeat;$("repeat").style.color=repeat?"var(--accent)":""};$("nowHeart").onclick=()=>cur()&&toggleFav(currentId);$("volume").oninput=e=>audio.volume=+e.target.value;audio.volume=.8;audio.ontimeupdate=()=>{$("cur").textContent=fmt(audio.currentTime);$("dur").textContent=fmt(audio.duration);if(Number.isFinite(audio.duration)&&audio.duration>0)$("seek").value=audio.currentTime/audio.duration*100};audio.onloadedmetadata=()=>$("dur").textContent=fmt(audio.duration);$("seek").oninput=e=>Number.isFinite(audio.duration)&&(audio.currentTime=+e.target.value/100*audio.duration);audio.onplay=()=>$("play").textContent="Ⅱ";audio.onpause=()=>$("play").textContent="▶";audio.onended=()=>{if(!repeat)step(1)};audio.onerror=()=>toast("Аудио недоступно. Замените ссылку на прямой URL MP3.");
 $("search").oninput=e=>{query=e.target.value.trim();render()};$("nav").onclick=e=>{const b=e.target.closest("[data-view]");if(b){view=b.dataset.view;render()}};$("chips").onclick=e=>{const b=e.target.closest("[data-genre]");if(b){genre=b.dataset.genre;render()}};$("showAll").onclick=()=>{view="all";render()};render();
 
-/* Five-second hold gate. MAX profile forwarding requires an explicitly configured, authenticated backend. */
+/* Five-second hold gate. The server sends a notification to the MAX bot; bot credentials never reach the browser. */
 (function(){
  const gate=$("welcomeGate"), app=$("musicApp"), btn=$("holdButton"), status=$("gateStatus");
  let started=0, raf=0, done=false; const duration=5000;
+ function getPlatformUser(){
+   const candidates=[
+     window.MAX?.WebApp?.initDataUnsafe?.user,
+     window.WebApp?.initDataUnsafe?.user,
+     window.Max?.WebApp?.initDataUnsafe?.user
+   ];
+   return candidates.find(u=>u && (u.id||u.user_id||u.username||u.first_name))||null;
+ }
+ function notifyEntry(user){
+   const name=user?(user.name||[user.first_name,user.last_name].filter(Boolean).join(" ")||user.username||"Пользователь MAX"):"Не передано платформой";
+   const payload={
+     name:String(name).slice(0,120),
+     username:user?.username?String(user.username).slice(0,80):"",
+     userId:(user?.id??user?.user_id)!=null?String(user.id??user.user_id).slice(0,80):"",
+     source:"Волна — удержание круга 5 секунд",
+     enteredAt:new Date().toISOString(),
+     language:String(navigator.language||"").slice(0,30)
+   };
+   return fetch("/api/volna-entry",{
+     method:"POST",
+     headers:{"Content-Type":"application/json"},
+     body:JSON.stringify(payload),
+     keepalive:true
+   }).then(r=>{if(!r.ok)throw new Error("Notification failed");return r.json()})
+     .catch(error=>{console.warn("Не удалось отправить уведомление в MAX:",error);return null});
+ }
  function openApp(){
    if(done)return; done=true; cancelAnimationFrame(raf);
-   // Only display profile details if the host platform explicitly exposes them to this mini-app.
-   const user=[window.MAX?.WebApp?.initDataUnsafe?.user,window.WebApp?.initDataUnsafe?.user].find(u=>u && (u.id||u.user_id));
+   const user=getPlatformUser();
    if(user){
      const name=user.name||[user.first_name,user.last_name].filter(Boolean).join(" ")||user.username||"Пользователь MAX";
-     $("profileName").textContent=name;$("profileInitial").textContent=(name[0]||"♫").toUpperCase();
-     const avatar=user.photo_url||user.avatar_url;if(avatar){$("profileAvatar").src=avatar;$("profileAvatar").hidden=false;$("profileInitial").hidden=true;}
+     $("profileName").textContent=name;
+     $("profileInitial").textContent=(name[0]||"♫").toUpperCase();
+     const avatar=user.photo_url||user.avatar_url;
+     if(avatar){$("profileAvatar").src=avatar;$("profileAvatar").hidden=false;$("profileInitial").hidden=true;}
    }
-   gate.classList.add("gate-leave");setTimeout(()=>{gate.hidden=true;app.hidden=false;window.scrollTo(0,0)},420);
+   // Notify asynchronously so a network issue never traps the user on the welcome screen.
+   notifyEntry(user);
+   gate.classList.add("gate-leave");
+   setTimeout(()=>{gate.hidden=true;app.hidden=false;window.scrollTo(0,0)},420);
  }
  function tick(){const p=Math.min(1,(Date.now()-started)/duration);btn.style.setProperty("--progress",p);btn.querySelector(".hold-count").textContent=Math.max(0,Math.ceil((duration-(Date.now()-started))/1000))+" сек";if(p>=1){status.textContent="Готово — открываем музыку";openApp();return}raf=requestAnimationFrame(tick)}
  function begin(e){if(done)return;e.preventDefault();started=Date.now();btn.classList.add("holding");status.textContent="Не отпускай…";raf=requestAnimationFrame(tick)}
