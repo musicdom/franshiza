@@ -174,10 +174,8 @@ async function fetchLegalPreview(t){
  return t;
 }
 async function preloadLegalPreviews(){
- const candidates=tracks.filter(t=>t.popular);
- let cursor=0;
- const worker=async()=>{while(cursor<candidates.length){const t=candidates[cursor++];try{await fetchLegalPreview(t)}catch{} }};
- await Promise.all([worker(),worker(),worker()]);
+ // Не делаем десятки сетевых запросов при открытии приложения.
+ // Полный поиск запускается только когда пользователь выбирает композицию.
  renderCatalog($("catalogSearch").value);
 }
 async function playAt(i){
