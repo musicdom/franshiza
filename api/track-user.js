@@ -43,18 +43,28 @@ module.exports = async function handler(req, res) {
   const identified = Boolean(id);
   const name = clean([user.first_name, user.last_name].filter(Boolean).join(" ") || user.name || user.username || (identified ? "Пользователь MAX" : "Профиль MAX не передан"), 120);
   const username = clean(user.username, 80);
-  let adminId = clean(process.env.MAX_ADMIN_USER_ID || process.env.MAX_OWNER_USER_ID || process.env.MAX_ADMIN_CHAT_ID || "", 80);
-  const token = clean(process.env.MAX_BOT_TOKEN || "", 500);
-  if (!token) {
-    console.error("TRACK USER: MAX_BOT_TOKEN is not configured");
-    return json(res, 503, { ok: false, error: "На сервере не настроен MAX_BOT_TOKEN" });
-  }
-  if (!adminId) {
+  let adminId = "";
+  let recipientParam = "";
+  const configuredUserId = clean(process.env.MAX_ADMIN_USER_ID || process.env.MAX_OWNER_USER_ID || "", 80);
+  const configuredChatId = clean(process.env.MAX_ADMIN_CHAT_ID || "", 80);
+  if (configuredUserId) {
+    adminId = configuredUserId;
+    recipientParam = "user_id";
+  } else if (configuredChatId) {
+    adminId = configuredChatId;
+    recipientParam = "chat_id";
+  }  if (!adminId) {
     try {
       const saved = await redis(["GET", "maxbiz:admin:recipient"]);
       if (saved) {
         const recipient = typeof saved === "string" ? JSON.parse(saved) : saved;
-        adminId = clean(String(recipient.user_id || recipient.chat_id || ""), 80);
+        if (recipient.chat_id) {
+          adminId = clean(String(recipient.chat_id), 80);
+          recipientParam = "chat_id";
+        } else if (recipient.user_id) {
+          adminId = clean(String(recipient.user_id), 80);
+          recipientParam = "user_id";
+        }
       }
     } catch (lookupError) {
       console.error("TRACK USER: saved administrator lookup failed:", lookupError.message);
@@ -77,7 +87,7 @@ module.exports = async function handler(req, res) {
     }
     const profile = identified ? "[Открыть профиль](max://user/" + encodeURIComponent(id) + ")" : "MAX не передал ID пользователя";
     const text = [
-      identified ? (returning ? "🔄 Повторное открытие мини-приложения «Гармоника»" : "🎵 Пользователь открыл мини-приложение «Волна»") : "⚠️ Открытие мини-приложения «Волна»: профиль MAX недоступен",
+      identified ? (returning ? "🔄 Повторное открытие мини-приложения «Гармоника»" : "🎵 Пользователь открыл мини-приложение «Гармоника»") : "⚠️ Открытие мини-приложения «Гармоника»: профиль MAX недоступен",
       "",
       "👤 Имя: " + escapeText(name),
       "🆔 ID: " + escapeText(id || "не получен"),
@@ -88,7 +98,7 @@ module.exports = async function handler(req, res) {
     const sent = await requestMax({
       token,
       method: "POST",
-      apiPath: "/messages?user_id=" + encodeURIComponent(adminId),
+      apiPath: "/messages?" + recipientParam + "=" + encodeURIComponent(adminId),
       body: { text }
     });
     if (!sent.ok) {
