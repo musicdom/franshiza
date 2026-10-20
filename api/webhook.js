@@ -30,6 +30,20 @@ async function redisCommand(parts) {
   return true;
 }
 
+async function getRedisValue(key) {
+  const redis = getRedisConfig();
+  if (!redis) throw new Error("Lead storage is not configured");
+  const response = await fetch(redis.url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${redis.token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(["GET", key])
+  });
+  if (!response.ok) throw new Error("Redis request failed");
+  const result = await response.json();
+  if (result.error) throw new Error("Redis command failed");
+  return result.result || null;
+}
+
 async function saveLead(lead) {
   if (!getRedisConfig()) throw new Error("Lead storage is not configured");
   const id = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -261,7 +275,49 @@ module.exports = async function handler(req, res) {
 
       try { await sales.recordEvent({ event: "message_received", chat_id: String(chatId), user_id: sender.user_id ? String(sender.user_id) : null }); } catch (eventError) { console.error("Event recording failed"); }
 
-      const command = text.toLowerCase().trim().replace(/^\/+/, "").split(/\s+/)[0];
+      const commandParts = text.trim().split(/\s+/);
+      const command = commandParts[0].toLowerCase().replace(/^\/+/, "");
+      if (command === "admin_setup") {
+        const setupSecret = process.env.MAX_ADMIN_SETUP_SECRET;
+        const suppliedSecret = commandParts[1] || "";
+        const senderId = sender.user_id ? String(sender.user_id) : "";
+        if (!setupSecret) {
+          await sendMessage(chatId, "Настройка администратора пока не включена: добавьте MAX_ADMIN_SETUP_SECRET в переменные окружения Vercel.");
+          return json(res, 503, { ok: false, error: "MAX_ADMIN_SETUP_SECRET is not configured" });
+        }
+        if (!senderId || suppliedSecret.length < 16 || suppliedSecret !== setupSecret) {
+          await sendMessage(chatId, "Команда настройки не подтверждена. Используйте /admin_setup и секретный ключ настройки, который задан владельцем проекта в Vercel.");
+          return json(res, 403, { ok: false, error: "Invalid administrator setup credentials" });
+        }
+        try {
+          const currentRaw = await getRedisValue("maxbiz:admin:recipient");
+          if (currentRaw) {
+            const current = JSON.parse(currentRaw);
+            if (String(current.user_id) !== senderId) {
+              await sendMessage(chatId, "Администратор уже настроен. Повторная привязка из этого аккаунта запрещена.");
+              return json(res, 409, { ok: false, error: "Administrator already configured" });
+            }
+            await sendMessage(chatId, "✅ Этот аккаунт уже настроен как администратор «Гармоники». Уведомления будут приходить сюда.");
+            return json(res, 200, { ok: true, admin: "already_configured" });
+          }
+          const recipient = JSON.stringify({ user_id: senderId, chat_id: String(chatId), name: cleanText(sender.name || sender.first_name || "", 120), configured_at: new Date().toISOString() });
+          const redis = getRedisConfig();
+          const response = await fetch(redis.url, { method: "POST", headers: { Authorization: `Bearer ${redis.token}`, "Content-Type": "application/json" }, body: JSON.stringify(["SET", "maxbiz:admin:recipient", recipient, "NX"]) });
+          if (!response.ok) throw new Error("Redis request failed");
+          const saved = await response.json();
+          if (saved.error) throw new Error("Redis command failed");
+          if (saved.result !== "OK") {
+            await sendMessage(chatId, "Администратор уже настроен другим аккаунтом. Новая привязка отклонена.");
+            return json(res, 409, { ok: false, error: "Administrator already configured" });
+          }
+          await sendMessage(chatId, "✅ Администратор «Гармоники» привязан к этому аккаунту. Теперь уведомления об открытиях мини-приложения и новых заявках будут отправляться сюда.");
+          return json(res, 200, { ok: true, admin: "configured" });
+        } catch (error) {
+          console.error("MAX admin setup failed:", error && error.message ? error.message : "unknown error");
+          await sendMessage(chatId, "Не удалось сохранить администратора. Проверьте подключение Redis/KV в Vercel и попробуйте ещё раз.");
+          return json(res, 503, { ok: false, error: "Unable to store administrator" });
+        }
+      }
       if (command === "id" || command === "chatid" || command === "мойid") {
         await sendMessage(chatId, `ID этого чата: ${chatId}`);
         return json(res, 200, { ok: true, command: "id" });
