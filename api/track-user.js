@@ -47,6 +47,11 @@ module.exports = async function handler(req, res) {
   let recipientParam = "";
   const configuredUserId = clean(process.env.MAX_ADMIN_USER_ID || process.env.MAX_OWNER_USER_ID || "", 80);
   const configuredChatId = clean(process.env.MAX_ADMIN_CHAT_ID || "", 80);
+  const token = clean(process.env.MAX_BOT_TOKEN || "", 500);
+  if (!token) {
+    console.error("TRACK USER: MAX_BOT_TOKEN is not configured");
+    return json(res, 503, { ok: false, error: "На сервере не настроен MAX_BOT_TOKEN" });
+  }
   if (configuredUserId) {
     adminId = configuredUserId;
     recipientParam = "user_id";
