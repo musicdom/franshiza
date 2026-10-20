@@ -198,10 +198,21 @@ async function playAt(i){
  }
  playing=false;updatePlayback();
  toast("Готовлю легальное превью. Через пару секунд нажми песню ещё раз.");
- fetchLegalPreview(t).then(()=>renderCatalog($("catalogSearch").value)).catch(()=>{
+ fetchLegalPreview(t).then(async()=>{
+   renderCatalog($("catalogSearch").value);
+   audio.pause();audio.src=t.previewUrl;audio.load();
+   try{
+     await audio.play();playing=true;updatePlayback();
+     $("miniArtist").textContent=t.artist+" · лицензированное превью";
+     $("songArtist").textContent=t.artist+" · лицензированное превью";
+     toast("Превью загружено и запущено.");
+   }catch{
+     toast("Превью загружено. Нажми песню ещё раз, если WebView заблокировал запуск.");
+   }
+ }).catch(()=>{
    toast("Встроенное превью недоступно. Открываю поиск этой песни в VK Музыке.");
    const q=encodeURIComponent(t.title+" "+t.artist);
-   window.open("https://vk.com/search?c[q]="+q+"&c[section]=audio","_blank","noopener");
+   window.location.href="https://vk.com/search?c[q]="+q+"&c[section]=audio";
  });
 }
 async function togglePlayback(){
