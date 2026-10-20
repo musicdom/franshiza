@@ -44,6 +44,20 @@ async function getRedisValue(key) {
   return result.result || null;
 }
 
+async function getAdminChatId() {
+  const configured = process.env.MAX_ADMIN_CHAT_ID;
+  if (configured) return String(configured);
+  try {
+    const raw = await getRedisValue("maxbiz:admin:recipient");
+    if (!raw) return "";
+    const recipient = JSON.parse(raw);
+    return String(recipient.chat_id || recipient.user_id || "");
+  } catch (error) {
+    console.error("MAX saved administrator lookup failed:", error && error.message ? error.message : "unknown error");
+    return "";
+  }
+}
+
 async function saveLead(lead) {
   if (!getRedisConfig()) throw new Error("Lead storage is not configured");
   const id = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -372,7 +386,7 @@ module.exports = async function handler(req, res) {
         const details = cleanText(text, 1800);
         const request = { type: "bot_build_request", chat_id: String(chatId), user_id: sender.user_id ? String(sender.user_id) : null, user_name: senderName, business: session.business || "Не указано", goal: session.goal || "Не указано", details, created_at: new Date().toISOString() };
         await safeSaveLead(request);
-        const adminChatId = process.env.MAX_ADMIN_CHAT_ID;
+        const adminChatId = await getAdminChatId();
         if (adminChatId) {
           try { await sendMessage(adminChatId, "🆕 Заявка на разработку бота\nОт: " + senderName + "\nЧат: " + chatId + "\nСфера: " + request.business + "\nЗадача: " + request.goal + "\nДетали: " + details + "\n\nЧтобы ответить, откройте чат с клиентом по ID: " + chatId); }
           catch (notificationError) { console.error("MAX admin notification failed:", notificationError && notificationError.message ? notificationError.message : "unknown error"); }
@@ -392,7 +406,7 @@ module.exports = async function handler(req, res) {
         const action = text;
         const senderName = cleanText(sender.name, 120) || "Покупатель";
         await safeSaveLead({ type: "product_scenario_action", chat_id: String(chatId), user_name: senderName, action, created_at: new Date().toISOString() });
-        const adminChatId = process.env.MAX_ADMIN_CHAT_ID;
+        const adminChatId = await getAdminChatId();
         if (adminChatId) {
           try { await sendMessage(adminChatId, "Действие по выбранному решению\nОт: " + senderName + "\nЧат: " + chatId + "\nВыбор: " + action); }
           catch (notificationError) { console.error("MAX admin notification failed:", notificationError && notificationError.message ? notificationError.message : "unknown error"); }
@@ -427,7 +441,7 @@ module.exports = async function handler(req, res) {
       if (normalizedText.includes("оставить заявку")) {
         const senderName = cleanText(sender.name, 120) || "Покупатель";
         await safeSaveLead({ type: "product_quote_request", chat_id: String(chatId), user_name: senderName, request: "Пользователь нажал «Оставить заявку» после выбора решения", created_at: new Date().toISOString() });
-        const adminChatId = process.env.MAX_ADMIN_CHAT_ID;
+        const adminChatId = await getAdminChatId();
         if (adminChatId) {
           try { await sendMessage(adminChatId, "Заявка по выбранному решению\nОт: " + senderName + "\nЧат: " + chatId + "\nКлиент нажал «Оставить заявку». Ожидает уточнения деталей."); }
           catch (notificationError) { console.error("MAX admin notification failed:", notificationError && notificationError.message ? notificationError.message : "unknown error"); }
@@ -442,7 +456,7 @@ module.exports = async function handler(req, res) {
       }
       if (["салон красоты", "кафе / ресторан", "магазин", "другое"].some((v) => normalizedText.includes(v))) {
         const business = normalizedText.includes("салон красоты") ? "Салон красоты" : normalizedText.includes("кафе / ресторан") ? "Кафе / ресторан" : normalizedText.includes("магазин") ? "Магазин" : "Другое";
-        const adminChatId = process.env.MAX_ADMIN_CHAT_ID;
+        const adminChatId = await getAdminChatId();
         const senderName = cleanText(sender.name, 120) || "Покупатель";
         await safeSaveLead({ type: "bot_selection", chat_id: String(chatId), user_name: senderName, business, created_at: new Date().toISOString() });
         if (adminChatId) {
@@ -473,7 +487,7 @@ module.exports = async function handler(req, res) {
         return json(res, 200, { ok: true, action: "manager" });
       }
 
-      const adminChatId = process.env.MAX_ADMIN_CHAT_ID;
+      const adminChatId = await getAdminChatId();
       if (adminChatId) {
         const senderName = cleanText(sender.name, 120) || "Покупатель";
         const product = cleanText(body.text, 1200);
