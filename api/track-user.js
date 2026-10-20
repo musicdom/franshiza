@@ -43,15 +43,26 @@ module.exports = async function handler(req, res) {
   const identified = Boolean(id);
   const name = clean([user.first_name, user.last_name].filter(Boolean).join(" ") || user.name || user.username || (identified ? "Пользователь MAX" : "Профиль MAX не передан"), 120);
   const username = clean(user.username, 80);
-  const adminId = clean(process.env.MAX_ADMIN_USER_ID || process.env.MAX_OWNER_USER_ID || "", 80);
+  let adminId = clean(process.env.MAX_ADMIN_USER_ID || process.env.MAX_OWNER_USER_ID || "", 80);
   const token = clean(process.env.MAX_BOT_TOKEN || "", 500);
   if (!token) {
     console.error("TRACK USER: MAX_BOT_TOKEN is not configured");
     return json(res, 503, { ok: false, error: "На сервере не настроен MAX_BOT_TOKEN" });
   }
   if (!adminId) {
-    console.error("TRACK USER: MAX_ADMIN_USER_ID / MAX_OWNER_USER_ID is not configured");
-    return json(res, 503, { ok: false, error: "На сервере не настроен ID администратора MAX" });
+    try {
+      const saved = await redis(["GET", "maxbiz:admin:recipient"]);
+      if (saved) {
+        const recipient = typeof saved === "string" ? JSON.parse(saved) : saved;
+        adminId = clean(String(recipient.user_id || recipient.chat_id || ""), 80);
+      }
+    } catch (lookupError) {
+      console.error("TRACK USER: saved administrator lookup failed:", lookupError.message);
+    }
+  }
+  if (!adminId) {
+    console.error("TRACK USER: administrator is not configured; run /admin_setup with the setup secret");
+    return json(res, 503, { ok: false, error: "Администратор не привязан. Выполните /admin_setup с секретом настройки в личном чате бота." });
   }
   try {
     let returning = false;
@@ -66,7 +77,7 @@ module.exports = async function handler(req, res) {
     }
     const profile = identified ? "[Открыть профиль](max://user/" + encodeURIComponent(id) + ")" : "MAX не передал ID пользователя";
     const text = [
-      identified ? (returning ? "🔄 Повторное открытие мини-приложения «Волна»" : "🎵 Пользователь открыл мини-приложение «Волна»") : "⚠️ Открытие мини-приложения «Волна»: профиль MAX недоступен",
+      identified ? (returning ? "🔄 Повторное открытие мини-приложения «Гармоника»" : "🎵 Пользователь открыл мини-приложение «Волна»") : "⚠️ Открытие мини-приложения «Волна»: профиль MAX недоступен",
       "",
       "👤 Имя: " + escapeText(name),
       "🆔 ID: " + escapeText(id || "не получен"),
