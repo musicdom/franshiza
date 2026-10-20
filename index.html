@@ -91,7 +91,7 @@ body{background:radial-gradient(ellipse at 50% 15%,#2b4121 0,#121a10 34%,#080b09
   <input id="catalogSearch" class="catalog-search" type="search" placeholder="Найти песню или исполнителя…" autocomplete="off" aria-label="Поиск по каталогу">
   <div class="catalog-subtitle" id="catalogCount">ТРЕКИ</div>
   <div class="catalog-list" id="catalogList"></div>
-  <p class="sheet-note" style="margin-top:18px">Для популярных песен приложение ищет лицензионные короткие превью в каталоге Apple Music/iTunes. Обычно доступен фрагмент около 30 секунд; наличие зависит от региона и каталога.</p>
+  <p class="sheet-note" style="margin-top:18px">Для популярных песен «Волна» ищет доступные аудиопревью через Deezer. Если превью не предоставляется, можно открыть поиск композиции в VK Музыке. Полные версии защищённых авторским правом песен сторонний плеер без разрешения сервиса не получает.</p>
 </section>
 <div id="toast" class="gate-status" style="position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:60;background:#20271d;border:1px solid #ffffff20;border-radius:12px;padding:10px 14px;display:none;max-width:90vw"></div>
 <audio id="audio" preload="metadata"></audio>
@@ -164,51 +164,45 @@ function updatePlayback(){
  $("statusLabel").textContent=active?"СЕЙЧАС ИГРАЕТ":"ТВОЁ МУЗЫКАЛЬНОЕ ПРОСТРАНСТВО";
  $("bottomHint").textContent=active?"Нажми на нижнюю панель — узнать исполнителя":"МУЗЫКА В ОДНОМ КАСАНИИ";
 }
-async function findLicensedPreview(t){
- const term=[t.title,t.artist].filter(Boolean).join(" ");
- const url="https://itunes.apple.com/search?term="+encodeURIComponent(term)+"&entity=song&limit=10&country=us";
- const response=await fetch(url,{method:"GET",cache:"no-store"});
- if(!response.ok)throw new Error("Каталог аудио недоступен (HTTP "+response.status+")");
- const data=await response.json();
- const results=Array.isArray(data.results)?data.results:[];
- const norm=s=>String(s||"").toLowerCase().replace(/[^a-z0-9а-яё]+/gi," ").trim();
- const title=norm(t.title),artist=norm(t.artist);
- const scored=results.filter(x=>x.previewUrl).map(x=>{
-   const rt=norm(x.trackName),ra=norm(x.artistName);
-   let score=(rt===title?8:rt.includes(title)||title.includes(rt)?4:0);
-   const artistWords=artist.split(" ").filter(w=>w.length>2);
-   score+=artistWords.filter(w=>ra.includes(w)).length*2;
-   return {x,score};
- }).sort((a,b)=>b.score-a.score);
- if(!scored.length||scored[0].score<4)throw new Error("Лицензионное превью этой песни не найдено");
- return scored[0].x;
+async function fetchLegalPreview(t){
+ const response=await fetch("/api/music-search?q="+encodeURIComponent(t.title+" "+t.artist),{cache:"no-store"});
+ const data=await response.json().catch(()=>({}));
+ if(!response.ok||!data.ok||!data.previewUrl)throw new Error(data.error||"Нет доступного легального аудиопревью");
+ t.previewUrl=data.previewUrl;
+ t.previewTitle=data.title||t.title;
+ t.previewArtist=data.artist||t.artist;
+ return t;
+}
+async function preloadLegalPreviews(){
+ const candidates=tracks.filter(t=>t.popular);
+ let cursor=0;
+ const worker=async()=>{while(cursor<candidates.length){const t=candidates[cursor++];try{await fetchLegalPreview(t)}catch{} }};
+ await Promise.all([worker(),worker(),worker()]);
+ renderCatalog($("catalogSearch").value);
 }
 async function playAt(i){
  index=(i+tracks.length)%tracks.length;const t=current();
  updateTrack();
- audio.pause();audio.removeAttribute("src");audio.load();
  $("artLarge").classList.remove("video-mode");
  const span=document.createElement("span");span.textContent=t.icon;$("artLarge").replaceChildren(span);
- if(t.videoId||t.searchQuery){
-   playing=false;updatePlayback();
-   toast("Ищу лицензионное превью песни…");
-   try{
-     const result=await findLicensedPreview(t);
-     audio.src=result.previewUrl;
-     audio.load();
-     $("miniArtist").textContent=t.artist+" · фрагмент 30 сек.";
-     $("songArtist").textContent=t.artist+" · фрагмент 30 сек.";
-     await audio.play();
-     playing=true;updatePlayback();
-     toast("Воспроизводится легальный фрагмент песни (обычно 30 секунд).");
-   }catch(e){
-     playing=false;updatePlayback();
-     toast(e.message||"Не удалось загрузить превью. Попробуй инструментал.");
-   }
+ if(t.src){
+   audio.pause();audio.src=t.src;audio.load();
+   try{await audio.play();playing=true;updatePlayback()}catch(e){playing=false;updatePlayback();toast("Нажми ▶ ещё раз, чтобы запустить аудио.");}
    return;
  }
- audio.src=t.src;
- try{await audio.play();playing=true;updatePlayback()}catch(e){playing=false;updatePlayback();toast("Не удалось запустить аудио. Нажми ▶ ещё раз.");}
+ if(t.previewUrl){
+   audio.pause();audio.src=t.previewUrl;audio.load();
+   try{await audio.play();playing=true;updatePlayback();$("miniArtist").textContent=t.artist+" · лицензированное превью";$("songArtist").textContent=t.artist+" · лицензированное превью";toast("Запущено аудиопревью прямо из ленты.");}
+   catch(e){playing=false;updatePlayback();toast("WebView не запустил аудио. Нажми ▶ ещё раз.");}
+   return;
+ }
+ playing=false;updatePlayback();
+ toast("Готовлю легальное превью. Через пару секунд нажми песню ещё раз.");
+ fetchLegalPreview(t).then(()=>renderCatalog($("catalogSearch").value)).catch(()=>{
+   toast("Встроенное превью недоступно. Открываю поиск этой песни в VK Музыке.");
+   const q=encodeURIComponent(t.title+" "+t.artist);
+   window.open("https://vk.com/search?c[q]="+q+"&c[section]=audio","_blank","noopener");
+ });
 }
 async function togglePlayback(){
  if(index<0){await playAt(0);return}
@@ -243,9 +237,9 @@ function renderCatalog(query=""){
    const meta=document.createElement("span");meta.className="catalog-meta";
    const name=document.createElement("span");name.className="catalog-name";name.textContent=t.title;
    const artist=document.createElement("span");artist.className="catalog-artist";artist.textContent=t.artist;
-   const type=document.createElement("span");type.className="catalog-type";type.textContent=(t.searchQuery||t.videoId)?"▶ ЛИЦЕНЗИОННОЕ ПРЕВЬЮ":"▶ ИНСТРУМЕНТАЛ";
+   const type=document.createElement("span");type.className="catalog-type";type.textContent=t.src?"▶ СВОБОДНЫЙ АУДИОПОТОК":(t.previewUrl?"▶ ЛЕГАЛЬНОЕ ПРЕВЬЮ":"♫ VK МУЗЫКА · ГОТОВИМ ИСТОЧНИК");
    meta.append(name,artist,type);const action=document.createElement("span");action.textContent="▶";action.style.color="var(--accent)";
-   b.append(cover,meta,action);b.addEventListener("click",async()=>{await playAt(tracks.findIndex(x=>x.id===t.id));closeCatalog();openSheet();});root.append(b);
+   b.append(cover,meta,action);b.addEventListener("click",async()=>{await playAt(tracks.findIndex(x=>x.id===t.id));closeCatalog();});root.append(b);
  });
 }
 function openCatalog(){ $("catalogPanel").hidden=false;$("catalogSearch").focus();renderCatalog($("catalogSearch").value); }
@@ -254,6 +248,7 @@ $("openCatalog").addEventListener("click",openCatalog);
 $("closeCatalog").addEventListener("click",closeCatalog);
 $("catalogSearch").addEventListener("input",e=>renderCatalog(e.target.value));
 renderCatalog();
+preloadLegalPreviews();
 let swipeY=null,swipeX=null;
 function startSheetSwipe(e){if(e.target.closest("button,input,iframe"))return;const p=e.touches?e.touches[0]:e;swipeY=p.clientY;swipeX=p.clientX;}
 function endSheetSwipe(e){if(swipeY===null)return;const p=e.changedTouches?e.changedTouches[0]:e;const dy=p.clientY-swipeY,dx=p.clientX-swipeX;if(dy>65&&Math.abs(dy)>Math.abs(dx)*1.15&&$("songSheet").scrollTop<=2)closeSheet();swipeY=null;swipeX=null;}
