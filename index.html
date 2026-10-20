@@ -91,7 +91,7 @@ body{background:radial-gradient(ellipse at 50% 15%,#2b4121 0,#121a10 34%,#080b09
   <input id="catalogSearch" class="catalog-search" type="search" placeholder="Найти песню или исполнителя…" autocomplete="off" aria-label="Поиск по каталогу">
   <div class="catalog-subtitle" id="catalogCount">ТРЕКИ</div>
   <div class="catalog-list" id="catalogList"></div>
-  <p class="sheet-note" style="margin-top:18px">Для популярных песен «Волна» ищет доступные аудиопревью через Deezer. Если превью не предоставляется, можно открыть поиск композиции в VK Музыке. Полные версии защищённых авторским правом песен сторонний плеер без разрешения сервиса не получает.</p>
+  <p class="sheet-note" style="margin-top:18px">Встроенное воспроизведение использует только доступные аудиопревью. Каталог Muzofond можно открыть отдельно; сторонний сайт может запрещать встраивание своих потоков.</p>
 </section>
 <div id="toast" class="gate-status" style="position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:60;background:#20271d;border:1px solid #ffffff20;border-radius:12px;padding:10px 14px;display:none;max-width:90vw"></div>
 <audio id="audio" preload="metadata"></audio>
@@ -210,9 +210,8 @@ async function playAt(i){
      toast("Превью загружено. Нажми песню ещё раз, если WebView заблокировал запуск.");
    }
  }).catch(()=>{
-   toast("Встроенное превью недоступно. Открываю поиск этой песни в VK Музыке.");
-   const q=encodeURIComponent(t.title+" "+t.artist);
-   window.location.href="https://vk.com/search?c[q]="+q+"&c[section]=audio";
+   playing=false;updatePlayback();
+   toast("Для этой песни не найден встроенный аудиофайл. Выбери другой трек или открой каталог Muzofond.");
  });
 }
 async function togglePlayback(){
@@ -248,7 +247,7 @@ function renderCatalog(query=""){
    const meta=document.createElement("span");meta.className="catalog-meta";
    const name=document.createElement("span");name.className="catalog-name";name.textContent=t.title;
    const artist=document.createElement("span");artist.className="catalog-artist";artist.textContent=t.artist;
-   const type=document.createElement("span");type.className="catalog-type";type.textContent=t.src?"▶ СВОБОДНЫЙ АУДИОПОТОК":(t.previewUrl?"▶ ЛЕГАЛЬНОЕ ПРЕВЬЮ":"♫ VK МУЗЫКА · ГОТОВИМ ИСТОЧНИК");
+   const type=document.createElement("span");type.className="catalog-type";type.textContent=t.src?"▶ СВОБОДНЫЙ АУДИОПОТОК":(t.previewUrl?"▶ ЛЕГАЛЬНОЕ ПРЕВЬЮ":"♫ ИЩЕМ ДОСТУПНЫЙ АУДИОИСТОЧНИК");
    meta.append(name,artist,type);const action=document.createElement("span");action.textContent="▶";action.style.color="var(--accent)";
    b.append(cover,meta,action);b.addEventListener("click",async()=>{await playAt(tracks.findIndex(x=>x.id===t.id));closeCatalog();});root.append(b);
  });
