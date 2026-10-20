@@ -1,5 +1,3 @@
-const { requestMax } = require("../lib/max-api");
-
 function json(res, status, body) {
   res.status(status).setHeader("Content-Type", "application/json; charset=utf-8");
   res.end(JSON.stringify(body));
