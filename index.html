@@ -89,6 +89,15 @@ body{background:radial-gradient(ellipse at 50% 15%,#2b4121 0,#121a10 34%,#080b09
 <section class="catalog-panel" id="catalogPanel" hidden aria-label="Музыкальный каталог">
   <div class="catalog-head"><div><div class="overline">ВЫБИРАЙ СВОЁ</div><h2>Музыкальный каталог</h2></div><button type="button" class="catalog-close" id="closeCatalog" aria-label="Закрыть каталог">×</button></div>
   <input id="catalogSearch" class="catalog-search" type="search" placeholder="Найти песню или исполнителя…" autocomplete="off" aria-label="Поиск по каталогу">
+  <div style="display:flex;gap:8px;margin:0 0 14px">
+    <button type="button" id="muzofondButton" class="catalog-trigger" style="flex:1">♫ Музыка Muzofond</button>
+    <button type="button" id="builtInButton" class="catalog-trigger" style="flex:1">Мой каталог</button>
+  </div>
+  <div id="muzofondPanel" hidden style="margin-bottom:16px">
+    <p style="font-size:12px;color:var(--muted);margin:0 0 10px">Источник: Muzofond. Если сайт запрещает встраивание, открой его по ссылке ниже.</p>
+    <iframe title="Каталог Muzofond" src="https://muzofond.fm/collections/top/%D0%B2%D0%BA" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" style="width:100%;height:60vh;border:1px solid #ffffff20;border-radius:14px;background:#111"></iframe>
+    <p style="margin:10px 0"><a href="https://muzofond.fm/collections/top/%D0%B2%D0%BA" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">Открыть подборку Muzofond в браузере</a></p>
+  </div>
   <div class="catalog-subtitle" id="catalogCount">ТРЕКИ</div>
   <div class="catalog-list" id="catalogList"></div>
   <p class="sheet-note" style="margin-top:18px">Встроенное воспроизведение использует только доступные аудиопревью. Каталог Muzofond можно открыть отдельно; сторонний сайт может запрещать встраивание своих потоков.</p>
@@ -257,6 +266,8 @@ function closeCatalog(){ $("catalogPanel").hidden=true; }
 $("openCatalog").addEventListener("click",openCatalog);
 $("closeCatalog").addEventListener("click",closeCatalog);
 $("catalogSearch").addEventListener("input",e=>renderCatalog(e.target.value));
+$("muzofondButton").addEventListener("click",()=>{$("muzofondPanel").hidden=false;$("catalogList").hidden=true;$("catalogCount").hidden=true;$("catalogSearch").hidden=true;});
+$("builtInButton").addEventListener("click",()=>{$("muzofondPanel").hidden=true;$("catalogList").hidden=false;$("catalogCount").hidden=false;$("catalogSearch").hidden=false;});
 renderCatalog();
 preloadLegalPreviews();
 let swipeY=null,swipeX=null;
