@@ -37,6 +37,28 @@
 #grabber{touch-action:none;cursor:grab}
 @media(min-width:600px){.catalog-panel{border-left:1px solid #ffffff15;border-right:1px solid #ffffff15}}
 
+
+/* Visual refresh */
+:root{--accent:#b8ff5c;--bg:#080b09;--panel:#151b14}
+body{background:radial-gradient(ellipse at 50% 15%,#2b4121 0,#121a10 34%,#080b09 76%)}
+.app{max-width:820px}
+.brand{font-size:14px;letter-spacing:4px}
+.profile{border-color:#b8ff5c30;background:linear-gradient(110deg,#ffffff0b,#b8ff5c08)}
+.center{padding-top:35px}
+.headline{letter-spacing:-2.5px;text-wrap:balance}
+.launch-wrap{width:min(68vw,320px)}
+.halo{border-color:#b8ff5c40;box-shadow:0 0 100px #b8ff5c12,inset 0 0 60px #b8ff5c0c}
+.launch{border-color:#d9ffa080;background:radial-gradient(circle at 35% 25%,#3c542b,#172312 50%,#080d07 80%);box-shadow:0 0 0 12px #b8ff5c08,0 0 90px #b8ff5c1d,inset 0 0 45px #b8ff5c14}
+.launch-icon{background:linear-gradient(145deg,#dcffad,#a4f442);box-shadow:0 0 42px #b8ff5c45}
+.catalog-trigger{background:linear-gradient(120deg,#b8ff5c1c,#b8ff5c08);border-color:#b8ff5c60}
+.mini-player{border-color:#b8ff5c25;background:linear-gradient(110deg,#1c2619f5,#101510f2);box-shadow:0 12px 55px #0009}
+.mini-art,.catalog-cover{background:linear-gradient(145deg,#dfffad,#84b956 52%,#385328);box-shadow:inset 0 0 0 1px #ffffff28}
+.catalog-row{border-color:#ffffff12;background:linear-gradient(110deg,#ffffff08,#ffffff03);transition:border-color .2s,transform .2s}
+.catalog-row:active{transform:scale(.99);border-color:#b8ff5c70}
+.catalog-panel{background:radial-gradient(ellipse at 80% 0%,#1c2a17,#0b0f0b 52%)}
+.catalog-search{background:#ffffff0b;border-color:#ffffff24}
+.song-genre{color:var(--accent)}
+@media(min-width:700px){.launch-wrap{width:290px}}
 </style>
 </head>
 <body>
@@ -75,7 +97,37 @@
 <audio id="audio" preload="metadata"></audio>
 </div>
 <script>
-const tracks=[
+const tracks=[{id:"ru1",title:"Матушка",artist:"Татьяна Куртукова",genre:"Поп · народный",icon:"♫",searchQuery:"Матушка Татьяна Куртукова официальный клип",popular:true},
+{id:"ru2",title:"Давай сбежим (Искорки)",artist:"5УТРА",genre:"Поп",icon:"♫",searchQuery:"Давай сбежим (Искорки) 5УТРА официальный клип",popular:true},
+{id:"ru3",title:"Царица",artist:"ANNA ASTI",genre:"Поп",icon:"♫",searchQuery:"Царица ANNA ASTI официальный клип",popular:true},
+{id:"ru4",title:"Асфальт",artist:"Jakone",genre:"Поп-рэп",icon:"♫",searchQuery:"Асфальт Jakone официальный клип",popular:true},
+{id:"ru5",title:"Худи",artist:"Джиган, Artik & Asti, NILETTO",genre:"Поп",icon:"♫",searchQuery:"Худи Джиган, Artik & Asti, NILETTO официальный клип",popular:true},
+{id:"ru6",title:"I Got Love",artist:"Miyagi & Эндшпиль feat. Рем Дигга",genre:"Хип-хоп",icon:"♫",searchQuery:"I Got Love Miyagi & Эндшпиль feat. Рем Дигга официальный клип",popular:true},
+{id:"ru7",title:"Ягода малинка",artist:"ХАБИБ",genre:"Поп",icon:"♫",searchQuery:"Ягода малинка ХАБИБ официальный клип",popular:true},
+{id:"ru8",title:"Птичка",artist:"HammAli & Navai",genre:"Поп",icon:"♫",searchQuery:"Птичка HammAli & Navai официальный клип",popular:true},
+{id:"ru9",title:"Комета",artist:"JONY",genre:"Поп",icon:"♫",searchQuery:"Комета JONY официальный клип",popular:true},
+{id:"ru10",title:"Камин",artist:"ANNA ASTI",genre:"Поп",icon:"♫",searchQuery:"Камин ANNA ASTI официальный клип",popular:true},
+{id:"ru11",title:"По барам",artist:"ANNA ASTI",genre:"Поп",icon:"♫",searchQuery:"По барам ANNA ASTI официальный клип",popular:true},
+{id:"ru12",title:"Малиновая лада",artist:"GAYAZOV$ BROTHER$",genre:"Поп",icon:"♫",searchQuery:"Малиновая лада GAYAZOV$ BROTHER$ официальный клип",popular:true},
+{id:"ru13",title:"Пчеловод",artist:"RASA",genre:"Поп",icon:"♫",searchQuery:"Пчеловод RASA официальный клип",popular:true},
+{id:"ru14",title:"Медляк",artist:"Тима Белорусских",genre:"Поп",icon:"♫",searchQuery:"Медляк Тима Белорусских официальный клип",popular:true},
+{id:"ru15",title:"Любимка",artist:"NILETTO",genre:"Поп",icon:"♫",searchQuery:"Любимка NILETTO официальный клип",popular:true},
+{id:"ru16",title:"Венера-Юпитер",artist:"Ваня Дмитриенко",genre:"Поп",icon:"♫",searchQuery:"Венера-Юпитер Ваня Дмитриенко официальный клип",popular:true},
+{id:"ru17",title:"Эгоистка",artist:"Zivert",genre:"Поп",icon:"♫",searchQuery:"Эгоистка Zivert официальный клип",popular:true},
+{id:"ru18",title:"Плакала",artist:"KAZKA",genre:"Поп",icon:"♫",searchQuery:"Плакала KAZKA официальный клип",popular:true},
+{id:"ru19",title:"Золото",artist:"Люся Чеботина",genre:"Поп",icon:"♫",searchQuery:"Золото Люся Чеботина официальный клип",popular:true},
+{id:"ru20",title:"Невозможное возможно",artist:"Дима Билан",genre:"Поп",icon:"♫",searchQuery:"Невозможное возможно Дима Билан официальный клип",popular:true},
+{id:"ru21",title:"Тает лёд",artist:"Грибы",genre:"Поп",icon:"♫",searchQuery:"Тает лёд Грибы официальный клип",popular:true},
+{id:"ru22",title:"Кукла колдуна",artist:"Король и Шут",genre:"Рок",icon:"♫",searchQuery:"Кукла колдуна Король и Шут официальный клип",popular:true},
+{id:"ru23",title:"Всё решено",artist:"Мот",genre:"Поп-рэп",icon:"♫",searchQuery:"Всё решено Мот официальный клип",popular:true},
+{id:"ru24",title:"Сигма бой",artist:"Betsy, Мария Янковская",genre:"Поп",icon:"♫",searchQuery:"Сигма бой Betsy, Мария Янковская официальный клип",popular:true},
+{id:"ru25",title:"Холодок",artist:"Мари Краймбрери",genre:"Поп",icon:"♫",searchQuery:"Холодок Мари Краймбрери официальный клип",popular:true},
+{id:"ru26",title:"Между нами",artist:"MONA",genre:"Поп",icon:"♫",searchQuery:"Между нами MONA официальный клип",popular:true},
+{id:"ru27",title:"Хочешь",artist:"Земфира",genre:"Рок",icon:"♫",searchQuery:"Хочешь Земфира официальный клип",popular:true},
+{id:"ru28",title:"Выхода нет",artist:"Сплин",genre:"Рок",icon:"♫",searchQuery:"Выхода нет Сплин официальный клип",popular:true},
+{id:"ru29",title:"Районы-кварталы",artist:"Звери",genre:"Рок",icon:"♫",searchQuery:"Районы-кварталы Звери официальный клип",popular:true},
+{id:"ru30",title:"Знаешь ли ты",artist:"МакSим",genre:"Поп",icon:"♫",searchQuery:"Знаешь ли ты МакSим официальный клип",popular:true},
+
 {id:"pop1",title:"Blinding Lights",artist:"The Weeknd",genre:"Поп · Synthwave",icon:"✦",videoId:"4NRXx6U8ABQ",popular:true},
 {id:"pop2",title:"Shape of You",artist:"Ed Sheeran",genre:"Поп",icon:"◉",videoId:"JGwWNGJdvx8",popular:true},
 {id:"pop3",title:"Flowers",artist:"Miley Cyrus",genre:"Поп",icon:"✿",videoId:"G7KNmW9a75Y",popular:true},
@@ -91,10 +143,11 @@ const tracks=[
 {id:"d3",title:"Deep Blue",artist:"Инструментал · атмосфера",genre:"Атмосфера",icon:"◉",src:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"},
 {id:"d4",title:"Green Light",artist:"Инструментал",genre:"Инструментал",icon:"♫",src:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"}];
 const $=id=>document.getElementById(id),audio=$("audio");
-let index=-1,playing=false,favorites=new Set(),sheetOpen=false,dragStartY=null;
+let index=-1,playing=false,favorites=new Set(),sheetOpen=false,dragStartY=null,lastAutoIndex=-1;
 const fmt=n=>Number.isFinite(n)&&n>=0?Math.floor(n/60)+":"+String(Math.floor(n%60)).padStart(2,"0"):"0:00";
 function toast(msg){const el=$("toast");el.textContent=msg;el.style.display="block";clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.style.display="none",2600)}
 function current(){return tracks[index]||null}
+function pickDifferentTrack(){if(tracks.length<2)return 0;let n;do{n=Math.floor(Math.random()*tracks.length)}while(n===index);lastAutoIndex=n;return n}
 function updateTrack(){
  const t=current();if(!t)return;
  if(!$("artLarge").querySelector("span")){const span=document.createElement("span");span.textContent=t.icon;$("artLarge").replaceChildren(span);$("artLarge").classList.remove("video-mode");}
@@ -114,6 +167,13 @@ function updatePlayback(){
 async function playAt(i){
  index=(i+tracks.length)%tracks.length;const t=current();
  updateTrack();
+ if(t.searchQuery){
+   audio.pause();audio.removeAttribute("src");audio.load();
+   playing=false;updatePlayback();
+   toast("Открываю поиск официального трека на YouTube");
+   window.open("https://www.youtube.com/results?search_query="+encodeURIComponent(t.searchQuery),"_blank","noopener");
+   return;
+ }
  if(t.videoId){
    audio.pause();audio.removeAttribute("src");audio.load();
    const frame=document.createElement("iframe");
@@ -133,6 +193,14 @@ async function playAt(i){
 async function togglePlayback(){
  if(index<0){await playAt(0);return}
  const t=current();
+ if(!playing){
+   if(t&&t.videoId){
+     const next=pickDifferentTrack();await playAt(next);return;
+   }
+   if(t&&t.searchQuery){await playAt(pickDifferentTrack());return;}
+   if(audio.paused){await playAt(pickDifferentTrack());return;}
+ }
+
  if(t&&t.videoId){
    const frame=$("artLarge").querySelector("iframe");
    if(frame&&frame.contentWindow){frame.contentWindow.postMessage(JSON.stringify({event:"command",func:playing?"pauseVideo":"playVideo",args:[]}),"*");playing=!playing;updatePlayback();}
@@ -168,9 +236,9 @@ function renderCatalog(query=""){
    const meta=document.createElement("span");meta.className="catalog-meta";
    const name=document.createElement("span");name.className="catalog-name";name.textContent=t.title;
    const artist=document.createElement("span");artist.className="catalog-artist";artist.textContent=t.artist;
-   const type=document.createElement("span");type.className="catalog-type";type.textContent=t.popular?"ПОПУЛЯРНЫЙ ТРЕК · YOUTUBE":"ИНСТРУМЕНТАЛ";
+   const type=document.createElement("span");type.className="catalog-type";type.textContent=t.searchQuery?"НАЙТИ ОФИЦИАЛЬНЫЙ ТРЕК НА YOUTUBE":t.popular?"ПОПУЛЯРНЫЙ ТРЕК · YOUTUBE":"ИНСТРУМЕНТАЛ";
    meta.append(name,artist,type);const action=document.createElement("span");action.textContent="▶";action.style.color="var(--accent)";
-   b.append(cover,meta,action);b.addEventListener("click",async()=>{await playAt(tracks.findIndex(x=>x.id===t.id));closeCatalog();openSheet()});root.append(b);
+   b.append(cover,meta,action);b.addEventListener("click",async()=>{await playAt(tracks.findIndex(x=>x.id===t.id));if(!t.searchQuery){closeCatalog();openSheet();}});root.append(b);
  });
 }
 function openCatalog(){ $("catalogPanel").hidden=false;$("catalogSearch").focus();renderCatalog($("catalogSearch").value); }
