@@ -111,9 +111,9 @@ const tracks=[{id:"pop1",title:"Blinding Lights",artist:"The Weeknd",genre:"По
 {id:"d2",title:"Golden Hour",artist:"Инструментал · чилл",genre:"Чилл",icon:"☼",src:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"},
 {id:"d3",title:"Deep Blue",artist:"Инструментал · атмосфера",genre:"Атмосфера",icon:"◉",src:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"},
 {id:"d4",title:"Green Light",artist:"Инструментал",genre:"Инструментал",icon:"♫",src:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"},
-{id:"ru1",title:"Матушка",artist:"Татьяна Куртукова",genre:"Поп · народный",icon:"♫",searchQuery:"Матушка Татьяна Куртукова официальный клип",popular:true},
+{id:"ru1",title:"Матушка",artist:"Татьяна Куртукова",genre:"Поп · народный",icon:"♫",videoId:"ivtjjyQ_W-8",popular:true},
 {id:"ru2",title:"Давай сбежим (Искорки)",artist:"5УТРА",genre:"Поп",icon:"♫",searchQuery:"Давай сбежим (Искорки) 5УТРА официальный клип",popular:true},
-{id:"ru3",title:"Царица",artist:"ANNA ASTI",genre:"Поп",icon:"♫",searchQuery:"Царица ANNA ASTI официальный клип",popular:true},
+{id:"ru3",title:"Царица",artist:"ANNA ASTI",genre:"Поп",icon:"♫",videoId:"d8-3ffuTTZ8",popular:true},
 {id:"ru4",title:"Асфальт",artist:"Jakone",genre:"Поп-рэп",icon:"♫",searchQuery:"Асфальт Jakone официальный клип",popular:true},
 {id:"ru5",title:"Худи",artist:"Джиган, Artik & Asti, NILETTO",genre:"Поп",icon:"♫",searchQuery:"Худи Джиган, Artik & Asti, NILETTO официальный клип",popular:true},
 {id:"ru6",title:"I Got Love",artist:"Miyagi & Эндшпиль feat. Рем Дигга",genre:"Хип-хоп",icon:"♫",searchQuery:"I Got Love Miyagi & Эндшпиль feat. Рем Дигга официальный клип",popular:true},
@@ -170,7 +170,7 @@ async function playAt(i){
  if(t.searchQuery){
    audio.pause();audio.removeAttribute("src");audio.load();
    playing=false;updatePlayback();
-   toast("Открываю поиск официального трека на YouTube");
+   toast("Для этой песни пока нет проверенного встроенного видео. Открываю поиск YouTube.");
    window.open("https://www.youtube.com/results?search_query="+encodeURIComponent(t.searchQuery),"_blank","noopener");
    return;
  }
@@ -278,8 +278,8 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetOpen)closeShee
  }
  function notify(user){
    return fetch("/api/track-user",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user:user||{name:"Профиль MAX недоступен"}}),keepalive:true,cache:"no-store"})
-     .then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.error||("HTTP "+r.status));return d;})
-     .catch(e=>{console.warn("[ВОЛНА] Ошибка уведомления:",e);});
+     .then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.error||("HTTP "+r.status));console.info("[ВОЛНА] Уведомление принято MAX API");return d;})
+     .catch(e=>{console.error("[ВОЛНА] Уведомление не отправлено:",e);toast("Уведомление админу не отправлено: "+(e.message||"ошибка сервера"));});
  }
  let sent=false,tries=0;
  function trackOnOpen(){
