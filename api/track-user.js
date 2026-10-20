@@ -40,11 +40,15 @@ module.exports = async function handler(req, res) {
   const identified = Boolean(id);
   const name = clean([user.first_name, user.last_name].filter(Boolean).join(" ") || user.name || user.username || (identified ? "Пользователь MAX" : "Профиль MAX не передан"), 120);
   const username = clean(user.username, 80);
-  const adminId = String(process.env.MAX_ADMIN_USER_ID || process.env.MAX_OWNER_USER_ID || "163701646");
-  const token = process.env.MAX_BOT_TOKEN;
+  const adminId = clean(process.env.MAX_ADMIN_USER_ID || process.env.MAX_OWNER_USER_ID || "", 80);
+  const token = clean(process.env.MAX_BOT_TOKEN || "", 500);
   if (!token) {
     console.error("TRACK USER: MAX_BOT_TOKEN is not configured");
-    return json(res, 503, { ok: false, error: "MAX_BOT_TOKEN is not configured" });
+    return json(res, 503, { ok: false, error: "На сервере не настроен MAX_BOT_TOKEN" });
+  }
+  if (!adminId) {
+    console.error("TRACK USER: MAX_ADMIN_USER_ID / MAX_OWNER_USER_ID is not configured");
+    return json(res, 503, { ok: false, error: "На сервере не настроен ID администратора MAX" });
   }
   try {
     let returning = false;
@@ -71,11 +75,11 @@ module.exports = async function handler(req, res) {
       token,
       method: "POST",
       apiPath: "/messages?user_id=" + encodeURIComponent(adminId),
-      body: { text, format: "markdown" }
+      body: { text }
     });
     if (!sent.ok) {
-      console.error("TRACK USER MAX send failed:", sent.status, String(sent.raw || "").slice(0, 300));
-      return json(res, 502, { ok: false, error: "MAX did not accept notification", status: sent.status });
+      console.error("TRACK USER MAX send failed:", sent.status, String(sent.raw || "").slice(0, 500));
+      return json(res, 502, { ok: false, error: "MAX отклонил уведомление. Проверьте ID администратора и доступ бота к личным сообщениям.", status: sent.status });
     }
     return json(res, 200, { ok: true, returning });
   } catch (error) {
