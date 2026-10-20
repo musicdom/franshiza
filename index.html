@@ -37,19 +37,9 @@
 #grabber{touch-action:none;cursor:grab}
 @media(min-width:600px){.catalog-panel{border-left:1px solid #ffffff15;border-right:1px solid #ffffff15}}
 
-/* Не блокируем приложение заставкой: сразу показываем главный экран. */
-.gate{display:none!important}
 </style>
 </head>
 <body>
-<section id="welcomeGate" class="gate" aria-label="Вход в приложение">
-  <div class="gate-brand">ВОЛНА<b>.</b></div>
-  <h1>Твоя музыка.<br><em>Твоя волна.</em></h1>
-  <p>Удерживай круг 5 секунд,<br>чтобы открыть музыкальное пространство.</p>
-  <button id="holdButton" class="hold-button" type="button" aria-label="Удерживай пять секунд"><span class="hold-icon">♫</span><span class="hold-label">НАЖМИ И ДЕРЖИ</span><span class="hold-count">5 сек</span></button>
-  <div id="gateStatus" class="gate-status" aria-live="polite">Удерживай до завершения круга</div>
-  <div class="gate-legal">Данные профиля передаются боту только если доступны мини-приложению.</div>
-</section>
 <div id="musicApp">
 <main class="app">
   <header class="top"><div class="brand">ВОЛНА<b>.</b></div><button type="button" class="catalog-trigger" id="openCatalog">♫ Каталог</button><div class="profile"><div class="avatar" id="profileAvatar"><span id="profileInitial">♫</span></div><div class="profile-name" id="profileName">Твой аккаунт</div></div></header>
@@ -200,23 +190,41 @@ $("grabber").addEventListener("pointerdown",e=>{if(e.pointerType==="mouse")retur
 $("grabber").addEventListener("pointerup",e=>{if(swipeY!==null&&e.clientY-swipeY>30)closeSheet();swipeY=null;swipeX=null});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetOpen)closeSheet()});
 (function(){
- const gate=$("welcomeGate"),app=$("musicApp"),btn=$("holdButton"),status=$("gateStatus");let started=0,raf=0,done=false;const duration=5000;
- function getUser(){const a=[window.WebApp?.initDataUnsafe?.user,window.MAX?.user,window.MAX?.WebApp?.initDataUnsafe?.user,window.Max?.WebApp?.initDataUnsafe?.user,window.Telegram?.WebApp?.initDataUnsafe?.user];return a.find(u=>u&&(u.id||u.user_id||u.username||u.first_name))||null}
- function notify(user){return fetch("/api/track-user",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user}),keepalive:true,cache:"no-store"}).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.error||("HTTP "+r.status));return d}).catch(e=>{console.warn("[ВОЛНА] Не удалось отправить данные открытия:",e);return null})}
- function finish(){if(done)return;done=true;cancelAnimationFrame(raf);const u=getUser();if(u){const name=u.name||[u.first_name,u.last_name].filter(Boolean).join(" ")||u.username||"Твой аккаунт";$("profileName").textContent=name;$("profileInitial").textContent=(name[0]||"♫").toUpperCase();const photo=u.photo_url||u.avatar_url;if(photo){const img=document.createElement("img");img.src=photo;img.alt="";$("profileAvatar").replaceChildren(img)}}gate.classList.add("gate-leave");setTimeout(()=>{gate.hidden=true;app.hidden=false},420)}
- function tick(){const p=Math.min(1,(Date.now()-started)/duration);btn.style.setProperty("--progress",p);btn.querySelector(".hold-count").textContent=Math.max(0,Math.ceil((duration-(Date.now()-started))/1000))+" сек";if(p>=1){status.textContent="Готово";finish();return}raf=requestAnimationFrame(tick)}
- function begin(e){if(done)return;e.preventDefault();started=Date.now();status.textContent="Не отпускай…";raf=requestAnimationFrame(tick)}
- function cancel(){if(done)return;cancelAnimationFrame(raf);btn.style.setProperty("--progress",0);btn.querySelector(".hold-count").textContent="5 сек";status.textContent="Отпустил раньше — попробуй ещё раз"}
- btn.addEventListener("pointerdown",begin);btn.addEventListener("pointerup",cancel);btn.addEventListener("pointerleave",cancel);btn.addEventListener("pointercancel",cancel);btn.addEventListener("contextmenu",e=>e.preventDefault());
- // Отправляем событие открытия сразу, а не после пятисекундного удержания.
- let tracked=false,tries=0;
+ const app=$("musicApp");
+ app.hidden=false;
+ function getUser(){
+   const roots=[window.WebApp,window.MAX,window.Max,window.max,window.Telegram?.WebApp];
+   for(const root of roots){
+     const u=root?.initDataUnsafe?.user||root?.user||root?.userInfo;
+     if(u&&(u.id||u.user_id||u.username||u.first_name))return u;
+   }
+   return null;
+ }
+ function updateProfile(u){
+   if(!u)return;
+   const name=u.name||[u.first_name,u.last_name].filter(Boolean).join(" ")||u.username||"Твой аккаунт";
+   $("profileName").textContent=name;
+   $("profileInitial").textContent=(name[0]||"♫").toUpperCase();
+   const photo=u.photo_url||u.avatar_url;
+   if(photo){const img=document.createElement("img");img.src=photo;img.alt="";$("profileAvatar").replaceChildren(img);}
+ }
+ function notify(user){
+   return fetch("/api/track-user",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user:user||{name:"Профиль MAX недоступен"}}),keepalive:true,cache:"no-store"})
+     .then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.error||("HTTP "+r.status));return d;})
+     .catch(e=>{console.warn("[ВОЛНА] Ошибка уведомления:",e);});
+ }
+ let sent=false,tries=0;
  function trackOnOpen(){
-   if(tracked)return;
+   if(sent)return;
    const u=getUser();
-   if(u&&(u.id||u.user_id)){tracked=true;const name=u.name||[u.first_name,u.last_name].filter(Boolean).join(" ")||u.username||"Твой аккаунт";$("profileName").textContent=name;$("profileInitial").textContent=(name[0]||"♫").toUpperCase();const photo=u.photo_url||u.avatar_url;if(photo){const img=document.createElement("img");img.src=photo;img.alt="";$("profileAvatar").replaceChildren(img)}notify(u);return}
-   tries++;if(tries<20)setTimeout(trackOnOpen,300);else { console.warn("[ВОЛНА] MAX не передал профиль пользователя; отправляем хотя бы событие открытия."); notify({name:"Профиль MAX недоступен",username:"",id:""}); }
+   if(u&&(u.id||u.user_id)){sent=true;updateProfile(u);notify(u);return;}
+   tries++;
+   if(tries<20){setTimeout(trackOnOpen,300);return;}
+   sent=true;
+   console.warn("[ВОЛНА] MAX не передал профиль; отправляем событие открытия без ID.");
+   notify({name:"Профиль MAX недоступен"});
  }
  trackOnOpen();
-})();
+})();;
 </script>
 </body></html>
