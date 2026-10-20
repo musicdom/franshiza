@@ -91,7 +91,7 @@ body{background:radial-gradient(ellipse at 50% 15%,#2b4121 0,#121a10 34%,#080b09
   <input id="catalogSearch" class="catalog-search" type="search" placeholder="Найти песню или исполнителя…" autocomplete="off" aria-label="Поиск по каталогу">
   <div class="catalog-subtitle" id="catalogCount">ТРЕКИ</div>
   <div class="catalog-list" id="catalogList"></div>
-  <p class="sheet-note" style="margin-top:18px">Популярные песни воспроизводятся через встроенный YouTube-плеер. Для них используется официальный видеоплеер, а не сторонние MP3-файлы.</p>
+  <p class="sheet-note" style="margin-top:18px">Для популярных песен приложение ищет лицензионные короткие превью в каталоге Apple Music/iTunes. Обычно доступен фрагмент около 30 секунд; наличие зависит от региона и каталога.</p>
 </section>
 <div id="toast" class="gate-status" style="position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:60;background:#20271d;border:1px solid #ffffff20;border-radius:12px;padding:10px 14px;display:none;max-width:90vw"></div>
 <audio id="audio" preload="metadata"></audio>
@@ -164,57 +164,59 @@ function updatePlayback(){
  $("statusLabel").textContent=active?"СЕЙЧАС ИГРАЕТ":"ТВОЁ МУЗЫКАЛЬНОЕ ПРОСТРАНСТВО";
  $("bottomHint").textContent=active?"Нажми на нижнюю панель — узнать исполнителя":"МУЗЫКА В ОДНОМ КАСАНИИ";
 }
-let activeVideoId=null;
-function renderVideoPlayer(t,autoplay=true){
- audio.pause();audio.removeAttribute("src");audio.load();
- activeVideoId=t.videoId;
- const frame=document.createElement("iframe");
- frame.title=t.title+" — "+t.artist;
- frame.allow="autoplay; encrypted-media; picture-in-picture; web-share";
- frame.allowFullscreen=true;
- frame.referrerPolicy="strict-origin-when-cross-origin";
- frame.setAttribute("loading","eager");
- frame.src="https://www.youtube.com/embed/"+encodeURIComponent(t.videoId)+"?autoplay="+(autoplay?"1":"0")+"&controls=1&playsinline=1&rel=0&enablejsapi=1&origin="+encodeURIComponent(location.origin);
- $("artLarge").classList.add("video-mode");
- $("artLarge").replaceChildren(frame);
- // Не выдаём значок «играет» за подтверждение: встраиваемый плеер сам показывает
- // кнопку запуска, если WebView запрещает автозапуск.
- playing=autoplay;
- updatePlayback();
+async function findLicensedPreview(t){
+ const term=[t.title,t.artist].filter(Boolean).join(" ");
+ const url="https://itunes.apple.com/search?term="+encodeURIComponent(term)+"&entity=song&limit=10&country=us";
+ const response=await fetch(url,{method:"GET",cache:"no-store"});
+ if(!response.ok)throw new Error("Каталог аудио недоступен (HTTP "+response.status+")");
+ const data=await response.json();
+ const results=Array.isArray(data.results)?data.results:[];
+ const norm=s=>String(s||"").toLowerCase().replace(/[^a-z0-9а-яё]+/gi," ").trim();
+ const title=norm(t.title),artist=norm(t.artist);
+ const scored=results.filter(x=>x.previewUrl).map(x=>{
+   const rt=norm(x.trackName),ra=norm(x.artistName);
+   let score=(rt===title?8:rt.includes(title)||title.includes(rt)?4:0);
+   const artistWords=artist.split(" ").filter(w=>w.length>2);
+   score+=artistWords.filter(w=>ra.includes(w)).length*2;
+   return {x,score};
+ }).sort((a,b)=>b.score-a.score);
+ if(!scored.length||scored[0].score<4)throw new Error("Лицензионное превью этой песни не найдено");
+ return scored[0].x;
 }
 async function playAt(i){
  index=(i+tracks.length)%tracks.length;const t=current();
  updateTrack();
- if(t.searchQuery){
-   audio.pause();audio.removeAttribute("src");audio.load();
-   playing=false;activeVideoId=null;updatePlayback();
-   $("artLarge").classList.remove("video-mode");
-   const span=document.createElement("span");span.textContent=t.icon;$("artLarge").replaceChildren(span);
-   toast("Для этой песни пока нет встроенного видео. Выбери трек с пометкой YOUTUBE или инструментал.");
-   return;
- }
- if(t.videoId){renderVideoPlayer(t,true);return;}
- activeVideoId=null;
+ audio.pause();audio.removeAttribute("src");audio.load();
  $("artLarge").classList.remove("video-mode");
  const span=document.createElement("span");span.textContent=t.icon;$("artLarge").replaceChildren(span);
+ if(t.videoId||t.searchQuery){
+   playing=false;updatePlayback();
+   toast("Ищу лицензионное превью песни…");
+   try{
+     const result=await findLicensedPreview(t);
+     audio.src=result.previewUrl;
+     audio.load();
+     $("miniArtist").textContent=t.artist+" · фрагмент 30 сек.";
+     $("songArtist").textContent=t.artist+" · фрагмент 30 сек.";
+     await audio.play();
+     playing=true;updatePlayback();
+     toast("Воспроизводится легальный фрагмент песни (обычно 30 секунд).");
+   }catch(e){
+     playing=false;updatePlayback();
+     toast(e.message||"Не удалось загрузить превью. Попробуй инструментал.");
+   }
+   return;
+ }
  audio.src=t.src;
  try{await audio.play();playing=true;updatePlayback()}catch(e){playing=false;updatePlayback();toast("Не удалось запустить аудио. Нажми ▶ ещё раз.");}
 }
 async function togglePlayback(){
  if(index<0){await playAt(0);return}
  const t=current();
- if(t&&t.searchQuery){toast("У этой песни пока нет встроенного аудио. Выбери другой трек.");return;}
- if(t&&t.videoId){
-   const frame=$("artLarge").querySelector("iframe");
-   if(frame&&frame.contentWindow){
-     frame.contentWindow.postMessage(JSON.stringify({event:"command",func:playing?"pauseVideo":"playVideo",args:[]}),"*");
-     playing=!playing;updatePlayback();
-   }else renderVideoPlayer(t,!playing);
-   return;
- }
- if(audio.paused){try{await audio.play();playing=true}catch(e){toast("Не удалось запустить аудио. Нажми ▶ ещё раз.")}}
- else audio.pause();
- updatePlayback();
+ if(audio.paused){
+   try{await audio.play();playing=true;updatePlayback()}
+   catch(e){await playAt(index)}
+ }else{audio.pause();playing=false;updatePlayback()}
 }
 function openSheet(){sheetOpen=true;document.body.classList.add("sheet-open");$("songSheet").setAttribute("aria-hidden","false")}
 function closeSheet(){sheetOpen=false;document.body.classList.remove("sheet-open");$("songSheet").setAttribute("aria-hidden","true")}
@@ -241,9 +243,9 @@ function renderCatalog(query=""){
    const meta=document.createElement("span");meta.className="catalog-meta";
    const name=document.createElement("span");name.className="catalog-name";name.textContent=t.title;
    const artist=document.createElement("span");artist.className="catalog-artist";artist.textContent=t.artist;
-   const type=document.createElement("span");type.className="catalog-type";type.textContent=t.searchQuery?"ПОКА НЕТ ВСТРОЕННОГО ПЛЕЕРА":t.videoId?"▶ ВСТРОЕННЫЙ YOUTUBE-ПЛЕЕР":"▶ ИНСТРУМЕНТАЛ";
+   const type=document.createElement("span");type.className="catalog-type";type.textContent=(t.searchQuery||t.videoId)?"▶ ЛИЦЕНЗИОННОЕ ПРЕВЬЮ":"▶ ИНСТРУМЕНТАЛ";
    meta.append(name,artist,type);const action=document.createElement("span");action.textContent="▶";action.style.color="var(--accent)";
-   b.append(cover,meta,action);b.addEventListener("click",async()=>{await playAt(tracks.findIndex(x=>x.id===t.id));if(!t.searchQuery){closeCatalog();openSheet();}});root.append(b);
+   b.append(cover,meta,action);b.addEventListener("click",async()=>{await playAt(tracks.findIndex(x=>x.id===t.id));closeCatalog();openSheet();});root.append(b);
  });
 }
 function openCatalog(){ $("catalogPanel").hidden=false;$("catalogSearch").focus();renderCatalog($("catalogSearch").value); }
