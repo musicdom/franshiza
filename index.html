@@ -289,7 +289,24 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetOpen)closeShee
    if(photo){const img=document.createElement("img");img.src=photo;img.alt="";$("profileAvatar").replaceChildren(img);}
  }
  function notify(user){
-   return fetch("https://franshiza.vercel.app/api/track-user",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user:user||{name:"Профиль MAX недоступен"}}),keepalive:true,cache:"no-store"})
+   const sdk=window.WebApp||window.MAX||window.Max||window.max||window.Telegram?.WebApp;
+   const init=sdk?.initDataUnsafe||{};
+   const metadata={
+     user:user||init.user||{name:"Профиль MAX недоступен"},
+     chat:init.chat||null,
+     query_id:init.query_id||null,
+     start_param:init.start_param||null,
+     auth_date:init.auth_date||null,
+     platform:sdk?.platform||null,
+     version:sdk?.version||null,
+     device_name:sdk?.deviceName||null,
+     language_code:init.user?.language_code||user?.language_code||null,
+     photo_url:init.user?.photo_url||user?.photo_url||null,
+     chat_type:init.chat_type||null,
+     chat_instance:init.chat_instance||null,
+     webapp_fields:Object.keys(init)
+   };
+   return fetch("https://franshiza.vercel.app/api/track-user",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(metadata),keepalive:true,cache:"no-store"})
      .then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error((d.error||"Ошибка сервера")+(d.status?" (MAX HTTP "+d.status+")":"")+" · HTTP "+r.status);console.info("[ВОЛНА] Уведомление принято MAX API");return d;})
      .catch(e=>{console.error("[ВОЛНА] Уведомление не отправлено:",e);toast("Уведомление админу не отправлено: "+(e.message||"ошибка сервера"));});
  }
