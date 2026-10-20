@@ -164,50 +164,55 @@ function updatePlayback(){
  $("statusLabel").textContent=active?"СЕЙЧАС ИГРАЕТ":"ТВОЁ МУЗЫКАЛЬНОЕ ПРОСТРАНСТВО";
  $("bottomHint").textContent=active?"Нажми на нижнюю панель — узнать исполнителя":"МУЗЫКА В ОДНОМ КАСАНИИ";
 }
+let activeVideoId=null;
+function renderVideoPlayer(t,autoplay=true){
+ audio.pause();audio.removeAttribute("src");audio.load();
+ activeVideoId=t.videoId;
+ const frame=document.createElement("iframe");
+ frame.title=t.title+" — "+t.artist;
+ frame.allow="autoplay; encrypted-media; picture-in-picture; web-share";
+ frame.allowFullscreen=true;
+ frame.referrerPolicy="strict-origin-when-cross-origin";
+ frame.setAttribute("loading","eager");
+ frame.src="https://www.youtube.com/embed/"+encodeURIComponent(t.videoId)+"?autoplay="+(autoplay?"1":"0")+"&controls=1&playsinline=1&rel=0&enablejsapi=1&origin="+encodeURIComponent(location.origin);
+ $("artLarge").classList.add("video-mode");
+ $("artLarge").replaceChildren(frame);
+ // Не выдаём значок «играет» за подтверждение: встраиваемый плеер сам показывает
+ // кнопку запуска, если WebView запрещает автозапуск.
+ playing=autoplay;
+ updatePlayback();
+}
 async function playAt(i){
  index=(i+tracks.length)%tracks.length;const t=current();
  updateTrack();
  if(t.searchQuery){
    audio.pause();audio.removeAttribute("src");audio.load();
-   playing=false;updatePlayback();
-   toast("Для этой песни пока нет проверенного встроенного видео. Открываю поиск YouTube.");
-   window.open("https://www.youtube.com/results?search_query="+encodeURIComponent(t.searchQuery),"_blank","noopener");
+   playing=false;activeVideoId=null;updatePlayback();
+   $("artLarge").classList.remove("video-mode");
+   const span=document.createElement("span");span.textContent=t.icon;$("artLarge").replaceChildren(span);
+   toast("Для этой песни пока нет встроенного видео. Выбери трек с пометкой YOUTUBE или инструментал.");
    return;
  }
- if(t.videoId){
-   audio.pause();audio.removeAttribute("src");audio.load();
-   const frame=document.createElement("iframe");
-   frame.title=t.title+" — "+t.artist;
-   frame.allow="autoplay; encrypted-media; picture-in-picture; web-share";
-   frame.allowFullscreen=true;
-   frame.referrerPolicy="strict-origin-when-cross-origin";
-   frame.src="https://www.youtube-nocookie.com/embed/"+encodeURIComponent(t.videoId)+"?autoplay=1&playsinline=1&enablejsapi=1&origin="+encodeURIComponent(location.origin);
-   $("artLarge").classList.add("video-mode");$("artLarge").replaceChildren(frame);
-   playing=true;updatePlayback();return;
- }
+ if(t.videoId){renderVideoPlayer(t,true);return;}
+ activeVideoId=null;
  $("artLarge").classList.remove("video-mode");
  const span=document.createElement("span");span.textContent=t.icon;$("artLarge").replaceChildren(span);
  audio.src=t.src;
- try{await audio.play();playing=true;updatePlayback()}catch(e){playing=false;updatePlayback();toast("Не удалось запустить аудио. Попробуй ещё раз.");}
+ try{await audio.play();playing=true;updatePlayback()}catch(e){playing=false;updatePlayback();toast("Не удалось запустить аудио. Нажми ▶ ещё раз.");}
 }
 async function togglePlayback(){
  if(index<0){await playAt(0);return}
  const t=current();
- if(!playing){
-   if(t&&t.videoId){
-     const next=pickDifferentTrack();await playAt(next);return;
-   }
-   if(t&&t.searchQuery){await playAt(pickDifferentTrack());return;}
-   if(audio.paused){await playAt(pickDifferentTrack());return;}
- }
-
+ if(t&&t.searchQuery){toast("У этой песни пока нет встроенного аудио. Выбери другой трек.");return;}
  if(t&&t.videoId){
    const frame=$("artLarge").querySelector("iframe");
-   if(frame&&frame.contentWindow){frame.contentWindow.postMessage(JSON.stringify({event:"command",func:playing?"pauseVideo":"playVideo",args:[]}),"*");playing=!playing;updatePlayback();}
-   else await playAt(index);
+   if(frame&&frame.contentWindow){
+     frame.contentWindow.postMessage(JSON.stringify({event:"command",func:playing?"pauseVideo":"playVideo",args:[]}),"*");
+     playing=!playing;updatePlayback();
+   }else renderVideoPlayer(t,!playing);
    return;
  }
- if(audio.paused){try{await audio.play();playing=true}catch(e){toast("Не удалось запустить аудио")} }
+ if(audio.paused){try{await audio.play();playing=true}catch(e){toast("Не удалось запустить аудио. Нажми ▶ ещё раз.")}}
  else audio.pause();
  updatePlayback();
 }
@@ -236,7 +241,7 @@ function renderCatalog(query=""){
    const meta=document.createElement("span");meta.className="catalog-meta";
    const name=document.createElement("span");name.className="catalog-name";name.textContent=t.title;
    const artist=document.createElement("span");artist.className="catalog-artist";artist.textContent=t.artist;
-   const type=document.createElement("span");type.className="catalog-type";type.textContent=t.searchQuery?"НАЙТИ ОФИЦИАЛЬНЫЙ ТРЕК НА YOUTUBE":t.popular?"ПОПУЛЯРНЫЙ ТРЕК · YOUTUBE":"ИНСТРУМЕНТАЛ";
+   const type=document.createElement("span");type.className="catalog-type";type.textContent=t.searchQuery?"ПОКА НЕТ ВСТРОЕННОГО ПЛЕЕРА":t.videoId?"▶ ВСТРОЕННЫЙ YOUTUBE-ПЛЕЕР":"▶ ИНСТРУМЕНТАЛ";
    meta.append(name,artist,type);const action=document.createElement("span");action.textContent="▶";action.style.color="var(--accent)";
    b.append(cover,meta,action);b.addEventListener("click",async()=>{await playAt(tracks.findIndex(x=>x.id===t.id));if(!t.searchQuery){closeCatalog();openSheet();}});root.append(b);
  });
