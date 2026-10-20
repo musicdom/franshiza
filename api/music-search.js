@@ -73,6 +73,6 @@ module.exports = async function handler(req, res) {
     });
   } catch (error) {
     console.error("Music preview search failed:", String(error && error.message || error).slice(0, 180));
-    return res.status(502).json({ ok: false, error: "Каталог аудио сейчас недоступен. Попробуй ещё раз или открой поиск VK Музыки." });
+    return res.status(502).json({ ok: false, error: "Каталог Deezer сейчас недоступен. Попробуй ещё раз чуть позже." });
   }
 };
