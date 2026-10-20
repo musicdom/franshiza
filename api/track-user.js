@@ -43,7 +43,7 @@ module.exports = async function handler(req, res) {
   const identified = Boolean(id);
   const name = clean([user.first_name, user.last_name].filter(Boolean).join(" ") || user.name || user.username || (identified ? "Пользователь MAX" : "Профиль MAX не передан"), 120);
   const username = clean(user.username, 80);
-  let adminId = clean(process.env.MAX_ADMIN_USER_ID || process.env.MAX_OWNER_USER_ID || "", 80);
+  let adminId = clean(process.env.MAX_ADMIN_USER_ID || process.env.MAX_OWNER_USER_ID || process.env.MAX_ADMIN_CHAT_ID || "", 80);
   const token = clean(process.env.MAX_BOT_TOKEN || "", 500);
   if (!token) {
     console.error("TRACK USER: MAX_BOT_TOKEN is not configured");
