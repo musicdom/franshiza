@@ -1,5 +1,6 @@
 const { requestMax } = require("../lib/max-api");
 
+function cors(req,res){const o=String(req.headers.origin||"");if(["https://musicdom.github.io","https://franshiza.vercel.app"].includes(o)||/^https:\/\/franshiza-[a-z0-9-]+\.vercel\.app$/.test(o))res.setHeader("Access-Control-Allow-Origin",o);res.setHeader("Vary","Origin");res.setHeader("Access-Control-Allow-Methods","POST, OPTIONS");res.setHeader("Access-Control-Allow-Headers","Content-Type");}
 function json(res, status, body) {
   res.status(status).setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
@@ -30,6 +31,8 @@ function escapeText(value) {
   return String(value || "").replace(/[&<>]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[ch]));
 }
 module.exports = async function handler(req, res) {
+  cors(req,res);
+  if(req.method==="OPTIONS") return res.status(204).end();
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return json(res, 405, { ok: false, error: "Method not allowed" });
