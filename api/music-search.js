@@ -28,8 +28,12 @@ function normalize(value) {
 }
 
 module.exports = async function handler(req, res) {
+  const origin=String(req.headers.origin||"");
+  if(["https://musicdom.github.io","https://franshiza.vercel.app"].includes(origin)||/^https:\/\/franshiza-[a-z0-9-]+\.vercel\.app$/.test(origin)) res.setHeader("Access-Control-Allow-Origin",origin);
+  res.setHeader("Vary","Origin");
   res.setHeader("Cache-Control", "public, s-maxage=1800, stale-while-revalidate=3600");
-  res.setHeader("Access-Control-Allow-Methods", "GET");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  if(req.method==="OPTIONS") return res.status(204).end();
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).json({ ok: false, error: "Method not allowed" });
