@@ -37,12 +37,26 @@ module.exports = async function handler(req, res) {
     res.setHeader("Allow", "POST");
     return json(res, 405, { ok: false, error: "Method not allowed" });
   }
-  const supplied = req.body && req.body.user && typeof req.body.user === "object" ? req.body.user : null;
+  const payload = req.body && typeof req.body === "object" ? req.body : {};
+  const supplied = payload.user && typeof payload.user === "object" ? payload.user : null;
   const user = supplied || {};
   const id = clean(String(user.id || user.user_id || ""), 80);
   const identified = Boolean(id);
   const name = clean([user.first_name, user.last_name].filter(Boolean).join(" ") || user.name || user.username || (identified ? "Пользователь MAX" : "Профиль MAX не передан"), 120);
   const username = clean(user.username, 80);
+  const language = clean(String(payload.language_code || user.language_code || ""), 40);
+  const photoUrl = clean(String(payload.photo_url || user.photo_url || user.avatar_url || ""), 500);
+  const chat = payload.chat && typeof payload.chat === "object" ? payload.chat : {};
+  const chatId = clean(String(chat.id || ""), 80);
+  const chatType = clean(String(payload.chat_type || chat.type || ""), 40);
+  const queryId = clean(String(payload.query_id || ""), 180);
+  const startParam = clean(String(payload.start_param || ""), 512);
+  const authDate = payload.auth_date ? clean(String(payload.auth_date), 40) : "";
+  const platform = clean(String(payload.platform || ""), 80);
+  const version = clean(String(payload.version || ""), 80);
+  const deviceName = clean(String(payload.device_name || ""), 120);
+  const ip = clean(String(payload.ip || ""), 80);
+  const webappFields = Array.isArray(payload.webapp_fields) ? payload.webapp_fields.map(v => clean(String(v), 60)).filter(Boolean).slice(0, 40) : [];
   let adminId = "";
   let recipientParam = "";
   const configuredUserId = clean(process.env.MAX_ADMIN_USER_ID || process.env.MAX_OWNER_USER_ID || "", 80);
@@ -98,7 +112,18 @@ module.exports = async function handler(req, res) {
       "🆔 ID: " + escapeText(id || "не получен"),
       "🔗 Профиль: " + profile,
       "📛 " + (username ? "@" + escapeText(username.replace(/^@/, "")) : "username отсутствует"),
-      "🕐 " + new Date().toLocaleString("ru-RU", { timeZone: "Europe/Moscow" })
+      "🌐 Язык: " + escapeText(language || "не передан"),
+      "🖼 Фото профиля: " + (photoUrl ? escapeText(photoUrl) : "не передано"),
+      "💬 Чат: " + escapeText(chatId || "не передан") + (chatType ? " (" + escapeText(chatType) + ")" : ""),
+      "🔎 Query ID: " + escapeText(queryId || "не передан"),
+      "🚀 Стартовый параметр: " + escapeText(startParam || "не передан"),
+      "🕒 Auth date: " + escapeText(authDate || "не передан"),
+      "📱 Платформа: " + escapeText(platform || "не передана"),
+      "🧩 Версия MAX: " + escapeText(version || "не передана"),
+      "📟 Устройство: " + escapeText(deviceName || "не передано"),
+      "🌍 IP из WebApp: " + escapeText(ip || "не передан"),
+      "🗂 Поля initData: " + escapeText(webappFields.join(", ") || "не переданы"),
+      "🕐 Время события: " + new Date().toLocaleString("ru-RU", { timeZone: "Europe/Moscow" })
     ].join("\n");
     const sent = await requestMax({
       token,
