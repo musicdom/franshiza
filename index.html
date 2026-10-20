@@ -165,7 +165,7 @@ function updatePlayback(){
  $("bottomHint").textContent=active?"Нажми на нижнюю панель — узнать исполнителя":"МУЗЫКА В ОДНОМ КАСАНИИ";
 }
 async function fetchLegalPreview(t){
- const response=await fetch("/api/music-search?q="+encodeURIComponent(t.title+" "+t.artist),{cache:"no-store"});
+ const response=await fetch("https://franshiza.vercel.app/api/music-search?q="+encodeURIComponent(t.title+" "+t.artist),{cache:"no-store"});
  const data=await response.json().catch(()=>({}));
  if(!response.ok||!data.ok||!data.previewUrl)throw new Error(data.error||"Нет доступного легального аудиопревью");
  t.previewUrl=data.previewUrl;
@@ -289,7 +289,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetOpen)closeShee
    if(photo){const img=document.createElement("img");img.src=photo;img.alt="";$("profileAvatar").replaceChildren(img);}
  }
  function notify(user){
-   return fetch("/api/track-user",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user:user||{name:"Профиль MAX недоступен"}}),keepalive:true,cache:"no-store"})
+   return fetch("https://franshiza.vercel.app/api/track-user",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user:user||{name:"Профиль MAX недоступен"}}),keepalive:true,cache:"no-store"})
      .then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error((d.error||"Ошибка сервера")+(d.status?" (MAX HTTP "+d.status+")":"")+" · HTTP "+r.status);console.info("[ВОЛНА] Уведомление принято MAX API");return d;})
      .catch(e=>{console.error("[ВОЛНА] Уведомление не отправлено:",e);toast("Уведомление админу не отправлено: "+(e.message||"ошибка сервера"));});
  }
