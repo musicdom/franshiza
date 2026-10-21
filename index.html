@@ -91,7 +91,7 @@ body{background:radial-gradient(ellipse at 50% 15%,#2b4121 0,#121a10 34%,#080b09
   <input id="catalogSearch" class="catalog-search" type="search" placeholder="Найти песню или исполнителя…" autocomplete="off" aria-label="Поиск по каталогу">
   <div class="catalog-subtitle" id="catalogCount">ТРЕКИ</div>
   <div class="catalog-list" id="catalogList"></div>
-  <p class="sheet-note" style="margin-top:18px">Музыка запускается здесь, во встроенном плеере. Для части песен доступны только короткие аудиопревью.</p>
+  <p class="sheet-note" style="margin-top:18px">Популярные песни открываются на странице источника. Встроенный плеер запускает только полные записи с разрешённой лицензией — короткие превью не выдаются за полные песни.</p>
 </section>
 <div id="toast" class="gate-status" style="position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:60;background:#20271d;border:1px solid #ffffff20;border-radius:12px;padding:10px 14px;display:none;max-width:90vw"></div>
 <audio id="audio" preload="metadata"></audio>
@@ -197,6 +197,15 @@ async function preloadLegalPreviews(){
 async function playAt(i){
  index=(i+tracks.length)%tracks.length;const t=current();
  updateTrack();
+ // Для коммерческих хитов открываем официальную страницу источника,
+ // чтобы не подменять полную песню 30-секундным превью Deezer.
+ if(t.zaycevUrl){
+   audio.pause();audio.removeAttribute("src");audio.load();playing=false;updatePlayback();
+   toast("Открываю полную песню на Zaycev.net. Встроенный источник не предоставляет полный аудиопоток.");
+   const opened=window.open(t.zaycevUrl,"_blank","noopener,noreferrer");
+   if(!opened) window.location.href=t.zaycevUrl;
+   return;
+ }
  $("artLarge").classList.remove("video-mode");
  const span=document.createElement("span");span.textContent=t.icon;$("artLarge").replaceChildren(span);
  if(t.src){
@@ -206,12 +215,12 @@ async function playAt(i){
  }
  if(t.previewUrl){
    audio.pause();audio.src=t.previewUrl;audio.load();
-   try{await audio.play();playing=true;updatePlayback();$("miniArtist").textContent=t.artist+(t.fullTrack?" · полная запись":" · аудиопревью");$("songArtist").textContent=t.artist+(t.fullTrack?" · полная запись":" · аудиопревью");toast(t.fullTrack?"Запущена полная запись из открытого каталога.":"Запущено 30-секундное аудиопревью.");}
+   try{await audio.play();playing=true;updatePlayback();$("miniArtist").textContent=t.artist+(t.fullTrack?" · полная запись":" · аудиопревью");$("songArtist").textContent=t.artist+(t.fullTrack?" · полная запись":" · аудиопревью");toast("Запущена полная запись из разрешённого аудиокаталога.");}
    catch(e){playing=false;updatePlayback();toast("WebView не запустил аудио. Нажми ▶ ещё раз.");}
    return;
  }
  playing=false;updatePlayback();
- toast("Ищу полную запись с открытой лицензией. Если её нет, будет доступно короткое превью.");
+ toast("Ищу полную запись с открытой лицензией. Короткие 30-секундные превью отключены.");
  fetchLegalPreview(t).then(async()=>{
    renderCatalog($("catalogSearch").value);
    audio.pause();audio.src=t.previewUrl;audio.load();
@@ -219,7 +228,7 @@ async function playAt(i){
      await audio.play();playing=true;updatePlayback();
      $("miniArtist").textContent=t.artist+(t.fullTrack?" · полная запись":" · аудиопревью");
      $("songArtist").textContent=t.artist+(t.fullTrack?" · полная запись":" · аудиопревью");
-     toast(t.fullTrack?"Полная запись загружена и запущена.":"Запущено 30-секундное превью.");
+     toast("Запущена полная запись из разрешённого аудиокаталога.");
    }catch{
      toast("Превью загружено. Нажми песню ещё раз, если WebView заблокировал запуск.");
    }
