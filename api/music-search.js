@@ -42,23 +42,32 @@ function scoreText(queryWords, title, creator) {
     (normalizedTitle && queryWords.every(word => normalizedTitle.includes(word)) ? 2 : 0);
 }
 
-async function findFullTrack(query, queryWords) {
-  if (!queryWords.length) return null;
-  const terms = queryWords.slice(0, 6).map(word => word.replace(/[^a-z0-9а-яё]/gi, "")).filter(Boolean);
-  if (!terms.length) return null;
-  const clauses = terms.map(word => '(title:' + word + ' OR creator:' + word + ')').join(' OR ');
+async function findFullTrack(titleWanted, artistWanted) {
+  const wantedTitle = normalize(titleWanted);
+  const titleWords = wantedTitle.split(" ").filter(word => word.length > 1);
+  const artistWords = normalize(artistWanted).split(" ").filter(word =>
+    word.length > 2 && !["feat", "ft", "the", "and", "with"].includes(word)
+  );
+  if (!titleWords.length) return null;
+  const safeTitle = String(titleWanted || "").replace(/["\\]/g, " ").trim();
+  const searchQuery = 'mediatype:audio AND licenseurl:*creativecommons.org* AND title:"' + safeTitle + '"';
   const searchUrl = "https://archive.org/advancedsearch.php?q=" +
-    encodeURIComponent('mediatype:audio AND licenseurl:*creativecommons.org* AND (' + clauses + ')') +
-    "&fl[]=identifier&fl[]=title&fl[]=creator&fl[]=licenseurl&rows=12&page=1&output=json";
+    encodeURIComponent(searchQuery) +
+    "&fl[]=identifier&fl[]=title&fl[]=creator&fl[]=licenseurl&rows=20&page=1&output=json";
   try {
     const search = await getJson(searchUrl);
     const docs = search && search.response && Array.isArray(search.response.docs) ? search.response.docs : [];
-    const candidates = docs
-      .map(doc => ({ doc, score: scoreText(queryWords, doc.title, doc.creator) }))
-      .filter(entry => entry.score >= Math.min(2, queryWords.length))
-      .sort((a, b) => b.score - a.score);
+    const candidates = docs.filter(doc => {
+      const actualTitle = normalize(doc.title);
+      const actualArtist = normalize(doc.creator);
+      const titleMatches = titleWords.every(word => actualTitle.includes(word));
+      const artistMatches = !artistWords.length ||
+        artistWords.filter(word => actualArtist.includes(word)).length >= Math.min(2, artistWords.length);
+      return titleMatches && artistMatches;
+    });
 
-    for (const candidate of candidates.slice(0, 4)) {
+    for (const candidateDoc of candidates.slice(0, 6)) {
+      const candidate = { doc: candidateDoc };
       const identifier = String(candidate.doc.identifier || "");
       if (!/^[a-zA-Z0-9._-]+$/.test(identifier)) continue;
       const metadata = await getJson("https://archive.org/metadata/" + encodeURIComponent(identifier));
@@ -74,7 +83,7 @@ async function findFullTrack(query, queryWords) {
         file.size && Number(file.size) > 150000
       );
       if (!audioFile) continue;
-      const title = String(meta.title || candidate.doc.title || query).slice(0, 180);
+      const title = String(meta.title || candidate.doc.title || titleWanted).slice(0, 180);
       const artist = String(meta.creator || candidate.doc.creator || "").slice(0, 180);
       return {
         ok: true,
@@ -109,12 +118,12 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
 
-  const query = String(req.query && req.query.q || "").trim().slice(0, 180);
-  if (!query) return res.status(400).json({ ok: false, error: "Укажи название песни или исполнителя" });
-
-  const queryNorm = normalize(query);
-  const queryWords = queryNorm.split(" ").filter(word => word.length > 2);
-  const fullTrack = await findFullTrack(query, queryWords);
+  const title = String(req.query && req.query.title || "").trim().slice(0, 120);
+  const artist = String(req.query && req.query.artist || "").trim().slice(0, 120);
+  const legacyQuery = String(req.query && req.query.q || "").trim().slice(0, 180);
+  const requestedTitle = title || legacyQuery;
+  if (!requestedTitle) return res.status(400).json({ ok: false, error: "Укажи название песни" });
+  const fullTrack = await findFullTrack(requestedTitle, artist);
   if (fullTrack) return res.status(200).json(fullTrack);
 
   return res.status(404).json({
