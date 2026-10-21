@@ -117,36 +117,8 @@ module.exports = async function handler(req, res) {
   const fullTrack = await findFullTrack(query, queryWords);
   if (fullTrack) return res.status(200).json(fullTrack);
 
-  try {
-    const endpoint = "https://api.deezer.com/search?q=" + encodeURIComponent(query) + "&limit=12";
-    const data = await getJson(endpoint);
-    const results = Array.isArray(data.data) ? data.data : [];
-    const scored = results.filter(item => item && item.preview && item.link).map(item => {
-      const title = normalize(item.title);
-      const artist = normalize(item.artist && item.artist.name);
-      const combined = title + " " + artist;
-      let score = queryWords.reduce((sum, word) => sum + (combined.includes(word) ? 1 : 0), 0);
-      if (title && queryNorm.includes(title)) score += 2;
-      return { item, score };
-    }).sort((a, b) => b.score - a.score);
-
-    if (!scored.length || scored[0].score < Math.min(2, queryWords.length)) {
-      return res.status(404).json({ ok: false, error: "Полная свободно лицензированная запись не найдена. Для этой композиции доступно не более короткого превью либо источник не найден." });
-    }
-
-    const item = scored[0].item;
-    return res.status(200).json({
-      ok: true,
-      previewUrl: item.preview,
-      title: item.title,
-      artist: item.artist && item.artist.name || "",
-      duration: 30,
-      source: "Deezer",
-      sourceUrl: item.link,
-      fullTrack: false
-    });
-  } catch (error) {
-    console.error("Music preview search failed:", String(error && error.message || error).slice(0, 180));
-    return res.status(502).json({ ok: false, error: "Музыкальные каталоги сейчас недоступны. Попробуй ещё раз чуть позже." });
-  }
+  return res.status(404).json({
+    ok: false,
+    error: "Полная запись с разрешённой лицензией не найдена. Короткие 30-секундные превью отключены."
+  });
 };
