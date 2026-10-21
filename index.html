@@ -59,9 +59,12 @@ body{background:radial-gradient(ellipse at 50% 15%,#2b4121 0,#121a10 34%,#080b09
 .catalog-search{background:#ffffff0b;border-color:#ffffff24}
 .song-genre{color:var(--accent)}
 @media(min-width:700px){.launch-wrap{width:290px}}
+
+#zaycevEmbed{position:fixed;inset:0;z-index:1000;background:#090b0a;display:none;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}#zaycevEmbed.open{display:flex}#zaycevEmbed .embed-head{height:54px;flex:0 0 54px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--line);font-weight:700}#zaycevEmbed iframe{border:0;display:block;flex:1;width:100%;background:#fff}#zaycevEmbed .embed-note{font-size:12px;color:var(--muted);padding:8px 14px;border-top:1px solid var(--line)}
 </style>
 </head>
 <body>
+<div id="zaycevEmbed" aria-hidden="true"><div class="embed-head"><span id="zaycevEmbedTitle">Zaycev.net · встроенный плеер</span><button id="zaycevEmbedClose" type="button" aria-label="Закрыть">Закрыть ✕</button></div><iframe id="zaycevFrame" title="Плеер Zaycev.net" allow="autoplay; encrypted-media" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="embed-note">Плеер Zaycev.net открыт внутри «Волны». Если сайт запрещает встраивание, понадобится официальный доступ от Zaycev.net.</div></div>
 <div id="musicApp">
 <main class="app">
   <header class="top"><div class="brand">ВОЛНА<b>.</b></div><button type="button" class="catalog-trigger" id="openCatalog">♫ Каталог</button><div class="profile"><div class="avatar" id="profileAvatar"><span id="profileInitial">♫</span></div><div class="profile-name" id="profileName">Твой аккаунт</div></div></header>
@@ -266,9 +269,12 @@ function renderCatalog(query=""){
    const artist=document.createElement("span");artist.className="catalog-artist";artist.textContent=t.artist;
    const type=document.createElement("span");type.className="catalog-type";type.textContent=t.src?"▶ СВОБОДНЫЙ АУДИОПОТОК":(t.previewUrl?(t.fullTrack?"▶ ПОЛНАЯ ЗАПИСЬ":"▶ АУДИОПРЕВЬЮ"):"♫ ИЩЕМ ТОЧНУЮ ПОЛНУЮ ЗАПИСЬ");
    meta.append(name,artist,type);const action=document.createElement("span");action.textContent="▶";action.style.color="var(--accent)";
-   b.append(cover,meta,action);b.addEventListener("click",async()=>{await playAt(tracks.findIndex(x=>x.id===t.id));closeCatalog();});root.append(b);
+   b.append(cover,meta,action);b.addEventListener("click",async()=>{if(t.zaycevUrl){openZaycevEmbed(t);return;}await playAt(tracks.findIndex(x=>x.id===t.id));closeCatalog();});root.append(b);
  });
 }
+function openZaycevEmbed(t){const panel=$("zaycevEmbed"),frame=$("zaycevFrame");$("zaycevEmbedTitle").textContent=(t.title||"Песня")+" — "+(t.artist||"Zaycev.net");frame.src=t.zaycevUrl;panel.classList.add("open");panel.setAttribute("aria-hidden","false");closeCatalog();audio.pause();playing=false;updatePlayback();}
+function closeZaycevEmbed(){const panel=$("zaycevEmbed");panel.classList.remove("open");panel.setAttribute("aria-hidden","true");$("zaycevFrame").src="about:blank";}
+$("zaycevEmbedClose").addEventListener("click",closeZaycevEmbed);
 function openCatalog(){ $("catalogPanel").hidden=false;$("catalogSearch").focus();renderCatalog($("catalogSearch").value); }
 function closeCatalog(){ $("catalogPanel").hidden=true; }
 $("openCatalog").addEventListener("click",openCatalog);
