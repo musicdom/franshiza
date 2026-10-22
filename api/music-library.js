@@ -85,9 +85,10 @@ function normalizeTrack(body, existing) {
   if (!validHttpsUrl(audioUrl)) throw new Error("Ссылка на аудио должна начинаться с https://");
   const audio = new URL(audioUrl);
   const isYandexPublic = /(^|\.)disk\.yandex\.(ru|com|kz|by)$/i.test(audio.hostname) && /^\/d\/[A-Za-z0-9_-]+/.test(audio.pathname);
+  const isGoogleDrive = /(^|\.)drive\.google\.com$/i.test(audio.hostname) && Boolean(getGoogleDriveId(audioUrl));
   const isDirectAudio = /\.(mp3|m4a|aac|ogg|opus|wav|flac)(\?.*)?$/i.test(audio.pathname + audio.search);
-  if (!isYandexPublic && !isDirectAudio) {
-    throw new Error("Нужна публичная ссылка Яндекс Диска вида https://disk.yandex.ru/d/КОД или прямая ссылка на аудиофайл");
+  if (!isYandexPublic && !isGoogleDrive && !isDirectAudio) {
+    throw new Error("Нужна публичная ссылка Яндекс Диска, Google Диска или прямая ссылка на аудиофайл");
   }
   if (cover && !validHttpsUrl(cover)) throw new Error("Ссылка на обложку должна начинаться с https://");
   return {
@@ -103,6 +104,23 @@ function normalizeTrack(body, existing) {
   };
 }
 
+function getGoogleDriveId(value) {
+  try {
+    const url = new URL(value);
+    if (!/(^|\.)drive\.google\.com$/i.test(url.hostname)) return "";
+    const pathMatch = url.pathname.match(/\/file\/d\/([A-Za-z0-9_-]+)/);
+    if (pathMatch) return pathMatch[1];
+    const id = url.searchParams.get("id");
+    if (id && /^[A-Za-z0-9_-]+$/.test(id)) return id;
+    return "";
+  } catch { return ""; }
+}
+
+function resolveGoogleDrive(value) {
+  const id = getGoogleDriveId(value);
+  if (!id) throw new Error("Не удалось распознать ссылку Google Диска. Используй ссылку вида drive.google.com/file/d/ID/view");
+  return "https://drive.google.com/uc?export=download&id=" + encodeURIComponent(id);
+}
 async function resolveYandex(url) {
   const parsed = new URL(url);
   const publicKey = parsed.searchParams.get("public_key") ||
@@ -131,6 +149,10 @@ module.exports = async function handler(req, res) {
       if (yandex) {
         const url = await resolveYandex(track.audioUrl);
         return json(res, 200, { ok: true, url, expiresSoon: true });
+      }
+      if (/(^|\.)drive\.google\.com$/i.test(parsed.hostname)) {
+        const url = resolveGoogleDrive(track.audioUrl);
+        return json(res, 200, { ok: true, url, provider: "google-drive", expiresSoon: false });
       }
       return json(res, 200, { ok: true, url: track.audioUrl });
     }
