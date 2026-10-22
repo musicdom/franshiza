@@ -4,41 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#090b0a">
-<script src="https://st.max.ru/js/max-web-app.js">
-/* Home dashboard interactions */
-function renderHomeTracks(){
- const root=$("homeTrackList");if(!root)return;root.replaceChildren();
- const list=tracks.filter(t=>t.src||t.previewUrl).slice(0,5);
- if(!list.length){const empty=document.createElement("div");empty.className="catalog-empty";empty.textContent=openCatalogLoading?"Ищем доступные полные записи…":"Нажми «Слушать сейчас», чтобы загрузить музыкальный каталог.";root.append(empty);return;}
- list.forEach(t=>{const b=document.createElement("button");b.className="home-track";b.type="button";const art=document.createElement("span");art.className="home-track-cover";art.textContent=t.icon||"♫";const info=document.createElement("span");info.className="home-track-info";const title=document.createElement("b");title.textContent=t.title;const artist=document.createElement("small");artist.textContent=t.artist;info.append(title,artist);const play=document.createElement("span");play.className="home-track-play";play.textContent="▶";b.append(art,info,play);b.addEventListener("click",()=>playAt(tracks.findIndex(x=>x.id===t.id)));root.append(b);});
-}
-function setView(view){
- const home=$("homeView"),profile=$("profileView"),catalog=$("catalogPanel");
- if(home)home.hidden=view!=="home";if(profile)profile.hidden=view!=="profile";
- if(catalog)catalog.hidden=view!=="catalog";
- document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
- if(view==="catalog")preloadLegalPreviews();
- if(view==="profile"&&typeof profileNameObserver==="function")profileNameObserver();
- if(view==="favorites"){
-   const liked=tracks.filter(t=>favorites.has(t.id));
-   if(!liked.length){toast("Избранное пока пустое — нажми ♡ у песни в плеере.");setView("home");return;}
-   $("catalogPanel").hidden=false;$("catalogCount").textContent=liked.length+" В ИЗБРАННОМ";const root=$("catalogList");root.replaceChildren();
-   liked.forEach(t=>{const b=document.createElement("button");b.className="catalog-row";b.type="button";const cover=document.createElement("span");cover.className="catalog-cover";cover.textContent="♥";const meta=document.createElement("span");meta.className="catalog-meta";const name=document.createElement("span");name.className="catalog-name";name.textContent=t.title;const artist=document.createElement("span");artist.className="catalog-artist";artist.textContent=t.artist;meta.append(name,artist);b.append(cover,meta);b.addEventListener("click",()=>playAt(tracks.findIndex(x=>x.id===t.id)));root.append(b);});
- }
-}
-document.querySelectorAll(".nav-item").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
-$("featurePlay")?.addEventListener("click",togglePlayback);
-$("allTracks")?.addEventListener("click",()=>setView("catalog"));
-document.querySelectorAll("[data-track]").forEach(b=>b.addEventListener("click",()=>{const i=tracks.findIndex(t=>t.id===b.dataset.track&&(t.src||t.previewUrl));if(i>=0){playAt(i);return;}setView("catalog");$("catalogSearch").value="";renderCatalog("");toast("Выбери доступную запись из каталога — неподтверждённые песни не запускаются.");}));
-document.querySelectorAll("[data-genre]").forEach(b=>b.addEventListener("click",()=>{setView("catalog");$("catalogSearch").value=b.dataset.genre;renderCatalog(b.dataset.genre)}));
-$("profileFavorites")?.addEventListener("click",()=>setView("favorites"));
-$("profileSettings")?.addEventListener("click",()=>toast("Настройки аккаунта MAX управляются в приложении MAX."));
-$("profileHelp")?.addEventListener("click",()=>toast("Гармоника — музыкальный мини-апп."));
-$("profileAvatar")?.addEventListener("click",()=>setView("profile"));
-const profileNameObserver=()=>{const n=$("profileName")?.textContent||"Твой аккаунт";if($("profileBigName"))$("profileBigName").textContent=n;const a=$("profileAvatar")?.querySelector("img");if(a){const img=document.createElement("img");img.src=a.src;img.alt="";img.style.cssText="width:100%;height:100%;object-fit:cover;border-radius:50%";$("profileBigAvatar")?.replaceChildren(img)}else if($("profileBigAvatar"))$("profileBigAvatar").textContent=(n[0]||"♫").toUpperCase()};
-renderHomeTracks();
+<script src="https://st.max.ru/js/max-web-app.js"></script>
 
-</script>
 <title>Гармоника — музыка для тебя</title>
 <style>
 :root{color-scheme:dark;--bg:#090b0a;--panel:#151815;--text:#f5f7f2;--muted:#9ba398;--accent:#c5ff72;--line:#292e28}
@@ -511,5 +478,39 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetOpen)closeShee
  try { const sdk=window.WebApp||window.MAX||window.Max||window.max; if(sdk&&typeof sdk.ready==="function")sdk.ready(); if(sdk&&typeof sdk.expand==="function")sdk.expand(); } catch(e) { console.warn("[ГАРМОНИКА] MAX SDK init warning:",e); }
  trackOnOpen();
 })();;
+</script>
+<script>
+/* Home dashboard interactions */
+function renderHomeTracks(){
+ const root=$("homeTrackList");if(!root)return;root.replaceChildren();
+ const list=tracks.filter(t=>t.src||t.previewUrl).slice(0,5);
+ if(!list.length){const empty=document.createElement("div");empty.className="catalog-empty";empty.textContent=openCatalogLoading?"Ищем доступные полные записи…":"Нажми «Слушать сейчас», чтобы загрузить музыкальный каталог.";root.append(empty);return;}
+ list.forEach(t=>{const b=document.createElement("button");b.className="home-track";b.type="button";const art=document.createElement("span");art.className="home-track-cover";art.textContent=t.icon||"♫";const info=document.createElement("span");info.className="home-track-info";const title=document.createElement("b");title.textContent=t.title;const artist=document.createElement("small");artist.textContent=t.artist;info.append(title,artist);const play=document.createElement("span");play.className="home-track-play";play.textContent="▶";b.append(art,info,play);b.addEventListener("click",()=>playAt(tracks.findIndex(x=>x.id===t.id)));root.append(b);});
+}
+function setView(view){
+ const home=$("homeView"),profile=$("profileView"),catalog=$("catalogPanel");
+ if(home)home.hidden=view!=="home";if(profile)profile.hidden=view!=="profile";
+ if(catalog)catalog.hidden=view!=="catalog";
+ document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
+ if(view==="catalog")preloadLegalPreviews();
+ if(view==="profile"&&typeof profileNameObserver==="function")profileNameObserver();
+ if(view==="favorites"){
+   const liked=tracks.filter(t=>favorites.has(t.id));
+   if(!liked.length){toast("Избранное пока пустое — нажми ♡ у песни в плеере.");setView("home");return;}
+   $("catalogPanel").hidden=false;$("catalogCount").textContent=liked.length+" В ИЗБРАННОМ";const root=$("catalogList");root.replaceChildren();
+   liked.forEach(t=>{const b=document.createElement("button");b.className="catalog-row";b.type="button";const cover=document.createElement("span");cover.className="catalog-cover";cover.textContent="♥";const meta=document.createElement("span");meta.className="catalog-meta";const name=document.createElement("span");name.className="catalog-name";name.textContent=t.title;const artist=document.createElement("span");artist.className="catalog-artist";artist.textContent=t.artist;meta.append(name,artist);b.append(cover,meta);b.addEventListener("click",()=>playAt(tracks.findIndex(x=>x.id===t.id)));root.append(b);});
+ }
+}
+document.querySelectorAll(".nav-item").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
+$("featurePlay")?.addEventListener("click",togglePlayback);
+$("allTracks")?.addEventListener("click",()=>setView("catalog"));
+document.querySelectorAll("[data-track]").forEach(b=>b.addEventListener("click",()=>{const i=tracks.findIndex(t=>t.id===b.dataset.track&&(t.src||t.previewUrl));if(i>=0){playAt(i);return;}setView("catalog");$("catalogSearch").value="";renderCatalog("");toast("Выбери доступную запись из каталога — неподтверждённые песни не запускаются.");}));
+document.querySelectorAll("[data-genre]").forEach(b=>b.addEventListener("click",()=>{setView("catalog");$("catalogSearch").value=b.dataset.genre;renderCatalog(b.dataset.genre)}));
+$("profileFavorites")?.addEventListener("click",()=>setView("favorites"));
+$("profileSettings")?.addEventListener("click",()=>toast("Настройки аккаунта MAX управляются в приложении MAX."));
+$("profileHelp")?.addEventListener("click",()=>toast("Гармоника — музыкальный мини-апп."));
+$("profileAvatar")?.addEventListener("click",()=>setView("profile"));
+const profileNameObserver=()=>{const n=$("profileName")?.textContent||"Твой аккаунт";if($("profileBigName"))$("profileBigName").textContent=n;const a=$("profileAvatar")?.querySelector("img");if(a){const img=document.createElement("img");img.src=a.src;img.alt="";img.style.cssText="width:100%;height:100%;object-fit:cover;border-radius:50%";$("profileBigAvatar")?.replaceChildren(img)}else if($("profileBigAvatar"))$("profileBigAvatar").textContent=(n[0]||"♫").toUpperCase()};
+renderHomeTracks();
 </script>
 </body></html>
