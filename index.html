@@ -410,29 +410,50 @@ $("cancelEdit").addEventListener("click",()=>{$("trackForm").reset();$("trackGen
    }
  }
  function getInitData(){
-   const roots=[window.WebApp,window.MAX,window.Max,window.max,window.Telegram?.WebApp];
+   // В MAX основной и проверенный источник — window.WebApp, как в рабочем приложении ORBITA.
+   try{
+     const data=window.WebApp?.initDataUnsafe;
+     if(data&&typeof data==="object"&&Object.keys(data).length)return data;
+   }catch(e){console.warn("[ГАРМОНИКА] WebApp initDataUnsafe недоступен",e);}
+   const roots=[window.MAX,window.Max,window.max,window.Telegram?.WebApp];
    for(const root of roots){
      const data=root?.initDataUnsafe;
      if(data&&typeof data==="object"&&Object.keys(data).length)return data;
    }
-   return readInitDataFromHash();
+   const fromHash=readInitDataFromHash();
+   if(Object.keys(fromHash).length)return fromHash;
+   // Резерв для клиентов, передающих initData в строковом виде.
+   try{
+     const raw=String(window.WebApp?.initData||"");
+     if(raw){const p=new URLSearchParams(raw),out={};for(const [k,v] of p.entries()){if(k==="user"||k==="chat"){try{out[k]=JSON.parse(v)}catch{out[k]=null}}else out[k]=v;}return out;}
+   }catch(e){console.warn("[ГАРМОНИКА] Не удалось разобрать initData",e);}
+   return {};
  }
  function getUser(){
-   const roots=[window.WebApp,window.MAX,window.Max,window.max,window.Telegram?.WebApp];
+   try{
+     const u=window.WebApp?.initDataUnsafe?.user;
+     if(u&&(u.id!=null||u.user_id!=null||u.username||u.first_name||u.name))return u;
+   }catch(e){}
+   const roots=[window.MAX,window.Max,window.max,window.Telegram?.WebApp];
    for(const root of roots){
      const u=root?.initDataUnsafe?.user||root?.user||root?.userInfo;
-     if(u&&(u.id||u.user_id||u.username||u.first_name))return u;
+     if(u&&(u.id!=null||u.user_id!=null||u.username||u.first_name||u.name))return u;
    }
-   const u=readInitDataFromHash().user;
-   return u&&(u.id||u.user_id||u.username||u.first_name)?u:null;
+   const u=getInitData().user;
+   return u&&(u.id!=null||u.user_id!=null||u.username||u.first_name||u.name)?u:null;
  }
  function updateProfile(u){
    if(!u)return;
-   const name=u.name||[u.first_name,u.last_name].filter(Boolean).join(" ")||u.username||"Твой аккаунт";
+   const name=u.name||[u.first_name,u.last_name].filter(Boolean).join(" ")||u.username||"Пользователь MAX";
    $("profileName").textContent=name;
    $("profileInitial").textContent=(name[0]||"♫").toUpperCase();
-   const photo=u.photo_url||u.avatar_url;
+   const photo=u.photo_url||u.avatar_url||u.photo;
    if(photo){const img=document.createElement("img");img.src=photo;img.alt="";$("profileAvatar").replaceChildren(img);}
+   const bigName=$("profileBigName");if(bigName)bigName.textContent=name;
+   const bigAvatar=$("profileBigAvatar");if(bigAvatar&&!photo)bigAvatar.textContent=(name[0]||"♫").toUpperCase();
+   const id=u.id??u.user_id;
+   const idNode=$("profileUserId");
+   if(idNode)idNode.textContent=id!=null?"ID MAX: "+String(id):"";
  }
  function notify(user){
    const sdk=window.WebApp||window.MAX||window.Max||window.max||window.Telegram?.WebApp;
