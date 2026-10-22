@@ -6,7 +6,7 @@ const path = require("node:path");
 
 test("inline Mini App JavaScript parses without syntax errors", () => {
   const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
-  const scripts = [...html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)]
+  const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)]
     .map(match => match[1].trim())
     .filter(Boolean);
   assert.ok(scripts.length > 0, "index.html should contain an inline application script");
