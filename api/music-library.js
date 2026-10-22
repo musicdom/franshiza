@@ -97,7 +97,7 @@ function normalizeTrack(body, existing) {
     artist,
     audioUrl,
     cover,
-    genre: "Моя музыка",
+    genre: clean(body.genre, 80) || (existing && existing.genre) || "Моя музыка",
     icon: "♫",
     createdAt: existing && existing.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString()

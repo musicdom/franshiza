@@ -134,7 +134,7 @@ module.exports = async function handler(req, res) {
     let upstream;
     const yandex = /(^|\.)disk\.yandex\.(ru|com|kz|by)$/i.test(parsed.hostname) && /^\/d\//.test(parsed.pathname);
     const google = /(^|\.)drive\.google\.com$/i.test(parsed.hostname);
-    const directAudio = /\.(mp3|m4a|aac|ogg|opus|wav|flac)$/i.test(parsed.pathname);
+    const directAudio = /\.(mp3|m4a|aac|ogg|opus|wav|flac)(\?.*)?$/i.test(parsed.pathname + parsed.search);
     const range = req.headers.range;
 
     if (yandex) {
