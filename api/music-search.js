@@ -169,7 +169,17 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
 
-  if (String(req.query && req.query.mode || "") === "discover") {\n    try {\n      const tracks = await discoverOpenTracks(12);\n      return res.status(200).json({ ok: true, source: "Internet Archive", tracks });\n    } catch (error) {\n      console.error("Open catalog discovery failed:", String(error && error.message || error).slice(0, 180));\n      return res.status(502).json({ ok: false, error: "Не удалось загрузить открытый музыкальный каталог" });\n    }\n  }\n\n  const title = String(req.query && req.query.title || "").trim().slice(0, 120);
+  if (String(req.query && req.query.mode || "") === "discover") {
+    try {
+      const tracks = await discoverOpenTracks(12);
+      return res.status(200).json({ ok: true, source: "Internet Archive", tracks });
+    } catch (error) {
+      console.error("Open catalog discovery failed:", String(error && error.message || error).slice(0, 180));
+      return res.status(502).json({ ok: false, error: "Не удалось загрузить открытый музыкальный каталог" });
+    }
+  }
+
+  const title = String(req.query && req.query.title || "").trim().slice(0, 120);
   const artist = String(req.query && req.query.artist || "").trim().slice(0, 120);
   const legacyQuery = String(req.query && req.query.q || "").trim().slice(0, 180);
   const requestedTitle = title || legacyQuery;
