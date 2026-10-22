@@ -103,6 +103,57 @@ async function findFullTrack(titleWanted, artistWanted) {
   return null;
 }
 
+
+async function discoverOpenTracks(limitWanted = 12) {
+  const query = 'mediatype:audio AND licenseurl:*creativecommons.org* AND NOT collection:librivoxaudio';
+  const searchUrl = "https://archive.org/advancedsearch.php?q=" + encodeURIComponent(query) +
+    "&fl[]=identifier&fl[]=title&fl[]=creator&fl[]=licenseurl&sort[]=downloads+desc&rows=40&page=1&output=json";
+  const search = await getJson(searchUrl);
+  const docs = search && search.response && Array.isArray(search.response.docs) ? search.response.docs : [];
+  const candidates = docs.filter(doc => doc.identifier && doc.title &&
+    !/audiobook|podcast|speech|lecture|radio show|interview/i.test(String(doc.title)));
+  const results = await Promise.all(candidates.slice(0, 24).map(async doc => {
+    try {
+      const identifier = String(doc.identifier || "");
+      if (!/^[a-zA-Z0-9._-]+$/.test(identifier)) return null;
+      const metadata = await getJson("https://archive.org/metadata/" + encodeURIComponent(identifier));
+      const meta = metadata && metadata.metadata || {};
+      const licenseUrl = String(meta.licenseurl || doc.licenseurl || "");
+      if (!commercialLicense(licenseUrl)) return null;
+      const files = Array.isArray(metadata.files) ? metadata.files : [];
+      const audioFile = files.find(file =>
+        file && typeof file.name === "string" &&
+        /\.(mp3|m4a|ogg|opus|wav)$/i.test(file.name) &&
+        !/(_sample|_preview|_low\.)/i.test(file.name) &&
+        file.source !== "derivative" && file.size && Number(file.size) > 250000
+      );
+      if (!audioFile) return null;
+      return {
+        id: "ia-" + identifier,
+        title: String(meta.title || doc.title || "Без названия").slice(0, 180),
+        artist: String(meta.creator || doc.creator || "Открытый аудиокаталог").slice(0, 180),
+        genre: "Открытая музыка",
+        icon: "♫",
+        src: "https://archive.org/download/" + encodeURIComponent(identifier) + "/" + encodeURIComponent(audioFile.name),
+        source: "Internet Archive",
+        sourceUrl: "https://archive.org/details/" + encodeURIComponent(identifier),
+        licenseUrl,
+        fullTrack: true,
+        duration: Number(audioFile.length) || 0
+      };
+    } catch { return null; }
+  }));
+  const unique = [];
+  const seen = new Set();
+  for (const track of results) {
+    if (!track || seen.has(track.src)) continue;
+    seen.add(track.src);
+    unique.push(track);
+    if (unique.length >= limitWanted) break;
+  }
+  return unique;
+}
+
 module.exports = async function handler(req, res) {
   const origin = String(req.headers.origin || "");
   if (["https://musicdom.github.io", "https://franshiza.vercel.app"].includes(origin) ||
@@ -118,7 +169,7 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
 
-  const title = String(req.query && req.query.title || "").trim().slice(0, 120);
+  if (String(req.query && req.query.mode || "") === "discover") {\n    try {\n      const tracks = await discoverOpenTracks(12);\n      return res.status(200).json({ ok: true, source: "Internet Archive", tracks });\n    } catch (error) {\n      console.error("Open catalog discovery failed:", String(error && error.message || error).slice(0, 180));\n      return res.status(502).json({ ok: false, error: "Не удалось загрузить открытый музыкальный каталог" });\n    }\n  }\n\n  const title = String(req.query && req.query.title || "").trim().slice(0, 120);
   const artist = String(req.query && req.query.artist || "").trim().slice(0, 120);
   const legacyQuery = String(req.query && req.query.q || "").trim().slice(0, 180);
   const requestedTitle = title || legacyQuery;
