@@ -8,7 +8,8 @@
 /* Home dashboard interactions */
 function renderHomeTracks(){
  const root=$("homeTrackList");if(!root)return;root.replaceChildren();
- const list=tracks.filter(t=>t.src||t.previewUrl||t.popular).slice(0,5);
+ const list=tracks.filter(t=>t.src||t.previewUrl).slice(0,5);
+ if(!list.length){const empty=document.createElement("div");empty.className="catalog-empty";empty.textContent=openCatalogLoading?"Ищем доступные полные записи…":"Нажми «Слушать сейчас», чтобы загрузить музыкальный каталог.";root.append(empty);return;}
  list.forEach(t=>{const b=document.createElement("button");b.className="home-track";b.type="button";const art=document.createElement("span");art.className="home-track-cover";art.textContent=t.icon||"♫";const info=document.createElement("span");info.className="home-track-info";const title=document.createElement("b");title.textContent=t.title;const artist=document.createElement("small");artist.textContent=t.artist;info.append(title,artist);const play=document.createElement("span");play.className="home-track-play";play.textContent="▶";b.append(art,info,play);b.addEventListener("click",()=>playAt(tracks.findIndex(x=>x.id===t.id)));root.append(b);});
 }
 function setView(view){
@@ -279,6 +280,8 @@ const tracks=[
 ];
 const $=id=>document.getElementById(id),audio=$("audio");
 let index=-1,playing=false,favorites=new Set(),sheetOpen=false,dragStartY=null,lastAutoIndex=-1;
+try{const saved=JSON.parse(localStorage.getItem("harmonika:favorites")||"[]");if(Array.isArray(saved))favorites=new Set(saved.filter(x=>typeof x==="string"));}catch{favorites=new Set();}
+function saveFavorites(){try{localStorage.setItem("harmonika:favorites",JSON.stringify([...favorites]));}catch{}}
 const fmt=n=>Number.isFinite(n)&&n>=0?Math.floor(n/60)+":"+String(Math.floor(n%60)).padStart(2,"0"):"0:00";
 function toast(msg){const el=$("toast");el.textContent=msg;el.style.display="block";clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.style.display="none",2600)}
 function current(){return tracks[index]||null}
@@ -325,6 +328,7 @@ async function preloadLegalPreviews(){
    const existing=new Set(tracks.map(t=>t.id));
    data.tracks.forEach(t=>{if(t&&t.src&&!existing.has(t.id)){tracks.push(t);existing.add(t.id)}});
    openCatalogLoaded=true;
+   renderHomeTracks();
    renderCatalog($("catalogSearch").value);
    if(!data.tracks.length)toast("В открытом каталоге пока нет доступных записей.");
  }catch(e){
@@ -333,12 +337,17 @@ async function preloadLegalPreviews(){
  }finally{openCatalogLoading=false}
 }
 async function playAt(i){
+ if(!tracks.length)return;
  index=(i+tracks.length)%tracks.length;
- if(!tracks[index]||(!tracks[index].src&&!tracks[index].previewUrl)){
+ let requested=current();
+ if(!requested.src&&!requested.previewUrl){
    await preloadLegalPreviews();
-   const firstPlayable=tracks.findIndex(t=>t.src||t.previewUrl);
-   if(firstPlayable<0){toast("Музыкальный каталог ещё загружается. Попробуй снова через несколько секунд.");return;}
-   index=firstPlayable;
+   const refreshedIndex=tracks.findIndex(t=>t.id===requested.id);
+   if(refreshedIndex>=0){index=refreshedIndex;requested=current();}
+   if(!requested.src&&!requested.previewUrl){
+     try{await fetchLegalPreview(requested);}
+     catch{toast("Для «"+requested.title+"» не найдена доступная полная запись с разрешённой лицензией. Выбери трек из каталога.");return;}
+   }
  }
  const t=current();
  updateTrack();
@@ -376,8 +385,15 @@ async function playAt(i){
    toast("Для этой песни пока нет доступного встроенного аудио. Выбери другой трек.");
  });
 }
+async function startAvailableTrack(){
+ toast("Загружаю доступные записи…");
+ await preloadLegalPreviews();
+ const firstPlayable=tracks.findIndex(t=>t.src||t.previewUrl);
+ if(firstPlayable<0){toast("Открытый каталог сейчас не вернул доступных записей. Попробуй позже или найди песню в каталоге.");return;}
+ await playAt(firstPlayable);
+}
 async function togglePlayback(){
- if(index<0){await playAt(0);return}
+ if(index<0){await startAvailableTrack();return}
  const t=current();
  if(audio.paused){
    try{await audio.play();playing=true;updatePlayback()}
@@ -392,7 +408,7 @@ $("openSheet").addEventListener("click",openSheet);$("closeSheet").addEventListe
 $("sheetPlay").addEventListener("click",togglePlayback);
 $("previous").addEventListener("click",()=>playAt(index<=0?tracks.length-1:index-1));
 $("next").addEventListener("click",()=>playAt(index<0?0:index+1));
-$("like").addEventListener("click",()=>{const t=current();if(!t)return;favorites.has(t.id)?favorites.delete(t.id):favorites.add(t.id);$("like").textContent=favorites.has(t.id)?"♥":"♡";$("like").classList.toggle("active",favorites.has(t.id));toast(favorites.has(t.id)?"Добавлено в избранное":"Убрано из избранного")});
+$("like").addEventListener("click",()=>{const t=current();if(!t)return;favorites.has(t.id)?favorites.delete(t.id):favorites.add(t.id);saveFavorites();$("like").textContent=favorites.has(t.id)?"♥":"♡";$("like").classList.toggle("active",favorites.has(t.id));toast(favorites.has(t.id)?"Добавлено в избранное":"Убрано из избранного")});
 audio.addEventListener("play",()=>{playing=true;updatePlayback()});audio.addEventListener("pause",()=>{playing=false;updatePlayback()});audio.addEventListener("ended",()=>playAt(index+1));
 audio.addEventListener("timeupdate",()=>{$("elapsed").textContent=fmt(audio.currentTime);$("duration").textContent=fmt(audio.duration);if(Number.isFinite(audio.duration)&&audio.duration>0)$("seek").value=audio.currentTime/audio.duration*100});
 audio.addEventListener("loadedmetadata",()=> $("duration").textContent=fmt(audio.duration));
