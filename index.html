@@ -248,12 +248,12 @@ async function loadMusicLibrary(){
  openCatalogLoading=true;
  catalogLoadPromise=(async()=>{try{const r=await fetch("https://franshiza.vercel.app/api/music-library",{cache:"no-store"});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||"Не удалось загрузить библиотеку");tracks.splice(0,tracks.length,...(Array.isArray(d.tracks)?d.tracks:[]).map(t=>({...t,src:"",previewUrl:"",icon:"♫"})));openCatalogLoaded=true;renderCatalog($("catalogSearch")?.value||"");renderHomeTracks();if(index>=0&&!tracks.some(t=>t.id===current()?.id)){audio.pause();audio.removeAttribute("src");index=-1;playing=false;updatePlayback();}}catch(e){console.error("[ГАРМОНИКА] Library load failed",e);toast("Не удалось загрузить библиотеку. Проверь сервер.");}finally{openCatalogLoading=false;catalogLoadPromise=null;}})();return catalogLoadPromise;
 }
-async function resolveAudio(track){const r=await fetch("https://franshiza.vercel.app/api/music-library?resolve="+encodeURIComponent(track.id),{cache:"no-store"});const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok||!d.url)throw new Error(d.error||"Не удалось получить аудиоссылку");return d.url;}
+async function resolveAudio(track){const url="https://franshiza.vercel.app/api/music-stream?id="+encodeURIComponent(track.id);const r=await fetch(url,{headers:{Range:"bytes=0-0"},cache:"no-store"});if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.error||("Источник не отдал аудио (HTTP "+r.status+")"));}const type=r.headers.get("content-type")||"";if(type.includes("text/html")){await r.body?.cancel();throw new Error("Источник вернул страницу вместо аудио. Проверь публичный доступ к файлу.");}await r.body?.cancel();return url;}
 async function playAt(i){
  if(!tracks.length){toast("Каталог пока пуст. Добавь песни через админ-панель.");return;}
  index=(i+tracks.length)%tracks.length;const t=current();updateTrack();$("artLarge").classList.remove("video-mode");const span=document.createElement("span");span.textContent=t.icon||"♫";$("artLarge").replaceChildren(span);
  try{const url=await resolveAudio(t);audio.pause();audio.src=url;audio.load();await audio.play();playing=true;updatePlayback();$("miniArtist").textContent=t.artist+" · полная запись";$("songArtist").textContent=t.artist+" · полная запись";toast("Воспроизведение запущено.");}
- catch(e){playing=false;updatePlayback();console.error("[ГАРМОНИКА] Playback failed",e);toast("Не удалось воспроизвести файл. Проверь доступ «Все, у кого есть ссылка» и возможность скачивания в Google Диске или Яндекс Диске.");}
+ catch(e){playing=false;updatePlayback();console.error("[ГАРМОНИКА] Playback failed",e);toast((e&&e.message)||"Не удалось воспроизвести аудиофайл.");}
 }
 async function startAvailableTrack(){if(!tracks.length){await loadMusicLibrary();}if(!tracks.length){toast("Каталог пуст. Открой «Админ» и добавь первую песню.");return;}await playAt(0);}
 async function togglePlayback(){
