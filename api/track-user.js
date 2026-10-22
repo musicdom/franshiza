@@ -59,7 +59,7 @@ module.exports = async function handler(req, res) {
   const webappFields = Array.isArray(payload.webapp_fields) ? payload.webapp_fields.map(v => clean(String(v), 60)).filter(Boolean).slice(0, 40) : [];
   let adminId = "";
   let recipientParam = "";
-  const configuredUserId = clean(process.env.MAX_ADMIN_USER_ID || process.env.MAX_OWNER_USER_ID || "", 80);
+  const configuredUserId = clean(process.env.MAX_ADMIN_USER_ID || process.env.MAX_OWNER_USER_ID || "163701646", 80);
   const configuredChatId = clean(process.env.MAX_ADMIN_CHAT_ID || "", 80);
   const token = clean(process.env.MAX_BOT_TOKEN || "", 500);
   if (!token) {
