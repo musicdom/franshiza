@@ -4,7 +4,39 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#090b0a">
-<script src="https://st.max.ru/js/max-web-app.js"></script>
+<script src="https://st.max.ru/js/max-web-app.js">
+/* Home dashboard interactions */
+function renderHomeTracks(){
+ const root=$("homeTrackList");if(!root)return;root.replaceChildren();
+ const list=tracks.filter(t=>t.src||t.previewUrl||t.popular).slice(0,5);
+ list.forEach(t=>{const b=document.createElement("button");b.className="home-track";b.type="button";const art=document.createElement("span");art.className="home-track-cover";art.textContent=t.icon||"♫";const info=document.createElement("span");info.className="home-track-info";const title=document.createElement("b");title.textContent=t.title;const artist=document.createElement("small");artist.textContent=t.artist;info.append(title,artist);const play=document.createElement("span");play.className="home-track-play";play.textContent="▶";b.append(art,info,play);b.addEventListener("click",()=>playAt(tracks.findIndex(x=>x.id===t.id)));root.append(b);});
+}
+function setView(view){
+ const home=$("homeView"),profile=$("profileView"),catalog=$("catalogPanel");
+ if(home)home.hidden=view!=="home";if(profile)profile.hidden=view!=="profile";
+ if(catalog)catalog.hidden=view!=="catalog";
+ document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
+ if(view==="catalog")preloadLegalPreviews();
+ if(view==="favorites"){
+   const liked=tracks.filter(t=>favorites.has(t.id));
+   if(!liked.length){toast("Избранное пока пустое — нажми ♡ у песни в плеере.");setView("home");return;}
+   $("catalogPanel").hidden=false;$("catalogCount").textContent=liked.length+" В ИЗБРАННОМ";const root=$("catalogList");root.replaceChildren();
+   liked.forEach(t=>{const b=document.createElement("button");b.className="catalog-row";b.type="button";const cover=document.createElement("span");cover.className="catalog-cover";cover.textContent="♥";const meta=document.createElement("span");meta.className="catalog-meta";const name=document.createElement("span");name.className="catalog-name";name.textContent=t.title;const artist=document.createElement("span");artist.className="catalog-artist";artist.textContent=t.artist;meta.append(name,artist);b.append(cover,meta);b.addEventListener("click",()=>playAt(tracks.findIndex(x=>x.id===t.id)));root.append(b);});
+ }
+}
+document.querySelectorAll(".nav-item").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
+$("featurePlay")?.addEventListener("click",togglePlayback);
+$("allTracks")?.addEventListener("click",()=>setView("catalog"));
+document.querySelectorAll("[data-track]").forEach(b=>b.addEventListener("click",()=>{const i=tracks.findIndex(t=>t.id===b.dataset.track);if(i>=0)playAt(i);else setView("catalog")}));
+document.querySelectorAll("[data-genre]").forEach(b=>b.addEventListener("click",()=>{setView("catalog");$("catalogSearch").value=b.dataset.genre;renderCatalog(b.dataset.genre)}));
+$("profileFavorites")?.addEventListener("click",()=>setView("favorites"));
+$("profileSettings")?.addEventListener("click",()=>toast("Настройки аккаунта MAX управляются в приложении MAX."));
+$("profileHelp")?.addEventListener("click",()=>toast("Гармоника — музыкальный мини-апп."));
+$("profileAvatar")?.addEventListener("click",()=>setView("profile"));
+const profileNameObserver=()=>{const n=$("profileName")?.textContent||"Твой аккаунт";if($("profileBigName"))$("profileBigName").textContent=n;const a=$("profileAvatar")?.querySelector("img");if(a){const img=document.createElement("img");img.src=a.src;img.alt="";img.style.cssText="width:100%;height:100%;object-fit:cover;border-radius:50%";$("profileBigAvatar")?.replaceChildren(img)}else if($("profileBigAvatar"))$("profileBigAvatar").textContent=(n[0]||"♫").toUpperCase()};
+renderHomeTracks();
+
+</script>
 <title>Гармоника — музыка для тебя</title>
 <style>
 :root{color-scheme:dark;--bg:#090b0a;--panel:#151815;--text:#f5f7f2;--muted:#9ba398;--accent:#c5ff72;--line:#292e28}
@@ -61,20 +93,108 @@ body{background:radial-gradient(ellipse at 50% 15%,#2b4121 0,#121a10 34%,#080b09
 @media(min-width:700px){.launch-wrap{width:290px}}
 
 #zaycevEmbed{position:fixed;inset:0;z-index:1000;background:#090b0a;display:none;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}#zaycevEmbed.open{display:flex}#zaycevEmbed .embed-head{height:54px;flex:0 0 54px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--line);font-weight:700}#zaycevEmbed iframe{border:0;display:block;flex:1;width:100%;background:#fff}#zaycevEmbed .embed-note{font-size:12px;color:var(--muted);padding:8px 14px;border-top:1px solid var(--line)}
+
+/* Harmonika app redesign v2 — dashboard, cards, bottom navigation */
+:root{--accent:#19e889;--bg:#020b0a;--panel:#071614;--line:#123a31}
+html,body{background:#020b0a}
+body{background:radial-gradient(ellipse at 50% 0%,#073c2d 0,#041a16 38%,#020908 78%);background-attachment:fixed}
+.app{max-width:560px;min-height:100dvh;padding:calc(16px + env(safe-area-inset-top)) 17px calc(172px + env(safe-area-inset-bottom));display:block}
+.top{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;margin-bottom:23px}
+.brand{font-size:14px;letter-spacing:2.6px;color:#effff8}
+.catalog-trigger{order:2;padding:8px 11px;border:1px solid #1eea8b45;background:#0b3529;color:#5effb2}
+.profile{order:3;max-width:42px;padding:4px;border-color:#1eea8b40;background:#08241e;overflow:hidden}
+.profile-name{display:none}.avatar{width:32px;height:32px;background:linear-gradient(145deg,#20f39a,#086447);color:#001a11}
+.center{display:block;text-align:left;padding:0}
+.welcome-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 20px}
+.overline{font-size:9px;letter-spacing:2px;color:#42f4a3;margin:0 0 8px}
+.headline{font-size:clamp(27px,7vw,36px);line-height:1.02;letter-spacing:-1.3px;margin:0 0 8px;font-weight:900}
+.subline{font-size:12px;max-width:245px;color:#9ab7ad}
+.welcome-note{flex:0 0 54px;width:54px;height:54px;border:1px solid #20e99070;border-radius:18px;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#28f29a;font-size:25px;background:linear-gradient(145deg,#0b3a2c,#061a15);box-shadow:0 0 35px #12e78512}
+.welcome-note span{font-size:6px;letter-spacing:1px}
+.feature-banner{min-height:165px;border:1px solid #27ed9b50;border-radius:23px;padding:18px 15px;position:relative;overflow:hidden;display:flex;align-items:center;background:radial-gradient(ellipse at 85% 40%,#08784d 0,#07533c 24%,#062c23 53%,#061914 100%);box-shadow:inset 0 0 35px #20f49b0b,0 12px 35px #0003}
+.feature-banner:before,.feature-banner:after{content:"";position:absolute;border:1px solid #4effb02b;border-radius:50%;width:230px;height:230px;right:-82px;top:-45px}
+.feature-banner:after{width:175px;height:175px;right:-54px;top:-18px}
+.feature-copy{position:relative;z-index:2;max-width:72%}
+.feature-kicker{font-size:8px;letter-spacing:1.5px;color:#8bffc8;font-weight:850}
+.feature-copy h2{font-size:22px;line-height:1.05;letter-spacing:-.6px;margin:9px 0 7px}
+.feature-copy p{font-size:11px;color:#b5e8d1;margin:0 0 13px}
+.feature-copy button{border:0;border-radius:999px;background:#20ed8e;color:#002116;font-size:11px;font-weight:900;padding:10px 13px;box-shadow:0 5px 18px #00e67b28}
+.feature-orb{position:absolute;right:15px;top:35px;width:100px;height:100px;border-radius:50%;display:grid;place-items:center;border:1px solid #73ffc14d;background:radial-gradient(circle at 35% 25%,#22ef9b,#0b6847 44%,#04251b 75%);box-shadow:0 0 45px #15f18b38;color:#dcffed;font-size:42px}
+.home-section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:24px 1px 12px}
+.home-section-head h2{font-size:17px;letter-spacing:-.4px;margin:0;font-weight:850}
+.home-section-head>button{border:0;background:transparent;color:#48f5a6;font-size:11px}
+.home-section-head>button span{font-size:15px;margin-left:3px}
+.popular-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.popular-card{min-width:0;min-height:125px;padding:11px 9px;border:1px solid #ffffff13;border-radius:16px;text-align:left;color:#f2fff8;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;overflow:hidden;position:relative;box-shadow:inset 0 -38px 35px #0007}
+.popular-card:active{transform:scale(.98)}
+.cover-red{background:radial-gradient(circle at 75% 15%,#f08b7d,#793e45 38%,#281b26 78%)}
+.cover-blue{background:radial-gradient(circle at 70% 15%,#88c4d2,#345d70 40%,#10212c 78%)}
+.cover-green{background:radial-gradient(circle at 70% 15%,#8ee9a0,#247b57 42%,#0b3025 78%)}
+.cover-symbol{position:absolute;right:8px;top:4px;font-size:42px;color:#ffffffa0;text-shadow:0 4px 15px #0005}
+.popular-card b{position:relative;font-size:11px;line-height:1.15}
+.popular-card small{position:relative;margin-top:4px;color:#d0e5da;font-size:9px}
+.genres-head{margin-top:25px}.genres-head>span,.recent-head>span{font-size:9px;color:#75988b;letter-spacing:.6px}
+.genre-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.genre-grid button{min-height:64px;border:1px solid #ffffff12;border-radius:14px;background:linear-gradient(145deg,#10382d,#0a211b);color:#28f29a;font-size:20px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px}
+.genre-grid button:nth-child(2){background:linear-gradient(145deg,#133846,#0a222a);color:#72dfff}
+.genre-grid button:nth-child(3){background:linear-gradient(145deg,#34412a,#182319);color:#c7ff76}
+.genre-grid button:nth-child(4){background:linear-gradient(145deg,#164d3a,#09281e);color:#5effb2}
+.genre-grid span{font-size:9px;color:#e0f8ec}
+.recent-head{margin-top:25px}
+.home-track-list{display:flex;flex-direction:column;gap:7px}
+.home-track{width:100%;display:flex;align-items:center;gap:11px;padding:8px 9px;border:1px solid #ffffff0d;border-radius:14px;background:#061511a8;color:#f1fff8;text-align:left}
+.home-track:active{border-color:#20ed8e70}
+.home-track-cover{width:43px;height:43px;flex:0 0 43px;border-radius:11px;display:grid;place-items:center;background:linear-gradient(145deg,#16a66b,#123c30);color:#d9ffeb;font-size:19px}
+.home-track-info{min-width:0;flex:1}.home-track-info b{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.home-track-info small{display:block;font-size:10px;color:#88a99b;margin-top:3px}
+.home-track-play{color:#43f3a3;font-size:17px}
+.legacy-launch{display:none}
+.bottom-nav{position:fixed;z-index:8;bottom:calc(8px + env(safe-area-inset-bottom));left:10px;right:10px;max-width:540px;margin:auto;padding:8px 7px;display:grid;grid-template-columns:repeat(4,1fr);border:1px solid #1a4c3c;border-radius:19px;background:#04120ff0;backdrop-filter:blur(24px);box-shadow:0 10px 45px #0008}
+.nav-item{border:0;background:transparent;color:#79998b;display:flex;flex-direction:column;align-items:center;gap:3px;padding:3px 2px}
+.nav-item span{font-size:22px;line-height:1.1}.nav-item small{font-size:9px}.nav-item.active{color:#25f29a}.nav-item.active span{text-shadow:0 0 15px #21ef9a77}
+.mini-player{bottom:calc(76px + env(safe-area-inset-bottom));left:12px;right:12px;max-width:520px;border:1px solid #1d6b4d;background:#071c16f5;border-radius:16px;padding:8px 10px;gap:9px}
+.mini-art{width:39px;height:39px;border-radius:10px;background:linear-gradient(145deg,#1edc89,#0a543b);color:#e4fff1}
+.mini-title{font-size:12px}.mini-artist{font-size:10px}
+.sheet{background:linear-gradient(160deg,#09271e,#030c09 65%);border-color:#1a6949}.sheet-controls .main-play{background:#20ed8e}
+.art-large{background:radial-gradient(circle at 30% 25%,#7affc2,#149763 27%,#06402e 60%,#03130e 82%)}
+.catalog-panel{background:radial-gradient(ellipse at 80% 0%,#073e2c,#020a08 60%);max-width:560px}
+.catalog-head h2{font-size:24px}.catalog-row{background:#061a14;border-color:#174a37;border-radius:14px}
+.catalog-cover{background:linear-gradient(145deg,#24e995,#0b5137);color:#002317}
+.catalog-search{background:#071c17;border-color:#20533f;border-radius:13px}
+.profile-view{min-height:65vh;padding:4px 0 20px}
+.page-title{font-size:28px;font-weight:900;letter-spacing:-1px;margin:8px 0 24px}
+.profile-hero{border:1px solid #1c6245;border-radius:22px;padding:25px 15px;text-align:center;background:radial-gradient(ellipse at 50% 0%,#0b5638,#061c15 70%)}
+.profile-big-avatar{width:82px;height:82px;border-radius:50%;display:grid;place-items:center;margin:0 auto 12px;background:linear-gradient(145deg,#2bffa3,#07583b);color:#002116;font-size:35px;border:2px solid #75ffc0}
+.profile-hero h2{font-size:20px;margin:0 0 4px}.profile-hero p{font-size:11px;color:#8fb9a5;margin:0}
+.profile-menu{margin-top:15px;border:1px solid #174632;border-radius:17px;overflow:hidden;background:#061510}
+.profile-menu button{display:flex;align-items:center;gap:12px;width:100%;padding:16px 14px;text-align:left;border:0;border-bottom:1px solid #133629;background:transparent;color:#dffff0;font-size:17px}
+.profile-menu button:last-child{border-bottom:0}.profile-menu button span{flex:1;font-size:13px}.profile-menu button b{color:#36f4a0}
+@media(min-width:700px){.app{padding-left:22px;padding-right:22px}.bottom-nav{bottom:12px}}
+@media(max-width:370px){.app{padding-left:12px;padding-right:12px}.feature-orb{right:-8px;width:86px;height:86px}.feature-copy{max-width:78%}.popular-grid{gap:7px}.popular-card{padding:8px 7px}}
+
 </style>
 </head>
 <body>
 <div id="musicApp">
 <main class="app">
   <header class="top"><div class="brand">ГАРМОНИКА<b>.</b></div><button type="button" class="catalog-trigger" id="openCatalog">♫ Каталог</button><div class="profile"><div class="avatar" id="profileAvatar"><span id="profileInitial">♫</span></div><div class="profile-name" id="profileName">Твой аккаунт</div></div></header>
-  <section class="center">
-    <div class="overline" id="statusLabel">ТВОЁ МУЗЫКАЛЬНОЕ ПРОСТРАНСТВО</div>
-    <h1 class="headline" id="headline">Поймай<br>свою гармонику.</h1>
-    <p class="subline" id="subline">Нажми на круг — и музыка начнётся.</p>
-    <div class="launch-wrap"><div class="halo"></div><button id="launch" class="launch" aria-label="Запустить музыкальную ленту"><span class="launch-icon" id="launchIcon">▶</span><span class="launch-label" id="launchLabel">ЗАПУСТИТЬ ЛЕНТУ</span><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span></button></div>
-    <div class="bottom-hint" id="bottomHint">МУЗЫКА В ОДНОМ КАСАНИИ</div>
+  <section class="center" id="homeView">
+    <div class="welcome-row"><div><div class="overline" id="statusLabel">ТВОЯ МУЗЫКА РЯДОМ</div><h1 class="headline" id="headline">Открывай<br>новые звуки</h1><p class="subline" id="subline">Любимая музыка — в одном месте.</p></div><div class="welcome-note">♫<span>HARMONIKA</span></div></div>
+    <div class="feature-banner"><div class="feature-copy"><span class="feature-kicker">ТВОЙ МУЗЫКАЛЬНЫЙ МИР</span><h2>Включай настроение</h2><p>Найди свой ритм прямо сейчас</p><button id="featurePlay" type="button">▶ Слушать сейчас</button></div><div class="feature-orb">♫</div></div>
+    <div class="home-section-head"><h2>Популярное</h2><button type="button" id="allTracks">Все треки <span>↗</span></button></div>
+    <div class="popular-grid">
+      <button class="popular-card cover-red" data-track="ru3"><span class="cover-symbol">✦</span><b>Русский поп</b><small>Хиты и новинки</small></button>
+      <button class="popular-card cover-blue" data-track="ru6"><span class="cover-symbol">◉</span><b>Хип-хоп</b><small>Ритм улиц</small></button>
+      <button class="popular-card cover-green" data-track="pop1"><span class="cover-symbol">♫</span><b>Мировые хиты</b><small>Слушай снова</small></button>
+    </div>
+    <div class="home-section-head genres-head"><h2>Жанры</h2><span>Выбери вайб</span></div>
+    <div class="genre-grid"><button data-genre="Поп">♫ <span>Поп</span></button><button data-genre="Рок">⚡ <span>Рок</span></button><button data-genre="Хип-хоп">♬ <span>Хип-хоп</span></button><button data-genre="Техно">◈ <span>Электроника</span></button></div>
+    <div class="home-section-head recent-head"><h2>Твоя лента</h2><span id="bottomHint">МУЗЫКА В ОДНОМ КАСАНИИ</span></div>
+    <div class="home-track-list" id="homeTrackList"></div>
+    <div class="legacy-launch"><button id="launch" class="launch" aria-label="Запустить музыкальную ленту"><span class="launch-icon" id="launchIcon">▶</span><span class="launch-label" id="launchLabel">ЗАПУСТИТЬ ЛЕНТУ</span><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span></button></div>
   </section>
+  <section class="profile-view" id="profileView" hidden><div class="page-title">Профиль</div><div class="profile-hero"><div class="profile-big-avatar" id="profileBigAvatar">♫</div><h2 id="profileBigName">Твой аккаунт</h2><p>Твоя музыка. Твоё пространство.</p></div><div class="profile-menu"><button id="profileFavorites">♡ <span>Избранное</span><b>›</b></button><button id="profileSettings">⚙ <span>Настройки приложения</span><b>›</b></button><button id="profileHelp">ⓘ <span>О Гармонике</span><b>›</b></button></div></section>
 </main>
+<nav class="bottom-nav" id="bottomNav" aria-label="Основная навигация"><button class="nav-item active" data-view="home"><span>⌂</span><small>Главная</small></button><button class="nav-item" data-view="catalog"><span>▤</span><small>Каталог</small></button><button class="nav-item" data-view="favorites"><span>♡</span><small>Избранное</small></button><button class="nav-item" data-view="profile"><span>♙</span><small>Профиль</small></button></nav>
 <button class="mini-player" id="openSheet" aria-label="Открыть информацию о текущей песне">
   <div class="mini-art" id="miniArt">♫</div><div class="mini-info"><div class="mini-title" id="miniTitle">Лента ещё не запущена</div><div class="mini-artist" id="miniArtist">Нажми на круг, чтобы начать</div></div><span class="mini-open" aria-hidden="true">⌃</span><span class="mini-play" id="miniPlay" role="button" aria-label="Воспроизвести или поставить на паузу">▶</span>
 </button>
