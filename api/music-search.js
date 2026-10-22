@@ -112,8 +112,7 @@ async function discoverOpenTracks(limitWanted = 12) {
   const docs = search && search.response && Array.isArray(search.response.docs) ? search.response.docs : [];
   const candidates = docs.filter(doc => doc.identifier && doc.title &&
     !/audiobook|podcast|speech|lecture|radio show|interview/i.test(String(doc.title)));
-  // Keep metadata lookups bounded: large fan-out can hit serverless time limits.
-  const results = await Promise.all(candidates.slice(0, 8).map(async doc => {
+  const results = await Promise.all(candidates.slice(0, 24).map(async doc => {
     try {
       const identifier = String(doc.identifier || "");
       if (!/^[a-zA-Z0-9._-]+$/.test(identifier)) return null;
@@ -162,7 +161,7 @@ module.exports = async function handler(req, res) {
     res.setHeader("Access-Control-Allow-Origin", origin);
   }
   res.setHeader("Vary", "Origin");
-  res.setHeader("Cache-Control", "no-store, max-age=0");
+  res.setHeader("Cache-Control", "public, s-maxage=1800, stale-while-revalidate=3600");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "GET") {
