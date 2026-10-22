@@ -203,11 +203,11 @@ body{background:radial-gradient(ellipse at 50% 0%,#073c2d 0,#041a16 38%,#020908 
     <input id="editTrackId" type="hidden">
     <label>Название песни<input id="trackTitle" maxlength="160" placeholder="Например, Babka" required></label>
     <label>Исполнитель<input id="trackArtist" maxlength="160" placeholder="Имя исполнителя" required></label>
-    <label>Публичная ссылка на аудио<input id="trackUrl" type="url" inputmode="url" placeholder="https://disk.yandex.ru/d/..." required></label>
+    <label>Публичная ссылка на аудио<input id="trackUrl" type="url" inputmode="url" placeholder="Ссылка на Яндекс Диск или Google Диск" required></label>
     <label>Ссылка на обложку (необязательно)<input id="trackCover" type="url" inputmode="url" placeholder="https://..."></label>
     <div style="display:flex;gap:8px"><button class="admin-save" id="saveTrack" type="submit">Добавить песню</button><button type="button" id="cancelEdit" hidden>Отмена</button></div>
    </form>
-   <p class="admin-help">Ссылка на страницу Яндекс Диска будет преобразовываться сервером в ссылку скачивания перед воспроизведением. Реальную работу и перемотку нужно проверить в MAX.</p>
+   <p class="admin-help">Поддерживаются публичные ссылки Яндекс Диска и Google Диска, а также прямые ссылки на аудиофайлы. Для Google Диска включи доступ «Все, у кого есть ссылка». Воспроизведение и перемотку нужно проверить в MAX.</p>
    <div class="admin-status" id="adminStatus" role="status"></div>
    <div class="admin-list" id="adminTrackList"></div>
   </div>
@@ -253,7 +253,7 @@ async function playAt(i){
  if(!tracks.length){toast("Каталог пока пуст. Добавь песни через админ-панель.");return;}
  index=(i+tracks.length)%tracks.length;const t=current();updateTrack();$("artLarge").classList.remove("video-mode");const span=document.createElement("span");span.textContent=t.icon||"♫";$("artLarge").replaceChildren(span);
  try{const url=await resolveAudio(t);audio.pause();audio.src=url;audio.load();await audio.play();playing=true;updatePlayback();$("miniArtist").textContent=t.artist+" · полная запись";$("songArtist").textContent=t.artist+" · полная запись";toast("Воспроизведение запущено.");}
- catch(e){playing=false;updatePlayback();console.error("[ГАРМОНИКА] Playback failed",e);toast("Не удалось воспроизвести файл. Проверь публичный доступ к ссылке Яндекс Диска.");}
+ catch(e){playing=false;updatePlayback();console.error("[ГАРМОНИКА] Playback failed",e);toast("Не удалось воспроизвести файл. Проверь доступ «Все, у кого есть ссылка» и возможность скачивания в Google Диске или Яндекс Диске.");}
 }
 async function startAvailableTrack(){if(!tracks.length){await loadMusicLibrary();}if(!tracks.length){toast("Каталог пуст. Открой «Админ» и добавь первую песню.");return;}await playAt(0);}
 async function togglePlayback(){
