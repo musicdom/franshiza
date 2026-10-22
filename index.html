@@ -64,7 +64,6 @@ body{background:radial-gradient(ellipse at 50% 15%,#2b4121 0,#121a10 34%,#080b09
 </style>
 </head>
 <body>
-<div id="zaycevEmbed" aria-hidden="true"><div class="embed-head"><span id="zaycevEmbedTitle">Zaycev.net · встроенный плеер</span><button id="zaycevEmbedClose" type="button" aria-label="Закрыть">Закрыть ✕</button></div><iframe id="zaycevFrame" title="Плеер Zaycev.net" allow="autoplay; encrypted-media" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="embed-note">Плеер Zaycev.net открыт внутри «Волны». Если сайт запрещает встраивание, понадобится официальный доступ от Zaycev.net.</div></div>
 <div id="musicApp">
 <main class="app">
   <header class="top"><div class="brand">ГАРМОНИКА<b>.</b></div><button type="button" class="catalog-trigger" id="openCatalog">♫ Каталог</button><div class="profile"><div class="avatar" id="profileAvatar"><span id="profileInitial">♫</span></div><div class="profile-name" id="profileName">Твой аккаунт</div></div></header>
@@ -101,21 +100,21 @@ body{background:radial-gradient(ellipse at 50% 15%,#2b4121 0,#121a10 34%,#080b09
 </div>
 <script>
 const tracks=[
-{id:"zay1",title:"Шадэ",artist:"By Индия, Xcho, МОТ",genre:"Поп",icon:"♫",popular:true,zaycevUrl:"https://zaycev.net/pages/250772/25077263.shtml"},
-{id:"zay2",title:"МЫ",artist:"IOWA",genre:"Инди-поп",icon:"♫",popular:true,zaycevUrl:"https://zaycev.net/pages/250796/25079631.shtml"},
-{id:"zay3",title:"Море пока лето",artist:"Хабиб, VAVAN",genre:"Поп",icon:"♫",popular:true,zaycevUrl:"https://zaycev.net/pages/250896/25089636.shtml"},
-{id:"zay4",title:"Плачешь под луной",artist:"RASA",genre:"Поп",icon:"♫",popular:true,zaycevUrl:"https://zaycev.net/pages/250891/25089102.shtml"},
-{id:"zay5",title:"Отражение",artist:"Ваня Дмитриенко, Мальбэк, Сюзанна",genre:"Поп",icon:"♫",popular:true,zaycevUrl:"https://zaycev.net/pages/250934/25093488.shtml"},
-{id:"zay6",title:"Мурка",artist:"DASHI, RUNA",genre:"Поп",icon:"♫",popular:true,zaycevUrl:"https://zaycev.net/pages/250791/25079183.shtml"},
-{id:"zay7",title:"Очи карие",artist:"NoНейма, LeraLey",genre:"Поп",icon:"♫",popular:true,zaycevUrl:"https://zaycev.net/pages/250892/25089221.shtml"},
-{id:"zay8",title:"ХОЧЕТ ОЧЕНЬ",artist:"MIA BOYKA",genre:"Поп",icon:"♫",popular:true,zaycevUrl:"https://zaycev.net/pages/250618/25061885.shtml"},
-{id:"zay9",title:"Только Top Dog (Brazilian Bass Version)",artist:"NO4X",genre:"Техно",icon:"♫",popular:true,zaycevUrl:"https://zaycev.net/pages/250754/25075456.shtml"},
-{id:"zay10",title:"Ретровейв",artist:"Анна Немченко",genre:"Поп",icon:"♫",popular:true,zaycevUrl:"https://zaycev.net/pages/250896/25089644.shtml"},
-{id:"zay11",title:"Любовь за деньги",artist:"Анет Сай, 10AGE",genre:"Поп",icon:"♫",popular:true,zaycevUrl:"https://zaycev.net/pages/250745/25074527.shtml"},
-{id:"zay12",title:"Дыши со мной",artist:"Jeny Vesna",genre:"Поп",icon:"♫",popular:true,zaycevUrl:"https://zaycev.net/pages/250782/25078251.shtml"},
-{id:"zay13",title:"КУПЕР",artist:"SQWOZ BAB",genre:"Рэп",icon:"♫",popular:true,zaycevUrl:"https://zaycev.net/pages/250596/25059693.shtml"},
-{id:"zay14",title:"Фонк по дорогам",artist:"МУЗЫКА В МАШИНУ",genre:"Фонк",icon:"♫",popular:true,zaycevUrl:"https://zaycev.net/pages/250402/25040276.shtml"},
-{id:"zay15",title:"Бобр",artist:"SLAVA SKRIPKA",genre:"Поп",icon:"♫",popular:true,zaycevUrl:"https://zaycev.net/pages/250362/25036214.shtml"},
+{id:"zay1",title:"Шадэ",artist:"By Индия, Xcho, МОТ",genre:"Поп",icon:"♫",popular:true},
+{id:"zay2",title:"МЫ",artist:"IOWA",genre:"Инди-поп",icon:"♫",popular:true},
+{id:"zay3",title:"Море пока лето",artist:"Хабиб, VAVAN",genre:"Поп",icon:"♫",popular:true},
+{id:"zay4",title:"Плачешь под луной",artist:"RASA",genre:"Поп",icon:"♫",popular:true},
+{id:"zay5",title:"Отражение",artist:"Ваня Дмитриенко, Мальбэк, Сюзанна",genre:"Поп",icon:"♫",popular:true},
+{id:"zay6",title:"Мурка",artist:"DASHI, RUNA",genre:"Поп",icon:"♫",popular:true},
+{id:"zay7",title:"Очи карие",artist:"NoНейма, LeraLey",genre:"Поп",icon:"♫",popular:true},
+{id:"zay8",title:"ХОЧЕТ ОЧЕНЬ",artist:"MIA BOYKA",genre:"Поп",icon:"♫",popular:true},
+{id:"zay9",title:"Только Top Dog (Brazilian Bass Version)",artist:"NO4X",genre:"Техно",icon:"♫",popular:true},
+{id:"zay10",title:"Ретровейв",artist:"Анна Немченко",genre:"Поп",icon:"♫",popular:true},
+{id:"zay11",title:"Любовь за деньги",artist:"Анет Сай, 10AGE",genre:"Поп",icon:"♫",popular:true},
+{id:"zay12",title:"Дыши со мной",artist:"Jeny Vesna",genre:"Поп",icon:"♫",popular:true},
+{id:"zay13",title:"КУПЕР",artist:"SQWOZ BAB",genre:"Рэп",icon:"♫",popular:true},
+{id:"zay14",title:"Фонк по дорогам",artist:"МУЗЫКА В МАШИНУ",genre:"Фонк",icon:"♫",popular:true},
+{id:"zay15",title:"Бобр",artist:"SLAVA SKRIPKA",genre:"Поп",icon:"♫",popular:true},
 {id:"pop1",title:"Blinding Lights",artist:"The Weeknd",genre:"Поп · Synthwave",icon:"✦",popular:true},
 {id:"pop2",title:"Shape of You",artist:"Ed Sheeran",genre:"Поп",icon:"◉",popular:true},
 {id:"pop3",title:"Flowers",artist:"Miley Cyrus",genre:"Поп",icon:"✿",popular:true},
@@ -193,10 +192,24 @@ async function fetchLegalPreview(t){
  t.licenseUrl=data.licenseUrl||"";
  return t;
 }
+async let openCatalogLoaded=false,openCatalogLoading=false;
 async function preloadLegalPreviews(){
- // Не делаем десятки сетевых запросов при открытии приложения.
- // Полный поиск запускается только когда пользователь выбирает композицию.
  renderCatalog($("catalogSearch").value);
+ if(openCatalogLoaded||openCatalogLoading)return;
+ openCatalogLoading=true;
+ try{
+   const response=await fetch("https://franshiza.vercel.app/api/music-search?mode=discover",{cache:"no-store"});
+   const data=await response.json();
+   if(!response.ok||!data.ok||!Array.isArray(data.tracks))throw new Error(data.error||"Каталог недоступен");
+   const existing=new Set(tracks.map(t=>t.id));
+   data.tracks.forEach(t=>{if(t&&t.src&&!existing.has(t.id)){tracks.push(t);existing.add(t.id)}});
+   openCatalogLoaded=true;
+   renderCatalog($("catalogSearch").value);
+   if(!data.tracks.length)toast("В открытом каталоге пока нет доступных записей.");
+ }catch(e){
+   toast("Не удалось загрузить музыку. Открой каталог ещё раз чуть позже.");
+   renderCatalog($("catalogSearch").value);
+ }finally{openCatalogLoading=false}
 }
 async function playAt(i){
  index=(i+tracks.length)%tracks.length;const t=current();
@@ -205,7 +218,8 @@ async function playAt(i){
  const span=document.createElement("span");span.textContent=t.icon;$("artLarge").replaceChildren(span);
  if(t.src){
    audio.pause();audio.src=t.src;audio.load();
-   try{await audio.play();playing=true;updatePlayback()}catch(e){playing=false;updatePlayback();toast("Нажми ▶ ещё раз, чтобы запустить аудио.");}
+   try{await audio.play();playing=true;updatePlayback();$("miniArtist").textContent=t.artist+" · полная запись";$("songArtist").textContent=t.artist+" · полная запись";toast("Полная запись играет внутри Гармоники.");}
+   catch(e){playing=false;updatePlayback();toast("Не удалось запустить запись. Проверь соединение и нажми ещё раз.");}
    return;
  }
  if(t.previewUrl){
@@ -257,25 +271,21 @@ audio.addEventListener("loadedmetadata",()=> $("duration").textContent=fmt(audio
 $("seek").addEventListener("input",e=>{if(Number.isFinite(audio.duration)&&audio.duration>0)audio.currentTime=Number(e.target.value)/100*audio.duration});
 function renderCatalog(query=""){
  const q=String(query||"").trim().toLowerCase();
- const list=tracks.filter(t=>(t.title+" "+t.artist+" "+t.genre).toLowerCase().includes(q));
+ const list=tracks.filter(t=>(t.src||t.previewUrl)&&(t.title+" "+t.artist+" "+t.genre).toLowerCase().includes(q));
  $("catalogCount").textContent=list.length+" ТРЕКОВ";
  const root=$("catalogList");root.replaceChildren();
- if(!list.length){const empty=document.createElement("div");empty.className="catalog-empty";empty.textContent="Ничего не найдено. Попробуй другое название.";root.append(empty);return}
+ if(!list.length){const empty=document.createElement("div");empty.className="catalog-empty";empty.textContent=openCatalogLoading?"Загружаю полные записи из открытого музыкального каталога…":(openCatalogLoaded?"По этому запросу ничего не найдено. Попробуй другое название.":"Загружаю доступные песни…");root.append(empty);return}
  list.forEach(t=>{
    const b=document.createElement("button");b.type="button";b.className="catalog-row";
    const cover=document.createElement("span");cover.className="catalog-cover";cover.textContent=t.icon;
    const meta=document.createElement("span");meta.className="catalog-meta";
    const name=document.createElement("span");name.className="catalog-name";name.textContent=t.title;
    const artist=document.createElement("span");artist.className="catalog-artist";artist.textContent=t.artist;
-   const type=document.createElement("span");type.className="catalog-type";type.textContent=t.src?"▶ СВОБОДНЫЙ АУДИОПОТОК":(t.previewUrl?(t.fullTrack?"▶ ПОЛНАЯ ЗАПИСЬ":"▶ АУДИОПРЕВЬЮ"):"♫ ИЩЕМ ТОЧНУЮ ПОЛНУЮ ЗАПИСЬ");
+   const type=document.createElement("span");type.className="catalog-type";type.textContent=t.src?"▶ ПОЛНАЯ ЗАПИСЬ · ВСТРОЕННЫЙ ПЛЕЕР":(t.fullTrack?"▶ ПОЛНАЯ ЗАПИСЬ":"▶ АУДИОПРЕВЬЮ");
    meta.append(name,artist,type);const action=document.createElement("span");action.textContent="▶";action.style.color="var(--accent)";
-   b.append(cover,meta,action);b.addEventListener("click",async()=>{if(t.zaycevUrl){openZaycevEmbed(t);return;}await playAt(tracks.findIndex(x=>x.id===t.id));closeCatalog();});root.append(b);
+   b.append(cover,meta,action);b.addEventListener("click",async()=>{await playAt(tracks.findIndex(x=>x.id===t.id));closeCatalog();});root.append(b);
  });
 }
-function openZaycevEmbed(t){const panel=$("zaycevEmbed"),frame=$("zaycevFrame");$("zaycevEmbedTitle").textContent=(t.title||"Песня")+" — "+(t.artist||"Zaycev.net");frame.src=t.zaycevUrl;panel.classList.add("open");panel.setAttribute("aria-hidden","false");closeCatalog();audio.pause();playing=false;updatePlayback();}
-function closeZaycevEmbed(){const panel=$("zaycevEmbed");panel.classList.remove("open");panel.setAttribute("aria-hidden","true");$("zaycevFrame").src="about:blank";}
-$("zaycevEmbedClose").addEventListener("click",closeZaycevEmbed);
-function openCatalog(){ $("catalogPanel").hidden=false;$("catalogSearch").focus();renderCatalog($("catalogSearch").value); }
 function closeCatalog(){ $("catalogPanel").hidden=true; }
 $("openCatalog").addEventListener("click",openCatalog);
 $("closeCatalog").addEventListener("click",closeCatalog);
