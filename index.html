@@ -388,13 +388,43 @@ $("cancelEdit").addEventListener("click",()=>{$("trackForm").reset();$("trackGen
 (function(){
  const app=$("musicApp");
  app.hidden=false;
+ function readInitDataFromHash(){
+   try{
+     const hash=String(window.location.hash||"").replace(/^#/,"");
+     if(!hash)return {};
+     const outer=new URLSearchParams(hash);
+     let raw=outer.get("WebAppData")||outer.get("webAppData")||"";
+     if(!raw)return {};
+     for(let i=0;i<2&&/%[0-9a-f]{2}/i.test(raw);i++)raw=decodeURIComponent(raw);
+     const params=new URLSearchParams(raw);
+     const result={};
+     for(const [key,value] of params.entries()){
+       if(key==="user"||key==="chat"){
+         try{result[key]=JSON.parse(value);}catch(_){result[key]=null;}
+       }else result[key]=value;
+     }
+     return result;
+   }catch(error){
+     console.warn("[ГАРМОНИКА] Не удалось прочитать параметры MAX из URL:",error);
+     return {};
+   }
+ }
+ function getInitData(){
+   const roots=[window.WebApp,window.MAX,window.Max,window.max,window.Telegram?.WebApp];
+   for(const root of roots){
+     const data=root?.initDataUnsafe;
+     if(data&&typeof data==="object"&&Object.keys(data).length)return data;
+   }
+   return readInitDataFromHash();
+ }
  function getUser(){
    const roots=[window.WebApp,window.MAX,window.Max,window.max,window.Telegram?.WebApp];
    for(const root of roots){
      const u=root?.initDataUnsafe?.user||root?.user||root?.userInfo;
      if(u&&(u.id||u.user_id||u.username||u.first_name))return u;
    }
-   return null;
+   const u=readInitDataFromHash().user;
+   return u&&(u.id||u.user_id||u.username||u.first_name)?u:null;
  }
  function updateProfile(u){
    if(!u)return;
@@ -406,7 +436,7 @@ $("cancelEdit").addEventListener("click",()=>{$("trackForm").reset();$("trackGen
  }
  function notify(user){
    const sdk=window.WebApp||window.MAX||window.Max||window.max||window.Telegram?.WebApp;
-   const init=sdk?.initDataUnsafe||{};
+   const init=getInitData();
    const metadata={
      user:user||init.user||{name:"Профиль MAX недоступен"},
      chat:init.chat||null,
