@@ -212,7 +212,14 @@ async function preloadLegalPreviews(){
  }finally{openCatalogLoading=false}
 }
 async function playAt(i){
- index=(i+tracks.length)%tracks.length;const t=current();
+ index=(i+tracks.length)%tracks.length;
+ if(!tracks[index]||(!tracks[index].src&&!tracks[index].previewUrl)){
+   await preloadLegalPreviews();
+   const firstPlayable=tracks.findIndex(t=>t.src||t.previewUrl);
+   if(firstPlayable<0){toast("Музыкальный каталог ещё загружается. Попробуй снова через несколько секунд.");return;}
+   index=firstPlayable;
+ }
+ const t=current();
  updateTrack();
  $("artLarge").classList.remove("video-mode");
  const span=document.createElement("span");span.textContent=t.icon;$("artLarge").replaceChildren(span);
