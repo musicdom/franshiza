@@ -4,41 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#090b0a">
-<script src="https://st.max.ru/js/max-web-app.js">
-/* Home dashboard interactions */
-function renderHomeTracks(){
- const root=$("homeTrackList");if(!root)return;root.replaceChildren();
- const list=tracks.filter(t=>t.src||t.previewUrl).slice(0,5);
- if(!list.length){const empty=document.createElement("div");empty.className="catalog-empty";empty.textContent=openCatalogLoading?"Ищем доступные полные записи…":"Нажми «Слушать сейчас», чтобы загрузить музыкальный каталог.";root.append(empty);return;}
- list.forEach(t=>{const b=document.createElement("button");b.className="home-track";b.type="button";const art=document.createElement("span");art.className="home-track-cover";art.textContent=t.icon||"♫";const info=document.createElement("span");info.className="home-track-info";const title=document.createElement("b");title.textContent=t.title;const artist=document.createElement("small");artist.textContent=t.artist;info.append(title,artist);const play=document.createElement("span");play.className="home-track-play";play.textContent="▶";b.append(art,info,play);b.addEventListener("click",()=>playAt(tracks.findIndex(x=>x.id===t.id)));root.append(b);});
-}
-function setView(view){
- const home=$("homeView"),profile=$("profileView"),catalog=$("catalogPanel");
- if(home)home.hidden=view!=="home";if(profile)profile.hidden=view!=="profile";
- if(catalog)catalog.hidden=view!=="catalog";
- document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
- if(view==="catalog")preloadLegalPreviews();
- if(view==="profile"&&typeof profileNameObserver==="function")profileNameObserver();
- if(view==="favorites"){
-   const liked=tracks.filter(t=>favorites.has(t.id));
-   if(!liked.length){toast("Избранное пока пустое — нажми ♡ у песни в плеере.");setView("home");return;}
-   $("catalogPanel").hidden=false;$("catalogCount").textContent=liked.length+" В ИЗБРАННОМ";const root=$("catalogList");root.replaceChildren();
-   liked.forEach(t=>{const b=document.createElement("button");b.className="catalog-row";b.type="button";const cover=document.createElement("span");cover.className="catalog-cover";cover.textContent="♥";const meta=document.createElement("span");meta.className="catalog-meta";const name=document.createElement("span");name.className="catalog-name";name.textContent=t.title;const artist=document.createElement("span");artist.className="catalog-artist";artist.textContent=t.artist;meta.append(name,artist);b.append(cover,meta);b.addEventListener("click",()=>playAt(tracks.findIndex(x=>x.id===t.id)));root.append(b);});
- }
-}
-document.querySelectorAll(".nav-item").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
-$("featurePlay")?.addEventListener("click",togglePlayback);
-$("allTracks")?.addEventListener("click",()=>setView("catalog"));
-document.querySelectorAll("[data-track]").forEach(b=>b.addEventListener("click",()=>{const i=tracks.findIndex(t=>t.id===b.dataset.track&&(t.src||t.previewUrl));if(i>=0){playAt(i);return;}setView("catalog");$("catalogSearch").value="";renderCatalog("");toast("Выбери доступную запись из каталога — неподтверждённые песни не запускаются.");}));
-document.querySelectorAll("[data-genre]").forEach(b=>b.addEventListener("click",()=>{setView("catalog");$("catalogSearch").value=b.dataset.genre;renderCatalog(b.dataset.genre)}));
-$("profileFavorites")?.addEventListener("click",()=>setView("favorites"));
-$("profileSettings")?.addEventListener("click",()=>toast("Настройки аккаунта MAX управляются в приложении MAX."));
-$("profileHelp")?.addEventListener("click",()=>toast("Гармоника — музыкальный мини-апп."));
-$("profileAvatar")?.addEventListener("click",()=>setView("profile"));
-const profileNameObserver=()=>{const n=$("profileName")?.textContent||"Твой аккаунт";if($("profileBigName"))$("profileBigName").textContent=n;const a=$("profileAvatar")?.querySelector("img");if(a){const img=document.createElement("img");img.src=a.src;img.alt="";img.style.cssText="width:100%;height:100%;object-fit:cover;border-radius:50%";$("profileBigAvatar")?.replaceChildren(img)}else if($("profileBigAvatar"))$("profileBigAvatar").textContent=(n[0]||"♫").toUpperCase()};
-renderHomeTracks();
-
-</script>
+<script src="https://st.max.ru/js/max-web-app.js"></script>
 <title>Гармоника — музыка для тебя</title>
 <style>
 :root{color-scheme:dark;--bg:#090b0a;--panel:#151815;--text:#f5f7f2;--muted:#9ba398;--accent:#c5ff72;--line:#292e28}
@@ -173,12 +139,17 @@ body{background:radial-gradient(ellipse at 50% 0%,#073c2d 0,#041a16 38%,#020908 
 @media(min-width:700px){.app{padding-left:22px;padding-right:22px}.bottom-nav{bottom:12px}}
 @media(max-width:370px){.app{padding-left:12px;padding-right:12px}.feature-orb{right:-8px;width:86px;height:86px}.feature-copy{max-width:78%}.popular-grid{gap:7px}.popular-card{padding:8px 7px}}
 
+
+.admin-trigger{border:1px solid #c5ff7240;background:#c5ff720d;color:var(--accent);border-radius:12px;padding:9px 12px;font-size:12px;font-weight:800}
+.admin-panel{position:fixed;z-index:30;inset:0;overflow:auto;background:#090b0af7;backdrop-filter:blur(18px);padding:calc(22px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom))}
+.admin-inner{max-width:620px;margin:0 auto}.admin-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}.admin-head h2{margin:0;font-size:25px}.admin-close{border:0;border-radius:50%;width:42px;height:42px;background:#ffffff12;color:white;font-size:24px}
+.admin-form{display:grid;gap:12px}.admin-form label{display:grid;gap:6px;color:#aeb8a8;font-size:12px}.admin-form input{width:100%;min-width:0;border:1px solid #ffffff24;border-radius:12px;background:#151815;color:#fff;padding:13px;font:inherit}.admin-form button,.admin-save{border:0;border-radius:12px;background:var(--accent);color:#11170b;font-weight:900;padding:13px}.admin-help{color:#9ba398;font-size:12px;line-height:1.5}.admin-list{display:grid;gap:8px;margin-top:18px}.admin-track{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #ffffff17;border-radius:14px;background:#ffffff06}.admin-track-info{min-width:0;flex:1}.admin-track-info b,.admin-track-info small{display:block;overflow-wrap:anywhere}.admin-track-info small{color:#9ba398;font-size:12px}.admin-actions{display:flex;gap:6px}.admin-actions button{border:1px solid #ffffff20;border-radius:9px;background:#ffffff0b;color:white;padding:8px;font-size:12px}.admin-actions .delete{color:#ff9d9d}.admin-status{font-size:13px;color:var(--accent);min-height:18px}.catalog-empty{padding:24px 16px;text-align:center;color:#9ba398;border:1px dashed #ffffff24;border-radius:16px}
 </style>
 </head>
 <body>
 <div id="musicApp">
 <main class="app">
-  <header class="top"><div class="brand">ГАРМОНИКА<b>.</b></div><button type="button" class="catalog-trigger" id="openCatalog">♫ Каталог</button><div class="profile"><div class="avatar" id="profileAvatar"><span id="profileInitial">♫</span></div><div class="profile-name" id="profileName">Твой аккаунт</div></div></header>
+  <header class="top"><div class="brand">ГАРМОНИКА<b>.</b></div><div style="display:flex;gap:7px;align-items:center"><button type="button" class="catalog-trigger" id="openCatalog">♫ Каталог</button><button type="button" class="admin-trigger" id="openAdmin">Админ</button></div><div class="profile"><div class="avatar" id="profileAvatar"><span id="profileInitial">♫</span></div><div class="profile-name" id="profileName">Твой аккаунт</div></div></header>
   <section class="center" id="homeView">
     <div class="welcome-row"><div><div class="overline" id="statusLabel">ТВОЯ МУЗЫКА РЯДОМ</div><h1 class="headline" id="headline">Открывай<br>новые звуки</h1><p class="subline" id="subline">Любимая музыка — в одном месте.</p></div><div class="welcome-note">♫<span>HARMONIKA</span></div></div>
     <div class="feature-banner"><div class="feature-copy"><span class="feature-kicker">ТВОЙ МУЗЫКАЛЬНЫЙ МИР</span><h2>Включай настроение</h2><p>Найди свой ритм прямо сейчас</p><button id="featurePlay" type="button">▶ Слушать сейчас</button></div><div class="feature-orb">♫</div></div>
@@ -218,66 +189,35 @@ body{background:radial-gradient(ellipse at 50% 0%,#073c2d 0,#041a16 38%,#020908 
   <p class="sheet-note" style="margin-top:18px">Встроенный плеер запускает только найденные полные записи с проверяемыми метаданными и разрешённой лицензией. Если точного совпадения нет, случайная песня не подставляется.</p>
 </section>
 <div id="toast" class="gate-status" style="position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:60;background:#20271d;border:1px solid #ffffff20;border-radius:12px;padding:10px 14px;display:none;max-width:90vw"></div>
+
+<section class="admin-panel" id="adminPanel" hidden>
+ <div class="admin-inner">
+  <div class="admin-head"><div><div class="overline">ГАРМОНИКА · УПРАВЛЕНИЕ</div><h2>Моя музыка</h2></div><button class="admin-close" id="closeAdmin" type="button" aria-label="Закрыть">×</button></div>
+  <p class="admin-help">Добавляй только свои аудиофайлы или музыку, на которую у тебя есть права. Для Яндекс Диска вставляй публичную ссылку «Посмотреть или скачать файл».</p>
+  <form class="admin-form" id="adminLoginForm">
+   <label>Пароль администратора<input id="adminPassword" type="password" autocomplete="current-password" placeholder="Пароль из настроек сервера" required></label>
+   <button type="submit">Войти в админ-панель</button>
+  </form>
+  <div id="adminEditor" hidden>
+   <form class="admin-form" id="trackForm">
+    <input id="editTrackId" type="hidden">
+    <label>Название песни<input id="trackTitle" maxlength="160" placeholder="Например, Babka" required></label>
+    <label>Исполнитель<input id="trackArtist" maxlength="160" placeholder="Имя исполнителя" required></label>
+    <label>Публичная ссылка на аудио<input id="trackUrl" type="url" inputmode="url" placeholder="https://disk.yandex.ru/d/..." required></label>
+    <label>Ссылка на обложку (необязательно)<input id="trackCover" type="url" inputmode="url" placeholder="https://..."></label>
+    <div style="display:flex;gap:8px"><button class="admin-save" id="saveTrack" type="submit">Добавить песню</button><button type="button" id="cancelEdit" hidden>Отмена</button></div>
+   </form>
+   <p class="admin-help">Ссылка на страницу Яндекс Диска будет преобразовываться сервером в ссылку скачивания перед воспроизведением. Реальную работу и перемотку нужно проверить в MAX.</p>
+   <div class="admin-status" id="adminStatus" role="status"></div>
+   <div class="admin-list" id="adminTrackList"></div>
+  </div>
+ </div>
+</section>
+
 <audio id="audio" preload="metadata"></audio>
 </div>
 <script>
-const tracks=[
-{id:"zay1",title:"Шадэ",artist:"By Индия, Xcho, МОТ",genre:"Поп",icon:"♫",popular:true},
-{id:"zay2",title:"МЫ",artist:"IOWA",genre:"Инди-поп",icon:"♫",popular:true},
-{id:"zay3",title:"Море пока лето",artist:"Хабиб, VAVAN",genre:"Поп",icon:"♫",popular:true},
-{id:"zay4",title:"Плачешь под луной",artist:"RASA",genre:"Поп",icon:"♫",popular:true},
-{id:"zay5",title:"Отражение",artist:"Ваня Дмитриенко, Мальбэк, Сюзанна",genre:"Поп",icon:"♫",popular:true},
-{id:"zay6",title:"Мурка",artist:"DASHI, RUNA",genre:"Поп",icon:"♫",popular:true},
-{id:"zay7",title:"Очи карие",artist:"NoНейма, LeraLey",genre:"Поп",icon:"♫",popular:true},
-{id:"zay8",title:"ХОЧЕТ ОЧЕНЬ",artist:"MIA BOYKA",genre:"Поп",icon:"♫",popular:true},
-{id:"zay9",title:"Только Top Dog (Brazilian Bass Version)",artist:"NO4X",genre:"Техно",icon:"♫",popular:true},
-{id:"zay10",title:"Ретровейв",artist:"Анна Немченко",genre:"Поп",icon:"♫",popular:true},
-{id:"zay11",title:"Любовь за деньги",artist:"Анет Сай, 10AGE",genre:"Поп",icon:"♫",popular:true},
-{id:"zay12",title:"Дыши со мной",artist:"Jeny Vesna",genre:"Поп",icon:"♫",popular:true},
-{id:"zay13",title:"КУПЕР",artist:"SQWOZ BAB",genre:"Рэп",icon:"♫",popular:true},
-{id:"zay14",title:"Фонк по дорогам",artist:"МУЗЫКА В МАШИНУ",genre:"Фонк",icon:"♫",popular:true},
-{id:"zay15",title:"Бобр",artist:"SLAVA SKRIPKA",genre:"Поп",icon:"♫",popular:true},
-{id:"pop1",title:"Blinding Lights",artist:"The Weeknd",genre:"Поп · Synthwave",icon:"✦",popular:true},
-{id:"pop2",title:"Shape of You",artist:"Ed Sheeran",genre:"Поп",icon:"◉",popular:true},
-{id:"pop3",title:"Flowers",artist:"Miley Cyrus",genre:"Поп",icon:"✿",popular:true},
-{id:"pop4",title:"As It Was",artist:"Harry Styles",genre:"Поп",icon:"☼",popular:true},
-{id:"pop5",title:"bad guy",artist:"Billie Eilish",genre:"Альтернативный поп",icon:"◌",popular:true},
-{id:"pop6",title:"Despacito",artist:"Luis Fonsi ft. Daddy Yankee",genre:"Латин-поп",icon:"♫",popular:true},
-{id:"pop7",title:"Believer",artist:"Imagine Dragons",genre:"Поп-рок",icon:"⌁",popular:true},
-{id:"pop8",title:"Levitating",artist:"Dua Lipa",genre:"Дэнс-поп",icon:"✧",popular:true},
-{id:"pop9",title:"Starboy",artist:"The Weeknd ft. Daft Punk",genre:"Электропоп",icon:"☾",popular:true},
-{id:"pop10",title:"Dance Monkey",artist:"Tones and I",genre:"Поп",icon:"❋",popular:true},
-{id:"ru1",title:"Матушка",artist:"Татьяна Куртукова",genre:"Поп · народный",icon:"♫",popular:true},
-{id:"ru2",title:"Давай сбежим (Искорки)",artist:"5УТРА",genre:"Поп",icon:"♫",popular:true},
-{id:"ru3",title:"Царица",artist:"ANNA ASTI",genre:"Поп",icon:"♫",popular:true},
-{id:"ru4",title:"Асфальт",artist:"Jakone",genre:"Поп-рэп",icon:"♫",popular:true},
-{id:"ru5",title:"Худи",artist:"Джиган, Artik & Asti, NILETTO",genre:"Поп",icon:"♫",popular:true},
-{id:"ru6",title:"I Got Love",artist:"Miyagi & Эндшпиль feat. Рем Дигга",genre:"Хип-хоп",icon:"♫",popular:true},
-{id:"ru7",title:"Ягода малинка",artist:"ХАБИБ",genre:"Поп",icon:"♫",popular:true},
-{id:"ru8",title:"Птичка",artist:"HammAli & Navai",genre:"Поп",icon:"♫",popular:true},
-{id:"ru9",title:"Комета",artist:"JONY",genre:"Поп",icon:"♫",popular:true},
-{id:"ru10",title:"Камин",artist:"ANNA ASTI",genre:"Поп",icon:"♫",popular:true},
-{id:"ru11",title:"По барам",artist:"ANNA ASTI",genre:"Поп",icon:"♫",popular:true},
-{id:"ru12",title:"Малиновая лада",artist:"GAYAZOV$ BROTHER$",genre:"Поп",icon:"♫",popular:true},
-{id:"ru13",title:"Пчеловод",artist:"RASA",genre:"Поп",icon:"♫",popular:true},
-{id:"ru14",title:"Медляк",artist:"Тима Белорусских",genre:"Поп",icon:"♫",popular:true},
-{id:"ru15",title:"Любимка",artist:"NILETTO",genre:"Поп",icon:"♫",popular:true},
-{id:"ru16",title:"Венера-Юпитер",artist:"Ваня Дмитриенко",genre:"Поп",icon:"♫",popular:true},
-{id:"ru17",title:"Эгоистка",artist:"Zivert",genre:"Поп",icon:"♫",popular:true},
-{id:"ru18",title:"Плакала",artist:"KAZKA",genre:"Поп",icon:"♫",popular:true},
-{id:"ru19",title:"Золото",artist:"Люся Чеботина",genre:"Поп",icon:"♫",popular:true},
-{id:"ru20",title:"Невозможное возможно",artist:"Дима Билан",genre:"Поп",icon:"♫",popular:true},
-{id:"ru21",title:"Тает лёд",artist:"Грибы",genre:"Поп",icon:"♫",popular:true},
-{id:"ru22",title:"Кукла колдуна",artist:"Король и Шут",genre:"Рок",icon:"♫",popular:true},
-{id:"ru23",title:"Всё решено",artist:"Мот",genre:"Поп-рэп",icon:"♫",popular:true},
-{id:"ru24",title:"Сигма бой",artist:"Betsy, Мария Янковская",genre:"Поп",icon:"♫",popular:true},
-{id:"ru25",title:"Холодок",artist:"Мари Краймбрери",genre:"Поп",icon:"♫",popular:true},
-{id:"ru26",title:"Между нами",artist:"MONA",genre:"Поп",icon:"♫",popular:true},
-{id:"ru27",title:"Хочешь",artist:"Земфира",genre:"Рок",icon:"♫",popular:true},
-{id:"ru28",title:"Выхода нет",artist:"Сплин",genre:"Рок",icon:"♫",popular:true},
-{id:"ru29",title:"Районы-кварталы",artist:"Звери",genre:"Рок",icon:"♫",popular:true},
-{id:"ru30",title:"Знаешь ли ты",artist:"МакSим",genre:"Поп",icon:"♫",popular:true}
-];
+const tracks=[]
 const $=id=>document.getElementById(id),audio=$("audio");
 let index=-1,playing=false,favorites=new Set(),sheetOpen=false,dragStartY=null,lastAutoIndex=-1;
 try{const saved=JSON.parse(localStorage.getItem("harmonika:favorites")||"[]");if(Array.isArray(saved))favorites=new Set(saved.filter(x=>typeof x==="string"));}catch{favorites=new Set();}
@@ -285,7 +225,7 @@ function saveFavorites(){try{localStorage.setItem("harmonika:favorites",JSON.str
 const fmt=n=>Number.isFinite(n)&&n>=0?Math.floor(n/60)+":"+String(Math.floor(n%60)).padStart(2,"0"):"0:00";
 function toast(msg){const el=$("toast");el.textContent=msg;el.style.display="block";clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.style.display="none",2600)}
 function current(){return tracks[index]||null}
-function pickDifferentTrack(){const playable=tracks.map((t,i)=>({t,i})).filter(x=>x.t.src||x.t.previewUrl).map(x=>x.i);if(playable.length<2)return playable[0]??0;let n;do{n=playable[Math.floor(Math.random()*playable.length)]}while(n===index);lastAutoIndex=n;return n}
+function pickDifferentTrack(){const playable=tracks.map((t,i)=>({t,i})).map(x=>x.i);if(playable.length<2)return playable[0]??0;let n;do{n=playable[Math.floor(Math.random()*playable.length)]}while(n===index);lastAutoIndex=n;return n}
 function updateTrack(){
  const t=current();if(!t)return;
  if(!$("artLarge").querySelector("span")){const span=document.createElement("span");span.textContent=t.icon;$("artLarge").replaceChildren(span);$("artLarge").classList.remove("video-mode");}
@@ -302,104 +242,20 @@ function updatePlayback(){
  $("statusLabel").textContent=active?"СЕЙЧАС ИГРАЕТ":"ТВОЁ МУЗЫКАЛЬНОЕ ПРОСТРАНСТВО";
  $("bottomHint").textContent=active?"Нажми на нижнюю панель — узнать исполнителя":"МУЗЫКА В ОДНОМ КАСАНИИ";
 }
-async function fetchLegalPreview(t){
- const params=new URLSearchParams({title:t.title,artist:t.artist});
- const response=await fetch("https://franshiza.vercel.app/api/music-search?"+params.toString(),{cache:"no-store"});
- const data=await response.json().catch(()=>({}));
- if(!response.ok||!data.ok||!data.previewUrl)throw new Error(data.error||"Нет доступного легального аудиопревью");
- t.previewUrl=data.previewUrl;
- t.previewTitle=data.title||t.title;
- t.previewArtist=data.artist||t.artist;
- t.fullTrack=Boolean(data.fullTrack);
- t.audioSource=data.source||"";
- t.sourceUrl=data.sourceUrl||"";
- t.licenseUrl=data.licenseUrl||"";
- return t;
-}
 let openCatalogLoaded=false,openCatalogLoading=false,catalogLoadPromise=null;
-async function preloadLegalPreviews(){
- renderCatalog($("catalogSearch").value);
- if(openCatalogLoaded)return;
+async function loadMusicLibrary(){
  if(openCatalogLoading&&catalogLoadPromise)return catalogLoadPromise;
  openCatalogLoading=true;
- catalogLoadPromise=(async()=>{
-  try{
-   const response=await fetch("https://franshiza.vercel.app/api/music-search?mode=discover",{cache:"no-store"});
-   const data=await response.json();
-   if(!response.ok||!data.ok||!Array.isArray(data.tracks))throw new Error(data.error||"Каталог недоступен");
-   const existing=new Set(tracks.map(t=>t.id));
-   data.tracks.forEach(t=>{if(t&&t.src&&!existing.has(t.id)){tracks.push(t);existing.add(t.id)}});
-   openCatalogLoaded=true;
-   renderHomeTracks();
-   renderCatalog($("catalogSearch").value);
-   if(!data.tracks.length)toast("В открытом каталоге пока нет доступных записей.");
-  }catch(e){
-   console.error("[ГАРМОНИКА] Ошибка загрузки каталога:",e);
-   toast("Не удалось загрузить музыку. Проверь соединение и попробуй ещё раз.");
-   renderCatalog($("catalogSearch").value);
-  }finally{
-   openCatalogLoading=false;
-   catalogLoadPromise=null;
-  }
- })();
- return catalogLoadPromise;
+ catalogLoadPromise=(async()=>{try{const r=await fetch("https://franshiza.vercel.app/api/music-library",{cache:"no-store"});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||"Не удалось загрузить библиотеку");tracks.splice(0,tracks.length,...(Array.isArray(d.tracks)?d.tracks:[]).map(t=>({...t,src:"",previewUrl:"",icon:"♫"})));openCatalogLoaded=true;renderCatalog($("catalogSearch")?.value||"");renderHomeTracks();if(index>=0&&!tracks.some(t=>t.id===current()?.id)){audio.pause();audio.removeAttribute("src");index=-1;playing=false;updatePlayback();}}catch(e){console.error("[ГАРМОНИКА] Library load failed",e);toast("Не удалось загрузить библиотеку. Проверь сервер.");}finally{openCatalogLoading=false;catalogLoadPromise=null;}})();return catalogLoadPromise;
 }
+async function resolveAudio(track){const r=await fetch("https://franshiza.vercel.app/api/music-library?resolve="+encodeURIComponent(track.id),{cache:"no-store"});const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok||!d.url)throw new Error(d.error||"Не удалось получить аудиоссылку");return d.url;}
 async function playAt(i){
- if(!tracks.length)return;
- index=(i+tracks.length)%tracks.length;
- let requested=current();
- if(!requested.src&&!requested.previewUrl){
-   await preloadLegalPreviews();
-   const refreshedIndex=tracks.findIndex(t=>t.id===requested.id);
-   if(refreshedIndex>=0){index=refreshedIndex;requested=current();}
-   if(!requested.src&&!requested.previewUrl){
-     try{await fetchLegalPreview(requested);}
-     catch{toast("Для «"+requested.title+"» не найдена доступная полная запись с разрешённой лицензией. Выбери трек из каталога.");return;}
-   }
- }
- const t=current();
- updateTrack();
- $("artLarge").classList.remove("video-mode");
- const span=document.createElement("span");span.textContent=t.icon;$("artLarge").replaceChildren(span);
- if(t.src){
-   audio.pause();audio.src=t.src;audio.load();
-   try{await audio.play();playing=true;updatePlayback();$("miniArtist").textContent=t.artist+" · полная запись";$("songArtist").textContent=t.artist+" · полная запись";toast("Полная запись играет внутри Гармоники.");}
-   catch(e){playing=false;updatePlayback();toast("Не удалось запустить запись. Проверь соединение и нажми ещё раз.");}
-   return;
- }
- if(t.previewUrl){
-   audio.pause();audio.src=t.previewUrl;audio.load();
-   try{await audio.play();playing=true;updatePlayback();$("miniArtist").textContent=t.artist+(t.fullTrack?" · полная запись":" · аудиопревью");$("songArtist").textContent=t.artist+(t.fullTrack?" · полная запись":" · аудиопревью");toast("Запущена полная запись из разрешённого аудиокаталога.");}
-   catch(e){playing=false;updatePlayback();toast("WebView не запустил аудио. Нажми ▶ ещё раз.");}
-   return;
- }
- playing=false;updatePlayback();
- toast("Ищу полную запись с открытой лицензией. Короткие 30-секундные превью отключены.");
- fetchLegalPreview(t).then(async()=>{
-   renderCatalog($("catalogSearch").value);
-   updateTrack();
-   renderCatalog($("catalogSearch").value);
-   audio.pause();audio.src=t.previewUrl;audio.load();
-   try{
-     await audio.play();playing=true;updatePlayback();
-     $("miniArtist").textContent=t.artist+(t.fullTrack?" · полная запись":" · аудиопревью");
-     $("songArtist").textContent=t.artist+(t.fullTrack?" · полная запись":" · аудиопревью");
-     toast("Запущена полная запись из разрешённого аудиокаталога.");
-   }catch{
-     toast("Превью загружено. Нажми песню ещё раз, если WebView заблокировал запуск.");
-   }
- }).catch(()=>{
-   playing=false;updatePlayback();
-   toast("Для этой песни пока нет доступного встроенного аудио. Выбери другой трек.");
- });
+ if(!tracks.length){toast("Каталог пока пуст. Добавь песни через админ-панель.");return;}
+ index=(i+tracks.length)%tracks.length;const t=current();updateTrack();$("artLarge").classList.remove("video-mode");const span=document.createElement("span");span.textContent=t.icon||"♫";$("artLarge").replaceChildren(span);
+ try{const url=await resolveAudio(t);audio.pause();audio.src=url;audio.load();await audio.play();playing=true;updatePlayback();$("miniArtist").textContent=t.artist+" · полная запись";$("songArtist").textContent=t.artist+" · полная запись";toast("Воспроизведение запущено.");}
+ catch(e){playing=false;updatePlayback();console.error("[ГАРМОНИКА] Playback failed",e);toast("Не удалось воспроизвести файл. Проверь публичный доступ к ссылке Яндекс Диска.");}
 }
-async function startAvailableTrack(){
- toast("Загружаю доступные записи…");
- await preloadLegalPreviews();
- const firstPlayable=tracks.findIndex(t=>t.src||t.previewUrl);
- if(firstPlayable<0){toast("Открытый каталог сейчас не вернул доступных записей. Попробуй позже или найди песню в каталоге.");return;}
- await playAt(firstPlayable);
-}
+async function startAvailableTrack(){if(!tracks.length){await loadMusicLibrary();}if(!tracks.length){toast("Каталог пуст. Открой «Админ» и добавь первую песню.");return;}await playAt(0);}
 async function togglePlayback(){
  if(index<0){await startAvailableTrack();return}
  const t=current();
@@ -422,29 +278,18 @@ audio.addEventListener("timeupdate",()=>{$("elapsed").textContent=fmt(audio.curr
 audio.addEventListener("loadedmetadata",()=> $("duration").textContent=fmt(audio.duration));
 $("seek").addEventListener("input",e=>{if(Number.isFinite(audio.duration)&&audio.duration>0)audio.currentTime=Number(e.target.value)/100*audio.duration});
 function renderCatalog(query=""){
- const q=String(query||"").trim().toLowerCase();
- const list=tracks.filter(t=>(t.src||t.previewUrl)&&(t.title+" "+t.artist+" "+t.genre).toLowerCase().includes(q));
- $("catalogCount").textContent=list.length+" ТРЕКОВ";
- const root=$("catalogList");root.replaceChildren();
- if(!list.length){const empty=document.createElement("div");empty.className="catalog-empty";empty.textContent=openCatalogLoading?"Загружаю полные записи из открытого музыкального каталога…":(openCatalogLoaded?"По этому запросу ничего не найдено. Попробуй другое название.":"Загружаю доступные песни…");root.append(empty);return}
- list.forEach(t=>{
-   const b=document.createElement("button");b.type="button";b.className="catalog-row";
-   const cover=document.createElement("span");cover.className="catalog-cover";cover.textContent=t.icon;
-   const meta=document.createElement("span");meta.className="catalog-meta";
-   const name=document.createElement("span");name.className="catalog-name";name.textContent=t.title;
-   const artist=document.createElement("span");artist.className="catalog-artist";artist.textContent=t.artist;
-   const type=document.createElement("span");type.className="catalog-type";type.textContent=t.src?"▶ ПОЛНАЯ ЗАПИСЬ · ВСТРОЕННЫЙ ПЛЕЕР":(t.fullTrack?"▶ ПОЛНАЯ ЗАПИСЬ":"▶ АУДИОПРЕВЬЮ");
-   meta.append(name,artist,type);const action=document.createElement("span");action.textContent="▶";action.style.color="var(--accent)";
-   b.append(cover,meta,action);b.addEventListener("click",async()=>{await playAt(tracks.findIndex(x=>x.id===t.id));closeCatalog();});root.append(b);
- });
+ const q=String(query||"").trim().toLowerCase();const list=tracks.filter(t=>(t.title+" "+t.artist+" "+(t.genre||"")).toLowerCase().includes(q));
+ $("catalogCount").textContent=list.length+" ТРЕКОВ";const root=$("catalogList");if(!root)return;root.replaceChildren();
+ if(!list.length){const empty=document.createElement("div");empty.className="catalog-empty";empty.textContent=openCatalogLoading?"Загружаю твою библиотеку…":(openCatalogLoaded?"Песен пока нет. Добавь первую через «Админ».":"Библиотека загружается…");root.append(empty);return;}
+ list.forEach(t=>{const b=document.createElement("button");b.type="button";b.className="catalog-row";const cover=document.createElement("span");cover.className="catalog-cover";cover.textContent=favorites.has(t.id)?"♥":"♫";const meta=document.createElement("span");meta.className="catalog-meta";const name=document.createElement("span");name.className="catalog-name";name.textContent=t.title;const artist=document.createElement("span");artist.className="catalog-artist";artist.textContent=t.artist;const type=document.createElement("span");type.className="catalog-type";type.textContent="▶ ТВОЯ БИБЛИОТЕКА";meta.append(name,artist,type);const action=document.createElement("span");action.textContent="▶";action.style.color="var(--accent)";b.append(cover,meta,action);b.addEventListener("click",async()=>{await playAt(tracks.findIndex(x=>x.id===t.id));closeCatalog();});root.append(b);});
 }
-function openCatalog(){ $("catalogPanel").hidden=false; $("homeView").hidden=true; if($("profileView"))$("profileView").hidden=true; document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view==="catalog")); preloadLegalPreviews(); }
+function openCatalog(){ $("catalogPanel").hidden=false; $("homeView").hidden=true; if($("profileView"))$("profileView").hidden=true; document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view==="catalog")); loadMusicLibrary(); }
 function closeCatalog(){ $("catalogPanel").hidden=true; if($("homeView"))$("homeView").hidden=false; document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view==="home")); }
 $("openCatalog").addEventListener("click",openCatalog);
 $("closeCatalog").addEventListener("click",closeCatalog);
 $("catalogSearch").addEventListener("input",e=>renderCatalog(e.target.value));
 renderCatalog();
-preloadLegalPreviews();
+loadMusicLibrary();
 let swipeY=null,swipeX=null;
 function startSheetSwipe(e){if(e.target.closest("button,input,iframe"))return;const p=e.touches?e.touches[0]:e;swipeY=p.clientY;swipeX=p.clientX;}
 function endSheetSwipe(e){if(swipeY===null)return;const p=e.changedTouches?e.changedTouches[0]:e;const dy=p.clientY-swipeY,dx=p.clientX-swipeX;if(dy>65&&Math.abs(dy)>Math.abs(dx)*1.15&&$("songSheet").scrollTop<=2)closeSheet();swipeY=null;swipeX=null;}
@@ -455,6 +300,56 @@ $("songSheet").addEventListener("pointerup",e=>{if(e.pointerType==="touch")endSh
 $("grabber").addEventListener("pointerdown",e=>{if(e.pointerType==="mouse")return;swipeY=e.clientY;swipeX=e.clientX;try{$("grabber").setPointerCapture(e.pointerId)}catch{}});
 $("grabber").addEventListener("pointerup",e=>{if(swipeY!==null&&e.clientY-swipeY>30)closeSheet();swipeY=null;swipeX=null});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetOpen)closeSheet()});
+
+
+function renderHomeTracks(){
+ const root=$("homeTrackList");if(!root)return;root.replaceChildren();
+ const list=tracks.slice(0,5);
+ if(!list.length){const empty=document.createElement("div");empty.className="catalog-empty";empty.textContent="Твоя музыкальная библиотека пока пуста.";root.append(empty);return;}
+ list.forEach(t=>{const b=document.createElement("button");b.className="home-track";b.type="button";const art=document.createElement("span");art.className="home-track-cover";art.textContent="♫";const info=document.createElement("span");info.className="home-track-info";const title=document.createElement("b");title.textContent=t.title;const artist=document.createElement("small");artist.textContent=t.artist;info.append(title,artist);const play=document.createElement("span");play.className="home-track-play";play.textContent="▶";b.append(art,info,play);b.addEventListener("click",()=>playAt(tracks.findIndex(x=>x.id===t.id)));root.append(b);});
+}
+function setView(view){
+ const home=$("homeView"),profile=$("profileView"),catalog=$("catalogPanel");
+ if(home)home.hidden=view!=="home";if(profile)profile.hidden=view!=="profile";
+ if(catalog)catalog.hidden=view!=="catalog"&&view!=="favorites";
+ document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
+ if(view==="catalog"){loadMusicLibrary();renderCatalog($("catalogSearch").value);}
+ if(view==="profile"){const n=$("profileName")?.textContent||"Твой аккаунт";$("profileBigName").textContent=n;}
+ if(view==="favorites"){
+  const liked=tracks.filter(t=>favorites.has(t.id));$("catalogCount").textContent=liked.length+" В ИЗБРАННОМ";const root=$("catalogList");root.replaceChildren();
+  if(!liked.length){const e=document.createElement("div");e.className="catalog-empty";e.textContent="Избранное пока пустое.";root.append(e);return;}
+  liked.forEach(t=>{const b=document.createElement("button");b.type="button";b.className="catalog-row";const cover=document.createElement("span");cover.className="catalog-cover";cover.textContent="♥";const meta=document.createElement("span");meta.className="catalog-meta";const title=document.createElement("span");title.className="catalog-name";title.textContent=t.title;const artist=document.createElement("span");artist.className="catalog-artist";artist.textContent=t.artist;meta.append(title,artist);b.append(cover,meta);b.addEventListener("click",()=>playAt(tracks.findIndex(x=>x.id===t.id)));root.append(b);});
+ }
+}
+document.querySelectorAll(".nav-item").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
+$("profileFavorites")?.addEventListener("click",()=>setView("favorites"));
+$("profileSettings")?.addEventListener("click",()=>toast("Настройки аккаунта MAX управляются в приложении MAX."));
+$("profileHelp")?.addEventListener("click",()=>toast("Гармоника — твоя личная музыкальная библиотека."));
+$("profileAvatar")?.addEventListener("click",()=>setView("profile"));
+
+const adminState={password:"",tracks:[]};
+function adminStatus(message){$("adminStatus").textContent=message||"";}
+async function adminRequest(method,body={}){
+ const options={method,headers:{"Content-Type":"application/json"},cache:"no-store"};
+ if(method!=="GET")options.body=JSON.stringify({...body,password:adminState.password});
+ const response=await fetch("https://franshiza.vercel.app/api/music-library",options);
+ const data=await response.json().catch(()=>({}));
+ if(!response.ok||!data.ok)throw new Error(data.error||"Ошибка запроса");
+ return data;
+}
+function showAdmin(){ $("adminPanel").hidden=false; }
+function hideAdmin(){ $("adminPanel").hidden=true; }
+function renderAdminTracks(){
+ const root=$("adminTrackList");root.replaceChildren();
+ if(!adminState.tracks.length){const e=document.createElement("div");e.className="catalog-empty";e.textContent="Пока нет песен. Добавь первую выше.";root.append(e);return;}
+ adminState.tracks.forEach(t=>{const row=document.createElement("div");row.className="admin-track";const info=document.createElement("div");info.className="admin-track-info";const title=document.createElement("b");title.textContent=t.title;const artist=document.createElement("small");artist.textContent=t.artist;info.append(title,artist);const actions=document.createElement("div");actions.className="admin-actions";const edit=document.createElement("button");edit.type="button";edit.textContent="Изменить";edit.addEventListener("click",()=>{ $("editTrackId").value=t.id;$("trackTitle").value=t.title;$("trackArtist").value=t.artist;$("trackUrl").value=t.audioUrl;$("trackCover").value=t.cover||"";$("saveTrack").textContent="Сохранить";$("cancelEdit").hidden=false;});const del=document.createElement("button");del.type="button";del.className="delete";del.textContent="Удалить";del.addEventListener("click",async()=>{if(!confirm("Удалить «"+t.title+"» из каталога?"))return;try{await adminRequest("DELETE",{id:t.id});await refreshAdmin();await loadMusicLibrary();adminStatus("Песня удалена.");}catch(e){adminStatus(e.message);}});actions.append(edit,del);row.append(info,actions);root.append(row);});
+}
+async function refreshAdmin(){const data=await adminRequest("GET");adminState.tracks=Array.isArray(data.tracks)?data.tracks:[];renderAdminTracks();}
+$("openAdmin").addEventListener("click",showAdmin);$("closeAdmin").addEventListener("click",hideAdmin);
+$("adminLoginForm").addEventListener("submit",async e=>{e.preventDefault();adminState.password=$("adminPassword").value;try{await adminRequest("POST",{action:"auth"});$("adminLoginForm").hidden=true;$("adminEditor").hidden=false;await refreshAdmin();adminStatus("Вход выполнен. Изменения сохраняются на сервере.");}catch(err){adminState.password="";$("adminEditor").hidden=true;adminStatus(err.message);$("adminStatus").style.display="block";$("adminLoginForm").insertAdjacentElement("afterend",$("adminStatus"));}});
+$("trackForm").addEventListener("submit",async e=>{e.preventDefault();const id=$("editTrackId").value;const body={id,title:$("trackTitle").value.trim(),artist:$("trackArtist").value.trim(),audioUrl:$("trackUrl").value.trim(),cover:$("trackCover").value.trim()};try{await adminRequest(id?"PATCH":"POST",body);$("trackForm").reset();$("editTrackId").value="";$("saveTrack").textContent="Добавить песню";$("cancelEdit").hidden=true;await refreshAdmin();await loadMusicLibrary();renderCatalog($("catalogSearch").value);renderHomeTracks();adminStatus(id?"Изменения сохранены.":"Песня добавлена в каталог.");}catch(err){adminStatus(err.message);}});
+$("cancelEdit").addEventListener("click",()=>{$("trackForm").reset();$("editTrackId").value="";$("saveTrack").textContent="Добавить песню";$("cancelEdit").hidden=true;});
+
 (function(){
  const app=$("musicApp");
  app.hidden=false;
