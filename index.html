@@ -144,6 +144,22 @@ body{background:radial-gradient(ellipse at 50% 0%,#073c2d 0,#041a16 38%,#020908 
 .admin-panel{position:fixed;z-index:30;inset:0;overflow:auto;background:#090b0af7;backdrop-filter:blur(18px);padding:calc(22px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom))}
 .admin-inner{max-width:620px;margin:0 auto}.admin-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}.admin-head h2{margin:0;font-size:25px}.admin-close{border:0;border-radius:50%;width:42px;height:42px;background:#ffffff12;color:white;font-size:24px}
 .admin-form{display:grid;gap:12px}.admin-form label{display:grid;gap:6px;color:#aeb8a8;font-size:12px}.admin-form input{width:100%;min-width:0;border:1px solid #ffffff24;border-radius:12px;background:#151815;color:#fff;padding:13px;font:inherit}.admin-form button,.admin-save{border:0;border-radius:12px;background:var(--accent);color:#11170b;font-weight:900;padding:13px}.admin-help{color:#9ba398;font-size:12px;line-height:1.5}.admin-list{display:grid;gap:8px;margin-top:18px}.admin-track{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #ffffff17;border-radius:14px;background:#ffffff06}.admin-track-info{min-width:0;flex:1}.admin-track-info b,.admin-track-info small{display:block;overflow-wrap:anywhere}.admin-track-info small{color:#9ba398;font-size:12px}.admin-actions{display:flex;gap:6px}.admin-actions button{border:1px solid #ffffff20;border-radius:9px;background:#ffffff0b;color:white;padding:8px;font-size:12px}.admin-actions .delete{color:#ff9d9d}.admin-status{font-size:13px;color:var(--accent);min-height:18px}.catalog-empty{padding:24px 16px;text-align:center;color:#9ba398;border:1px dashed #ffffff24;border-radius:16px}
+
+/* Admin panel: stable layout on narrow MAX WebViews */
+.admin-track{min-width:0}
+.admin-track-info{overflow-wrap:anywhere}
+.admin-actions{flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
+.admin-actions button{min-height:38px;white-space:nowrap}
+.admin-actions .delete[data-confirmed="yes"]{background:#4a171b;border-color:#ff7b8580;color:#ffd9dc}
+@media(max-width:420px){
+ .admin-track{align-items:flex-start;flex-wrap:wrap}
+ .admin-track-info{flex:1 1 100%}
+ .admin-actions{width:100%;max-width:100%;justify-content:flex-end}
+ .admin-actions button{min-height:40px;padding:8px 12px}
+ .catalog-row{gap:9px;padding:9px}
+ .catalog-cover{width:42px;height:42px;flex-basis:42px}
+ .catalog-name{white-space:normal;overflow-wrap:anywhere}
+}
 </style>
 </head>
 <body>
@@ -231,7 +247,7 @@ function updateTrack(){
  const t=current();if(!t)return;
  if(!$("artLarge").querySelector("span")){const span=document.createElement("span");span.textContent=t.icon;$("artLarge").replaceChildren(span);$("artLarge").classList.remove("video-mode");}
  $("miniTitle").textContent=t.title;$("miniArtist").textContent=t.artist;$("miniArt").textContent=t.icon;
- $("songTitle").textContent=t.title;$("songArtist").textContent=t.artist;$("songGenre").textContent=t.genre.toUpperCase();
+ $("songTitle").textContent=t.title;$("songArtist").textContent=t.artist;$("songGenre").textContent=(t.genre||"Моя музыка").toUpperCase();
  $("artLarge").querySelector("span").textContent=t.icon;$("like").textContent=favorites.has(t.id)?"♥":"♡";$("like").classList.toggle("active",favorites.has(t.id));
  $("headline").innerHTML="Твоя музыка.<br>Твой ритм.";$("subline").textContent=t.title+" · "+t.artist;
 }
@@ -361,7 +377,7 @@ function hideAdmin(){ $("adminPanel").hidden=true; }
 function renderAdminTracks(){
  const root=$("adminTrackList");root.replaceChildren();
  if(!adminState.tracks.length){const e=document.createElement("div");e.className="catalog-empty";e.textContent="Пока нет песен. Добавь первую выше.";root.append(e);return;}
- adminState.tracks.forEach(t=>{const row=document.createElement("div");row.className="admin-track";const info=document.createElement("div");info.className="admin-track-info";const title=document.createElement("b");title.textContent=t.title;const artist=document.createElement("small");artist.textContent=t.artist;info.append(title,artist);const actions=document.createElement("div");actions.className="admin-actions";const edit=document.createElement("button");edit.type="button";edit.textContent="Изменить";edit.addEventListener("click",()=>{ $("editTrackId").value=t.id;$("trackTitle").value=t.title;$("trackArtist").value=t.artist;$("trackGenre").value=t.genre||"Моя музыка";$("trackUrl").value=t.audioUrl;$("trackCover").value=t.cover||"";$("saveTrack").textContent="Сохранить";$("cancelEdit").hidden=false;});const del=document.createElement("button");del.type="button";del.className="delete";del.textContent="Удалить";del.addEventListener("click",async()=>{if(del.dataset.confirmed!=="yes"){del.dataset.confirmed="yes";del.textContent="Точно удалить?";del.setAttribute("aria-label","Подтвердить удаление "+t.title);return;}del.disabled=true;del.textContent="Удаляю…";try{await adminRequest("POST",{action:"delete",id:t.id});if(current()?.id===t.id){audio.pause();audio.removeAttribute("src");index=-1;playing=false;playbackQueue=playbackQueue.filter(id=>id!==t.id);updatePlayback();}await refreshAdmin();await loadMusicLibrary();renderCatalog($("catalogSearch").value);renderHomeTracks();adminStatus("Песня удалена.");}catch(e){del.disabled=false;del.dataset.confirmed="";del.textContent="Удалить";adminStatus("Не удалось удалить песню: "+e.message);}});actions.append(edit,del);row.append(info,actions);root.append(row);});
+ adminState.tracks.forEach(t=>{const row=document.createElement("div");row.className="admin-track";const info=document.createElement("div");info.className="admin-track-info";const title=document.createElement("b");title.textContent=t.title;const artist=document.createElement("small");artist.textContent=t.artist;info.append(title,artist);const actions=document.createElement("div");actions.className="admin-actions";const edit=document.createElement("button");edit.type="button";edit.textContent="Изменить";edit.addEventListener("click",()=>{ $("editTrackId").value=t.id;$("trackTitle").value=t.title;$("trackArtist").value=t.artist;$("trackGenre").value=t.genre||"Моя музыка";$("trackUrl").value=t.audioUrl;$("trackCover").value=t.cover||"";$("saveTrack").textContent="Сохранить";$("cancelEdit").hidden=false;});const del=document.createElement("button");del.type="button";del.className="delete";del.textContent="Удалить";del.addEventListener("click",async()=>{if(del.dataset.confirmed!=="yes"){del.dataset.confirmed="yes";del.textContent="Точно удалить?";del.setAttribute("aria-label","Подтвердить удаление "+t.title);return;}del.disabled=true;del.textContent="Удаляю…";try{await adminRequest("POST",{action:"delete",id:t.id});if(current()?.id===t.id){audio.pause();audio.removeAttribute("src");index=-1;playing=false;updatePlayback();}playbackQueue=playbackQueue.filter(id=>id!==t.id);await refreshAdmin();await loadMusicLibrary();if(!playbackQueue.length)playbackQueue=tracks.map(x=>x.id);renderCatalog($("catalogSearch").value);renderHomeTracks();adminStatus("Песня удалена.");}catch(e){del.disabled=false;del.dataset.confirmed="";del.textContent="Удалить";adminStatus("Не удалось удалить песню: "+e.message);}});actions.append(edit,del);row.append(info,actions);root.append(row);});
 }
 async function refreshAdmin(){const data=await adminRequest("GET");adminState.tracks=Array.isArray(data.tracks)?data.tracks:[];renderAdminTracks();}
 $("openAdmin").addEventListener("click",showAdmin);$("closeAdmin").addEventListener("click",hideAdmin);
