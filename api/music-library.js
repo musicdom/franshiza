@@ -168,6 +168,18 @@ module.exports = async function handler(req, res) {
       return json(res, 200, { ok: true });
     }
 
+    // Support authenticated deletion via POST as well as DELETE, because some embedded
+    // WebViews/proxies may not forward a JSON body on DELETE consistently.
+    if (req.method === "POST" && clean(req.body && req.body.action, 30) === "delete") {
+      const id = clean(req.body && req.body.id, 100);
+      if (!id) return json(res, 400, { ok: false, error: "Не указан ID песни" });
+      const tracks = await readTracks();
+      const next = tracks.filter(item => item.id !== id);
+      if (next.length === tracks.length) return json(res, 404, { ok: false, error: "Песня не найдена" });
+      await writeTracks(next);
+      return json(res, 200, { ok: true });
+    }
+
     if (req.method === "POST") {
       const tracks = await readTracks();
       const track = normalizeTrack(req.body || {});
