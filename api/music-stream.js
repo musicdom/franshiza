@@ -109,9 +109,14 @@ function copyHeader(upstream, res, from, to = from) {
 }
 
 module.exports = async function handler(req, res) {
+  const origin = String(req.headers.origin || "");
+  if (origin === "https://musicdom.github.io" || origin === "https://franshiza.vercel.app" || /^https:\/\/franshiza-[a-z0-9-]+\.vercel\.app$/.test(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+  res.setHeader("Vary", "Origin");
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Range");
+  res.setHeader("Access-Control-Allow-Headers", "Range, Content-Type");
   res.setHeader("Accept-Ranges", "bytes");
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "GET" && req.method !== "HEAD") {
