@@ -316,12 +316,14 @@ async function fetchLegalPreview(t){
  t.licenseUrl=data.licenseUrl||"";
  return t;
 }
-let openCatalogLoaded=false,openCatalogLoading=false;
+let openCatalogLoaded=false,openCatalogLoading=false,catalogLoadPromise=null;
 async function preloadLegalPreviews(){
  renderCatalog($("catalogSearch").value);
- if(openCatalogLoaded||openCatalogLoading)return;
+ if(openCatalogLoaded)return;
+ if(openCatalogLoading&&catalogLoadPromise)return catalogLoadPromise;
  openCatalogLoading=true;
- try{
+ catalogLoadPromise=(async()=>{
+  try{
    const response=await fetch("https://franshiza.vercel.app/api/music-search?mode=discover",{cache:"no-store"});
    const data=await response.json();
    if(!response.ok||!data.ok||!Array.isArray(data.tracks))throw new Error(data.error||"Каталог недоступен");
@@ -331,10 +333,16 @@ async function preloadLegalPreviews(){
    renderHomeTracks();
    renderCatalog($("catalogSearch").value);
    if(!data.tracks.length)toast("В открытом каталоге пока нет доступных записей.");
- }catch(e){
-   toast("Не удалось загрузить музыку. Открой каталог ещё раз чуть позже.");
+  }catch(e){
+   console.error("[ГАРМОНИКА] Ошибка загрузки каталога:",e);
+   toast("Не удалось загрузить музыку. Проверь соединение и попробуй ещё раз.");
    renderCatalog($("catalogSearch").value);
- }finally{openCatalogLoading=false}
+  }finally{
+   openCatalogLoading=false;
+   catalogLoadPromise=null;
+  }
+ })();
+ return catalogLoadPromise;
 }
 async function playAt(i){
  if(!tracks.length)return;
