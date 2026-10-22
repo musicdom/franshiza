@@ -29,7 +29,7 @@ function setView(view){
 document.querySelectorAll(".nav-item").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
 $("featurePlay")?.addEventListener("click",togglePlayback);
 $("allTracks")?.addEventListener("click",()=>setView("catalog"));
-document.querySelectorAll("[data-track]").forEach(b=>b.addEventListener("click",()=>{const i=tracks.findIndex(t=>t.id===b.dataset.track);if(i>=0)playAt(i);else setView("catalog")}));
+document.querySelectorAll("[data-track]").forEach(b=>b.addEventListener("click",()=>{const i=tracks.findIndex(t=>t.id===b.dataset.track&&(t.src||t.previewUrl));if(i>=0){playAt(i);return;}setView("catalog");$("catalogSearch").value="";renderCatalog("");toast("Выбери доступную запись из каталога — неподтверждённые песни не запускаются.");}));
 document.querySelectorAll("[data-genre]").forEach(b=>b.addEventListener("click",()=>{setView("catalog");$("catalogSearch").value=b.dataset.genre;renderCatalog(b.dataset.genre)}));
 $("profileFavorites")?.addEventListener("click",()=>setView("favorites"));
 $("profileSettings")?.addEventListener("click",()=>toast("Настройки аккаунта MAX управляются в приложении MAX."));
