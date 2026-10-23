@@ -399,6 +399,20 @@ button:focus-visible,input:focus-visible{outline:2px solid #b7ff75;outline-offse
 .catalog-genre-chip.active{background:linear-gradient(145deg,#24ef98,#0ca969);border-color:#80ffc0;color:#032719}
 @media(min-width:480px){.catalog-genre-chip{min-height:112px}}
 
+
+
+/* Round genre buttons with individual CSS-rendered icon badges */
+.catalog-genres{gap:12px;margin-bottom:22px}
+.catalog-genre-chip{aspect-ratio:1/1;border-radius:50%;padding:10px 5px;gap:7px;border:1px solid #1a6247;background:radial-gradient(circle at 30% 15%,#123b2d,#071711 72%);box-shadow:inset 0 1px 0 #ffffff0c,0 7px 18px #0003;position:relative;isolation:isolate;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.catalog-genre-chip::before{content:attr(data-icon);width:43px;height:43px;flex:0 0 43px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(145deg,#1df19a25,#13a96a12);border:1px solid #35f3a14d;color:#6affba;font-size:23px;font-weight:800;box-shadow:0 0 20px #17e88910}
+.catalog-genre-chip{font-size:11px;line-height:1.1;overflow-wrap:anywhere}
+.catalog-genre-chip span{font-size:9px;color:#9be8c0;background:#0c3023;border:1px solid #1a6247;padding:3px 7px;white-space:nowrap}
+.catalog-genre-chip:active{transform:scale(.95)}
+.catalog-genre-chip.active{background:radial-gradient(circle at 35% 20%,#1b8c5d,#073b29 75%);border-color:#55ffad;color:#f1fff8;box-shadow:0 0 0 2px #20ed8e15,0 8px 26px #13e88922}
+.catalog-genre-chip.active::before{background:#20ed8e20;border-color:#6dffb8;color:#9affca;box-shadow:0 0 24px #20ed8e25}
+.catalog-genre-chip.active span{background:#0a3827;color:#c7ffdf;border-color:#27895d}
+@media(max-width:360px){.catalog-genres{gap:8px}.catalog-genre-chip{padding:7px 3px;gap:5px}.catalog-genre-chip::before{width:35px;height:35px;flex-basis:35px;font-size:20px}.catalog-genre-chip span{font-size:8px;padding:2px 5px}}
+
 </style>
 </head>
 <body>
@@ -596,8 +610,9 @@ function renderCatalogGenres(){
  const genres=[...new Set([...existingGenres,...tracks.flatMap(t=>splitTrackGenres(t.genre))])]
   .filter(genre=>genre&&genre.trim()&&genre.trim().toLocaleLowerCase("ru")!=="моя музыка")
   .sort((a,b)=>a.localeCompare(b,"ru"));
+ const genreIcons={"поп":"♫","рок":"⚡","хип-хоп":"♬","рэп":"♩","техно":"◈","электроника":"⌁","r&b":"♥","джаз":"♪","классика":"𝄞","инди":"✳","метал":"⛓","регги":"☀","лоу-фай":"☾","хаус":"⌂","транс":"✧","драм-н-бейс":"▥","дабстеп":"≋","фонк":"♜","диско":"✦","шансон":"♬","k-pop":"♡","поп-рок":"⚡","саундтреки":"▹"};
  const addChip=(label,value,count)=>{
-  const b=document.createElement("button");b.type="button";b.className="catalog-genre-chip"+(activeCatalogGenre===value?" active":"");b.append(document.createTextNode(label));
+  const b=document.createElement("button");b.type="button";b.className="catalog-genre-chip"+(activeCatalogGenre===value?" active":"");b.dataset.icon=genreIcons[label.toLocaleLowerCase("ru")]||"♫";b.append(document.createTextNode(label));
   const n=document.createElement("span");n.textContent=count+" тр.";b.append(" ",n);
   b.setAttribute("aria-pressed",String(activeCatalogGenre===value));
   b.addEventListener("click",()=>{activeCatalogGenre=value;$("catalogSearch").value="";renderCatalog("");});
@@ -621,7 +636,7 @@ function renderCatalog(query=""){
  const root=$("catalogList");if(!root)return;root.replaceChildren();
  // По умолчанию каталог показывает только жанры. Песни появляются после выбора жанра или поиска.
  if(!selectedGenre&&!searching){
-  const hint=document.createElement("div");hint.className="catalog-empty";hint.textContent=openCatalogLoading?"Загружаю жанры…":(catalogLoadError?"Не удалось загрузить жанры. Проверь соединение и попробуй ещё раз.":"Выбери жанр выше, чтобы увидеть песни. Кнопка «Запустить ленту» на главной включает случайную музыку из всей библиотеки.");root.append(hint);
+  if(openCatalogLoading||catalogLoadError){const hint=document.createElement("div");hint.className="catalog-empty";hint.textContent=catalogLoadError?"Не удалось загрузить жанры. Проверь соединение и попробуй ещё раз.":"Загружаю жанры…";root.append(hint);}
   if(catalogLoadError){const retry=document.createElement("button");retry.type="button";retry.className="catalog-retry";retry.textContent="Повторить загрузку";retry.addEventListener("click",()=>loadMusicLibrary());root.append(retry);}
   return;
  }
