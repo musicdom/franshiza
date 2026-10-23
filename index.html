@@ -556,8 +556,14 @@ function splitTrackGenres(value){
 }
 function trackHasGenre(track,genre){
  if(!genre)return true;
- const target=genre.toLocaleLowerCase("ru");
- return splitTrackGenres(track.genre).some(g=>g.toLocaleLowerCase("ru")===target||g.toLocaleLowerCase("ru").includes(target)||target.includes(g.toLocaleLowerCase("ru")));
+ const normalize=value=>String(value||"").trim().toLocaleLowerCase("ru");
+ const target=normalize(genre);
+ const aliases={"электроника":"техно","электронная музыка":"техно"};
+ const wanted=aliases[target]||target;
+ return splitTrackGenres(track.genre).some(g=>{
+  const value=normalize(g);
+  return value===wanted||(aliases[value]||value)===target;
+ });
 }
 function renderCatalogGenres(){
  const root=$("catalogGenres");if(!root)return;root.replaceChildren();
@@ -566,7 +572,7 @@ function renderCatalogGenres(){
   const b=document.createElement("button");b.type="button";b.className="catalog-genre-chip"+(activeCatalogGenre===value?" active":"");b.textContent=label;
   if(typeof count==="number"){const n=document.createElement("span");n.textContent=count;b.append(" ",n);}
   b.setAttribute("aria-pressed",String(activeCatalogGenre===value));
-  b.addEventListener("click",()=>{activeCatalogGenre=value;renderCatalog($("catalogSearch").value);});
+  b.addEventListener("click",()=>{activeCatalogGenre=value;$("catalogSearch").value="";renderCatalog("");});
   root.append(b);
  };
  addChip("Все жанры","",tracks.length);
@@ -574,11 +580,19 @@ function renderCatalogGenres(){
 }
 function renderCatalog(query=""){
  const q=String(query||"").trim().toLocaleLowerCase("ru");
+ const selectedGenre=Boolean(activeCatalogGenre);
+ const searching=Boolean(q);
  const list=tracks.filter(t=>(t.title+" "+t.artist+" "+(t.genre||"Моя музыка")).toLocaleLowerCase("ru").includes(q)&&trackHasGenre(t,activeCatalogGenre));
  renderCatalogGenres();
- $("catalogCount").textContent=(activeCatalogGenre?activeCatalogGenre.toLocaleUpperCase("ru")+" · ":"")+list.length+" ТРЕКОВ";
+ $("catalogCount").textContent=selectedGenre?activeCatalogGenre.toLocaleUpperCase("ru")+" · "+list.length+" ТРЕКОВ":(searching?list.length+" РЕЗУЛЬТАТОВ":"ВЫБЕРИ ЖАНР");
  const root=$("catalogList");if(!root)return;root.replaceChildren();
- if(!list.length){const empty=document.createElement("div");empty.className="catalog-empty";empty.textContent=catalogLoadError?"Не удалось загрузить библиотеку. Проверь соединение и попробуй ещё раз.":(openCatalogLoading?"Загружаю твою библиотеку…":(openCatalogLoaded?(activeCatalogGenre?"В этом жанре пока нет песен. Выбери другой жанр или добавь треки через «Админ».":"Песен пока нет. Добавь первую через «Админ»."):"Библиотека загружается…"));root.append(empty);if(catalogLoadError){const retry=document.createElement("button");retry.type="button";retry.className="catalog-retry";retry.textContent="Повторить загрузку";retry.addEventListener("click",()=>loadMusicLibrary());root.append(retry);}return;}
+ // По умолчанию каталог показывает только жанры. Песни появляются после выбора жанра или поиска.
+ if(!selectedGenre&&!searching){
+  const hint=document.createElement("div");hint.className="catalog-empty";hint.textContent=openCatalogLoading?"Загружаю жанры…":(catalogLoadError?"Не удалось загрузить жанры. Проверь соединение и попробуй ещё раз.":"Выбери жанр выше, чтобы увидеть песни. Кнопка «Запустить ленту» на главной включает случайную музыку из всей библиотеки.");root.append(hint);
+  if(catalogLoadError){const retry=document.createElement("button");retry.type="button";retry.className="catalog-retry";retry.textContent="Повторить загрузку";retry.addEventListener("click",()=>loadMusicLibrary());root.append(retry);}
+  return;
+ }
+ if(!list.length){const empty=document.createElement("div");empty.className="catalog-empty";empty.textContent=catalogLoadError?"Не удалось загрузить библиотеку. Проверь соединение и попробуй ещё раз.":(openCatalogLoading?"Загружаю твою библиотеку…":(openCatalogLoaded?(selectedGenre?"В этом жанре пока нет песен. Добавь песню в админ-панели и укажи этот жанр.":"Ничего не найдено. Попробуй изменить запрос."):"Библиотека загружается…"));root.append(empty);if(catalogLoadError){const retry=document.createElement("button");retry.type="button";retry.className="catalog-retry";retry.textContent="Повторить загрузку";retry.addEventListener("click",()=>loadMusicLibrary());root.append(retry);}return;}
  list.forEach(t=>{const b=document.createElement("button");b.type="button";b.className="catalog-row";const cover=document.createElement("span");cover.className="catalog-cover";cover.textContent=favorites.has(t.id)?"♥":"♫";const meta=document.createElement("span");meta.className="catalog-meta";const name=document.createElement("span");name.className="catalog-name";name.textContent=t.title;const artist=document.createElement("span");artist.className="catalog-artist";artist.textContent=t.artist;const type=document.createElement("span");type.className="catalog-type";type.textContent=splitTrackGenres(t.genre).join(" · ").toLocaleUpperCase("ru");meta.append(name,artist,type);const action=document.createElement("span");action.textContent="▶";action.style.color="var(--accent)";b.append(cover,meta,action);b.addEventListener("click",()=>{playAt(tracks.findIndex(x=>x.id===t.id),list.map(x=>x.id));closeCatalog();});root.append(b);});
 }
 function openCatalog(){ $("catalogPanel").hidden=false; $("homeView").hidden=true; if($("profileView"))$("profileView").hidden=true; document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view==="catalog")); loadMusicLibrary(); }
@@ -586,7 +600,7 @@ function closeCatalog(){ $("catalogPanel").hidden=true; if($("homeView"))$("home
 $("openCatalog").addEventListener("click",openCatalog);
  $("featurePlay").addEventListener("click",async()=>{if(index<0||audio.ended)await startAvailableTrack();else await togglePlayback();});
  $("allTracks").addEventListener("click",openCatalog);
- document.querySelectorAll("[data-genre]").forEach(b=>b.addEventListener("click",()=>{activeCatalogGenre=b.dataset.genre||"";$("catalogSearch").value="";openCatalog();renderCatalog("");}));
+ document.querySelectorAll("[data-genre]").forEach(b=>b.addEventListener("click",()=>{const raw=b.dataset.genre||"";activeCatalogGenre=raw==="Электроника"?"Техно":raw;$("catalogSearch").value="";openCatalog();renderCatalog("");}));
 $("closeCatalog").addEventListener("click",closeCatalog);
 $("catalogSearch").addEventListener("input",e=>renderCatalog(e.target.value));
 renderCatalog();
