@@ -17,7 +17,7 @@
 /* Каталог и управление свайпом */
 .catalog-trigger{border:1px solid #c5ff7240;border-radius:999px;background:#c5ff7210;color:var(--accent);padding:9px 13px;font-size:12px;font-weight:800;white-space:nowrap}
 .catalog-panel{position:fixed;z-index:35;inset:0;max-width:760px;margin:auto;background:#0c100d;padding:calc(16px + env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom));overflow:auto}
-.catalog-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.catalog-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}.catalog-heading{min-width:0}.catalog-back{display:inline-flex;align-items:center;gap:5px;margin:0 0 10px;padding:7px 12px;border:1px solid #20ed8e45;border-radius:999px;background:#0b3529;color:#83ffc0;font-size:12px;font-weight:800}.catalog-back span{font-size:22px;line-height:12px}.catalog-heading .overline{margin-bottom:7px}.catalog-heading h2{overflow-wrap:anywhere}
 .catalog-head h2{font-size:26px;letter-spacing:-1px;margin:0}
 .catalog-close{width:40px;height:40px;border-radius:50%;border:1px solid #ffffff22;background:#ffffff0a;color:#fff;font-size:23px}
 .catalog-search{width:100%;border:1px solid #ffffff20;border-radius:14px;background:#ffffff09;color:#fff;padding:14px 15px;font:inherit;outline:none;margin-bottom:14px}
@@ -354,7 +354,7 @@ button:focus-visible,input:focus-visible{outline:2px solid #b7ff75;outline-offse
 #zaycevEmbed{background:#070a08}
 #zaycevEmbed .embed-head{border-bottom-color:#ffffff16}
 #zaycevEmbed .embed-note{border-top-color:#ffffff16;color:#9aaba0}
-.catalog-genres{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 18px}
+.catalog-genres{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 18px}.catalog-genres[hidden]{display:none!important}
 .catalog-genre-chip{aspect-ratio:1/1;min-width:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:8px;border:1px solid #1a4d3a;border-radius:16px;background:linear-gradient(145deg,#10271d,#07140f);color:#d9ffe8;font-size:12px;font-weight:800;text-align:center;white-space:normal;overflow-wrap:anywhere;box-shadow:inset 0 1px #ffffff08;transition:transform .15s,border-color .15s,background .15s}
 .catalog-genre-chip::before{content:"♫";display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:#9dff3814;color:#9dff38;font-size:20px}
 .catalog-genre-chip span{font-size:10px;color:#8cb5a0;background:#0d3023;border-radius:999px;padding:3px 7px}
@@ -375,6 +375,29 @@ button:focus-visible,input:focus-visible{outline:2px solid #b7ff75;outline-offse
 @media(prefers-reduced-transparency:reduce){
  .bottom-nav,.mini-player,.sheet,.catalog-panel,.admin-panel,.feature-banner,.profile,.welcome-note{backdrop-filter:none;-webkit-backdrop-filter:none}
 }
+
+
+/* Polished genre tiles + dedicated category song screen */
+.genre-grid{gap:10px}
+.genre-grid button{position:relative;isolation:isolate;min-height:92px;padding:12px 5px 10px;border:1px solid #1a6149;border-radius:18px;background:linear-gradient(145deg,#104d39 0%,#09271e 72%);color:#7dffc0;font-size:24px;gap:8px;box-shadow:inset 0 1px #ffffff12,0 8px 20px #0002;transition:transform .18s,border-color .18s,box-shadow .18s}
+.genre-grid button::before{content:"";position:absolute;z-index:-1;inset:0;border-radius:inherit;background:radial-gradient(circle at 80% 0%,#29f49a20,transparent 58%)}
+.genre-grid button:nth-child(2){border-color:#285f76;background:linear-gradient(145deg,#153e50,#091e29);color:#7bdcff}
+.genre-grid button:nth-child(2)::before{background:radial-gradient(circle at 80% 0%,#72dfff20,transparent 58%)}
+.genre-grid button:nth-child(3){border-color:#5b6434;background:linear-gradient(145deg,#394323,#1b2819);color:#d6ff81}
+.genre-grid button:nth-child(3)::before{background:radial-gradient(circle at 80% 0%,#d6ff8120,transparent 58%)}
+.genre-grid button:nth-child(4){border-color:#346f58;background:linear-gradient(145deg,#14523b,#09271e);color:#66ffb5}
+.genre-grid button:nth-child(4)::before{background:radial-gradient(circle at 80% 0%,#66ffb520,transparent 58%)}
+.genre-grid button span{font-size:11px;font-weight:850;letter-spacing:.15px;color:#effff7}
+.genre-grid button:active{transform:scale(.96)}
+.catalog-panel{z-index:45}
+.catalog-head{align-items:flex-start}
+.catalog-heading h2{font-size:clamp(23px,6vw,30px);line-height:1.08}
+.catalog-back{margin-bottom:12px}
+.catalog-genre-chip{aspect-ratio:auto;min-height:100px;border-radius:20px;gap:9px;padding:13px 7px;background:linear-gradient(145deg,#103d2e,#081a14);border-color:#1c6046;box-shadow:inset 0 1px #ffffff0b,0 8px 22px #0002}
+.catalog-genre-chip::before{width:42px;height:42px;border-radius:14px;background:linear-gradient(145deg,#1a8054,#0a3a29);color:#80ffc0;font-size:23px}
+.catalog-genre-chip span{font-size:10px;background:#092c20;color:#a6e7c5}
+.catalog-genre-chip.active{background:linear-gradient(145deg,#24ef98,#0ca969);border-color:#80ffc0;color:#032719}
+@media(min-width:480px){.catalog-genre-chip{min-height:112px}}
 
 </style>
 </head>
@@ -413,7 +436,7 @@ button:focus-visible,input:focus-visible{outline:2px solid #b7ff75;outline-offse
   <p class="sheet-note">Потяни вниз или нажми ×, чтобы закрыть</p>
 </section>
 <section class="catalog-panel" id="catalogPanel" hidden aria-label="Музыкальный каталог">
-  <div class="catalog-head"><div><div class="overline">ВЫБИРАЙ СВОЁ</div><h2>Музыкальный каталог</h2></div><button type="button" class="catalog-close" id="closeCatalog" aria-label="Закрыть каталог">×</button></div>
+  <div class="catalog-head"><div class="catalog-heading"><button type="button" class="catalog-back" id="catalogBack" hidden><span>‹</span> Назад</button><div class="overline" id="catalogEyebrow">ВЫБИРАЙ СВОЁ</div><h2 id="catalogTitle">Музыкальный каталог</h2></div><button type="button" class="catalog-close" id="closeCatalog" aria-label="Закрыть каталог">×</button></div>
   <input id="catalogSearch" class="catalog-search" type="search" placeholder="Найти песню или исполнителя…" autocomplete="off" aria-label="Поиск по каталогу">
   <div class="catalog-genres" id="catalogGenres" aria-label="Фильтр по жанрам"></div>
   <div class="catalog-subtitle" id="catalogCount">ТРЕКИ</div>
@@ -588,6 +611,12 @@ function renderCatalog(query=""){
  const searching=Boolean(q);
  const list=tracks.filter(t=>(t.title+" "+t.artist+" "+(t.genre||"Моя музыка")).toLocaleLowerCase("ru").includes(q)&&trackHasGenre(t,activeCatalogGenre));
  renderCatalogGenres();
+ const genresView=!selectedGenre&&!searching;
+ $("catalogGenres").hidden=!genresView;
+ $("catalogBack").hidden=genresView;
+ $("catalogTitle").textContent=selectedGenre?activeCatalogGenre:(searching?"Результаты поиска":"Музыкальный каталог");
+ $("catalogEyebrow").textContent=selectedGenre?"ВЫБРАННЫЙ ЖАНР":(searching?"ПОИСК ПО БИБЛИОТЕКЕ":"ВЫБИРАЙ СВОЁ");
+ $("catalogSearch").placeholder=selectedGenre?"Поиск в жанре «"+activeCatalogGenre+"»…":"Найти песню или исполнителя…";
  $("catalogCount").textContent=selectedGenre?activeCatalogGenre.toLocaleUpperCase("ru")+" · "+list.length+" ТРЕКОВ":(searching?list.length+" РЕЗУЛЬТАТОВ":"ВЫБЕРИ ЖАНР");
  const root=$("catalogList");if(!root)return;root.replaceChildren();
  // По умолчанию каталог показывает только жанры. Песни появляются после выбора жанра или поиска.
@@ -599,11 +628,13 @@ function renderCatalog(query=""){
  if(!list.length){const empty=document.createElement("div");empty.className="catalog-empty";empty.textContent=catalogLoadError?"Не удалось загрузить библиотеку. Проверь соединение и попробуй ещё раз.":(openCatalogLoading?"Загружаю твою библиотеку…":(openCatalogLoaded?(selectedGenre?"В этом жанре пока нет песен. Добавь песню в админ-панели и укажи этот жанр.":"Ничего не найдено. Попробуй изменить запрос."):"Библиотека загружается…"));root.append(empty);if(catalogLoadError){const retry=document.createElement("button");retry.type="button";retry.className="catalog-retry";retry.textContent="Повторить загрузку";retry.addEventListener("click",()=>loadMusicLibrary());root.append(retry);}return;}
  list.forEach(t=>{const b=document.createElement("button");b.type="button";b.className="catalog-row";const cover=document.createElement("span");cover.className="catalog-cover";cover.textContent=favorites.has(t.id)?"♥":"♫";const meta=document.createElement("span");meta.className="catalog-meta";const name=document.createElement("span");name.className="catalog-name";name.textContent=t.title;const artist=document.createElement("span");artist.className="catalog-artist";artist.textContent=t.artist;const type=document.createElement("span");type.className="catalog-type";type.textContent=splitTrackGenres(t.genre).join(" · ").toLocaleUpperCase("ru");meta.append(name,artist,type);const action=document.createElement("span");action.textContent="▶";action.style.color="var(--accent)";b.append(cover,meta,action);b.addEventListener("click",()=>{playAt(tracks.findIndex(x=>x.id===t.id),list.map(x=>x.id));closeCatalog();});root.append(b);});
 }
-function openCatalog(){ $("catalogPanel").hidden=false; $("homeView").hidden=true; if($("profileView"))$("profileView").hidden=true; document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view==="catalog")); loadMusicLibrary(); }
-function closeCatalog(){ $("catalogPanel").hidden=true; if($("homeView"))$("homeView").hidden=false; document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view==="home")); }
+function openCatalog(){ $("catalogPanel").hidden=false; $("homeView").hidden=true; if($("profileView"))$("profileView").hidden=true; document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view==="catalog")); loadMusicLibrary(); renderCatalog($("catalogSearch").value); }
+function closeCatalog(){ $("catalogPanel").hidden=true; if($("homeView"))$("homeView").hidden=false; if($("profileView"))$("profileView").hidden=true; document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view==="home")); }
+function backToCatalogGenres(){activeCatalogGenre="";$("catalogSearch").value="";renderCatalog("");}
+$("catalogBack").addEventListener("click",backToCatalogGenres);
 if($("openCatalog"))$("openCatalog").addEventListener("click",openCatalog);
  $("featurePlay").addEventListener("click",async()=>{if(index<0||audio.ended)await startAvailableTrack();else await togglePlayback();});
- $("allTracks").addEventListener("click",openCatalog);
+ $("allTracks").addEventListener("click",()=>{activeCatalogGenre="";$("catalogSearch").value="";openCatalog();renderCatalog("");});
  document.querySelectorAll("[data-genre]").forEach(b=>b.addEventListener("click",()=>{const raw=b.dataset.genre||"";activeCatalogGenre=raw==="Электроника"?"Техно":raw;$("catalogSearch").value="";openCatalog();renderCatalog("");}));
 $("closeCatalog").addEventListener("click",closeCatalog);
 $("catalogSearch").addEventListener("input",e=>renderCatalog(e.target.value));
@@ -630,7 +661,8 @@ function setView(view){
  if(home)home.hidden=view!=="home";if(profile)profile.hidden=view!=="profile";
  if(catalog)catalog.hidden=view!=="catalog"&&view!=="favorites";
  document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
- if(view==="catalog"){loadMusicLibrary();renderCatalog($("catalogSearch").value);}
+ if(view==="catalog"){activeCatalogGenre="";$("catalogSearch").value="";loadMusicLibrary();renderCatalog("");}
+ if(view==="favorites"){$("catalogGenres").hidden=true;$("catalogBack").hidden=false;$("catalogTitle").textContent="Избранное";$("catalogEyebrow").textContent="ТВОИ ТРЕКИ";}
  if(view==="profile"){const n=$("profileName")?.textContent||"Твой аккаунт";$("profileBigName").textContent=n;}
  if(view==="favorites"){
   const liked=tracks.filter(t=>favorites.has(t.id));$("catalogCount").textContent=liked.length+" В ИЗБРАННОМ";const root=$("catalogList");root.replaceChildren();
