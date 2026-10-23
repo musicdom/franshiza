@@ -490,7 +490,7 @@ $("cancelEdit").addEventListener("click",()=>{$("trackForm").reset();$("trackGen
    }
    const bigName=$("profileBigName");if(bigName)bigName.textContent=name;
    const idNode=$("profileUserId");
-   if(idNode)idNode.textContent=id!=null?"Ваш аккаунт MAX · ID: "+String(id):(u.username?"Ваш аккаунт MAX · @"+String(u.username):"Аккаунт MAX определён");
+   if(idNode)idNode.textContent=name==="Профиль MAX недоступен"?"MAX не передал данные аккаунта":(id!=null?"Ваш аккаунт MAX · ID: "+String(id):(u.username?"Ваш аккаунт MAX · @"+String(u.username):"Аккаунт MAX определён"));
  }
  function notify(user){
    const sdk=window.WebApp||window.MAX||window.Max||window.max||window.Telegram?.WebApp;
