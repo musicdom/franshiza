@@ -131,7 +131,7 @@ body{background:radial-gradient(ellipse at 50% 0%,#073c2d 0,#041a16 38%,#020908 
 .profile-view{min-height:65vh;padding:4px 0 20px}
 .page-title{font-size:28px;font-weight:900;letter-spacing:-1px;margin:8px 0 24px}
 .profile-hero{border:1px solid #1c6245;border-radius:22px;padding:25px 15px;text-align:center;background:radial-gradient(ellipse at 50% 0%,#0b5638,#061c15 70%)}
-.profile-big-avatar{width:82px;height:82px;border-radius:50%;display:grid;place-items:center;margin:0 auto 12px;background:linear-gradient(145deg,#2bffa3,#07583b);color:#002116;font-size:35px;border:2px solid #75ffc0}
+.profile-user-id{margin:0 0 10px;color:var(--muted);font-size:12px;overflow-wrap:anywhere}.profile-big-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}.profile-big-avatar{width:82px;height:82px;border-radius:50%;display:grid;place-items:center;margin:0 auto 12px;background:linear-gradient(145deg,#2bffa3,#07583b);color:#002116;font-size:35px;border:2px solid #75ffc0}
 .profile-hero h2{font-size:20px;margin:0 0 4px}.profile-hero p{font-size:11px;color:#8fb9a5;margin:0}
 .profile-menu{margin-top:15px;border:1px solid #174632;border-radius:17px;overflow:hidden;background:#061510}
 .profile-menu button{display:flex;align-items:center;gap:12px;width:100%;padding:16px 14px;text-align:left;border:0;border-bottom:1px solid #133629;background:transparent;color:#dffff0;font-size:17px}
@@ -181,7 +181,7 @@ body{background:radial-gradient(ellipse at 50% 0%,#073c2d 0,#041a16 38%,#020908 
     <div class="home-track-list" id="homeTrackList"></div>
     <div class="legacy-launch"><button id="launch" class="launch" aria-label="Запустить музыкальную ленту"><span class="launch-icon" id="launchIcon">▶</span><span class="launch-label" id="launchLabel">ЗАПУСТИТЬ ЛЕНТУ</span><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span></button></div>
   </section>
-  <section class="profile-view" id="profileView" hidden><div class="page-title">Профиль</div><div class="profile-hero"><div class="profile-big-avatar" id="profileBigAvatar">♫</div><h2 id="profileBigName">Твой аккаунт</h2><p>Твоя музыка. Твоё пространство.</p></div><div class="profile-menu"><button id="profileFavorites">♡ <span>Избранное</span><b>›</b></button><button id="profileSettings">⚙ <span>Настройки приложения</span><b>›</b></button><button id="profileHelp">ⓘ <span>О Гармонике</span><b>›</b></button></div></section>
+  <section class="profile-view" id="profileView" hidden><div class="page-title">Профиль</div><div class="profile-hero"><div class="profile-big-avatar" id="profileBigAvatar">♫</div><h2 id="profileBigName">Загружаем профиль MAX…</h2><p id="profileUserId" class="profile-user-id">Ожидаем данные аккаунта MAX</p><p>Твоя музыка. Твоё пространство.</p></div><div class="profile-menu"><button id="profileFavorites">♡ <span>Избранное</span><b>›</b></button><button id="profileSettings">⚙ <span>Настройки приложения</span><b>›</b></button><button id="profileHelp">ⓘ <span>О Гармонике</span><b>›</b></button></div></section>
 </main>
 <nav class="bottom-nav" id="bottomNav" aria-label="Основная навигация"><button class="nav-item active" data-view="home"><span>⌂</span><small>Главная</small></button><button class="nav-item" data-view="catalog"><span>▤</span><small>Каталог</small></button><button class="nav-item" data-view="favorites"><span>♡</span><small>Избранное</small></button><button class="nav-item" data-view="profile"><span>♙</span><small>Профиль</small></button></nav>
 <button class="mini-player" id="openSheet" aria-label="Открыть информацию о текущей песне">
@@ -455,30 +455,42 @@ $("cancelEdit").addEventListener("click",()=>{$("trackForm").reset();$("trackGen
    return {};
  }
  function getUser(){
+   const valid=u=>Boolean(u&&(u.id!=null||u.user_id!=null||u.username||u.first_name||u.name||u.display_name));
    try{
-     const u=window.WebApp?.initDataUnsafe?.user;
-     if(u&&(u.id!=null||u.user_id!=null||u.username||u.first_name||u.name))return u;
-   }catch(e){}
+     const app=window.WebApp;
+     const candidates=[
+       app?.initDataUnsafe?.user,
+       app?.user,
+       app?.userInfo,
+       app?.initData?.user
+     ];
+     for(const u of candidates)if(valid(u))return u;
+   }catch(e){console.warn("[ГАРМОНИКА] Ошибка чтения профиля WebApp",e);}
    const roots=[window.MAX,window.Max,window.max,window.Telegram?.WebApp];
    for(const root of roots){
      const u=root?.initDataUnsafe?.user||root?.user||root?.userInfo;
-     if(u&&(u.id!=null||u.user_id!=null||u.username||u.first_name||u.name))return u;
+     if(valid(u))return u;
    }
    const u=getInitData().user;
-   return u&&(u.id!=null||u.user_id!=null||u.username||u.first_name||u.name)?u:null;
+   return valid(u)?u:null;
  }
  function updateProfile(u){
    if(!u)return;
-   const name=u.name||[u.first_name,u.last_name].filter(Boolean).join(" ")||u.username||"Пользователь MAX";
+   const name=u.name||u.display_name||[u.first_name,u.last_name].filter(Boolean).join(" ")||u.username||"Пользователь MAX";
+   const id=u.id??u.user_id??u.userId;
+   const photo=u.photo_url||u.avatar_url||u.photo||u.avatar;
    $("profileName").textContent=name;
    $("profileInitial").textContent=(name[0]||"♫").toUpperCase();
-   const photo=u.photo_url||u.avatar_url||u.photo;
-   if(photo){const img=document.createElement("img");img.src=photo;img.alt="";$("profileAvatar").replaceChildren(img);}
+   if(photo){
+     const makePhoto=()=>{const img=document.createElement("img");img.src=photo;img.alt="Фото профиля MAX";return img;};
+     $("profileAvatar").replaceChildren(makePhoto());
+     const bigAvatar=$("profileBigAvatar");if(bigAvatar)bigAvatar.replaceChildren(makePhoto());
+   }else{
+     const bigAvatar=$("profileBigAvatar");if(bigAvatar)bigAvatar.textContent=(name[0]||"♫").toUpperCase();
+   }
    const bigName=$("profileBigName");if(bigName)bigName.textContent=name;
-   const bigAvatar=$("profileBigAvatar");if(bigAvatar&&!photo)bigAvatar.textContent=(name[0]||"♫").toUpperCase();
-   const id=u.id??u.user_id;
    const idNode=$("profileUserId");
-   if(idNode)idNode.textContent=id!=null?"ID MAX: "+String(id):"";
+   if(idNode)idNode.textContent=id!=null?"Ваш аккаунт MAX · ID: "+String(id):(u.username?"Ваш аккаунт MAX · @"+String(u.username):"Аккаунт MAX определён");
  }
  function notify(user){
    const sdk=window.WebApp||window.MAX||window.Max||window.max||window.Telegram?.WebApp;
