@@ -296,6 +296,31 @@ async function startAvailableTrack(){
  playbackQueue=tracks.map(t=>t.id);
  await playAt(pickDifferentTrack(),playbackQueue);
 }
+// Восстановлено: эта функция была удалена, но на неё ссылались обработчики
+// главной кнопки, мини-плеера и панели трека. Из-за этого весь скрипт падал
+// при инициализации и остальные кнопки не получали обработчики.
+async function togglePlayback(){
+ if(index<0||!current()){
+  await startAvailableTrack();
+  return;
+ }
+ if(audio.paused){
+  try{
+   await audio.play();
+   playing=true;
+   updatePlayback();
+  }catch(error){
+   playing=false;
+   updatePlayback();
+   console.error("[ГАРМОНИКА] Playback resume failed",error);
+   toast("Не удалось продолжить воспроизведение. Попробуй ещё раз.");
+  }
+ }else{
+  audio.pause();
+  playing=false;
+  updatePlayback();
+ }
+}
 function openSheet(){sheetOpen=true;document.body.classList.add("sheet-open");$("songSheet").setAttribute("aria-hidden","false")}
 function closeSheet(){sheetOpen=false;document.body.classList.remove("sheet-open");$("songSheet").setAttribute("aria-hidden","true")}
 $("launch").addEventListener("click",togglePlayback);
