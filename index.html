@@ -472,7 +472,7 @@ button:focus-visible,input:focus-visible{outline:2px solid #b7ff75;outline-offse
     <input id="editTrackId" type="hidden">
     <label>Название песни<input id="trackTitle" maxlength="160" placeholder="Например, Babka" required></label>
     <label>Исполнитель<input id="trackArtist" maxlength="160" placeholder="Имя исполнителя" required></label>
-    <label>Жанр<input id="trackGenre" maxlength="80" placeholder="Например, Поп, Рок, Хип-хоп" value="Моя музыка"></label>
+    <label>Жанр<select id="trackGenre" required><option value="Поп">Поп</option><option value="Рок">Рок</option><option value="Рэп и хип-хоп">Рэп и хип-хоп</option><option value="Электронная музыка">Электронная музыка</option><option value="R&amp;B и соул">R&amp;B и соул</option><option value="Джаз">Джаз</option><option value="Классика">Классика</option><option value="Инди и альтернатива">Инди и альтернатива</option><option value="Метал">Метал</option><option value="Регги">Регги</option><option value="Шансон">Шансон</option><option value="K-pop">K-pop</option><option value="Саундтреки">Саундтреки</option><option value="Другое">Другое</option></select></label>
     <label>Публичная ссылка на аудио<input id="trackUrl" type="url" inputmode="url" placeholder="Ссылка на Яндекс Диск или Google Диск" required></label>
     <label>Ссылка на обложку (необязательно)<input id="trackCover" type="url" inputmode="url" placeholder="https://..."></label>
     <div style="display:flex;gap:8px"><button class="admin-save" id="saveTrack" type="submit">Добавить песню</button><button type="button" id="cancelEdit" hidden>Отмена</button></div>
@@ -588,37 +588,46 @@ audio.addEventListener("timeupdate",()=>{$("elapsed").textContent=fmt(audio.curr
 audio.addEventListener("loadedmetadata",()=> $("duration").textContent=fmt(audio.duration));
 $("seek").addEventListener("input",e=>{if(Number.isFinite(audio.duration)&&audio.duration>0)audio.currentTime=Number(e.target.value)/100*audio.duration});
 let activeCatalogGenre="";
+const MUSIC_GENRES=["Поп","Рок","Рэп и хип-хоп","Электронная музыка","R&B и соул","Джаз","Классика","Инди и альтернатива","Метал","Регги","Шансон","K-pop","Саундтреки","Другое"];
 function splitTrackGenres(value){
- return String(value||"Моя музыка").split(/[,;|\/]+/).map(g=>g.trim()).filter(Boolean);
+ return String(value||"Другое").split(/[,;|\/]+/).map(g=>g.trim()).filter(Boolean);
+}
+function canonicalGenre(value){
+ const g=String(value||"").trim().toLocaleLowerCase("ru");
+ if(!g||["моя музыка","другое","other","без жанра"].includes(g))return "Другое";
+ if(["поп","диско"].includes(g))return "Поп";
+ if(["рок","поп-рок","альтернатива","альтернативный рок"].includes(g))return "Рок";
+ if(["рэп","хип-хоп","hip-hop","hip hop","rap","рэп и хип-хоп"].includes(g))return "Рэп и хип-хоп";
+ if(["техно","электроника","электронная музыка","хаус","транс","драм-н-бейс","драм энд бейс","дабстеп","фонк","лоу-фай","lo-fi","techno","house","trance","drum and bass","dubstep","phonk"].includes(g))return "Электронная музыка";
+ if(["r&b","rnb","соул","soul","r&b и соул"].includes(g))return "R&B и соул";
+ if(["джаз","jazz"].includes(g))return "Джаз";
+ if(["классика","классическая музыка","classical"].includes(g))return "Классика";
+ if(["инди","инди и альтернатива","indie"].includes(g))return "Инди и альтернатива";
+ if(["метал","металл","metal"].includes(g))return "Метал";
+ if(["регги","reggae"].includes(g))return "Регги";
+ if(["шансон","chanson"].includes(g))return "Шансон";
+ if(["k-pop","kpop","к-поп"].includes(g))return "K-pop";
+ if(["саундтреки","саундтрек","soundtrack","soundtracks","музыка из фильмов"].includes(g))return "Саундтреки";
+ if(["поп","рок","рэп и хип-хоп","электронная музыка","r&b и соул","джаз","классика","инди и альтернатива","метал","регги","шансон","саундтреки","k-pop"].includes(g))return value;
+ return "Другое";
 }
 function trackHasGenre(track,genre){
- if(!genre||["все песни","все треки","вся библиотека"].includes(String(genre).trim().toLocaleLowerCase("ru")))return true;
- const normalize=value=>String(value||"").trim().toLocaleLowerCase("ru");
- const target=normalize(genre);
- const aliases={"электроника":"техно","электронная музыка":"техно","рэп":"хип-хоп"};
- const wanted=aliases[target]||target;
- return splitTrackGenres(track.genre).some(g=>{
-  const value=normalize(g);
-  return value===wanted||(aliases[value]||value)===target;
- });
+ if(!genre||String(genre).trim().toLocaleLowerCase("ru")==="все песни")return true;
+ return splitTrackGenres(track.genre).some(g=>canonicalGenre(g)===canonicalGenre(genre));
 }
 function renderCatalogGenres(){
  const root=$("catalogGenres");if(!root)return;root.replaceChildren();
- // Всегда показываем жанры, уже доступные в интерфейсе главной страницы,
- // а также остальные жанры, указанные у загруженных треков в библиотеке.
- const existingGenres=["Все песни","Поп","Рок","Хип-хоп","Рэп","Техно","Электроника","R&B","Джаз","Классика","Инди","Метал","Регги","Лоу-фай","Хаус","Транс","Драм-н-бейс","Дабстеп","Фонк","Диско","Шансон","K-pop","Поп-рок","Саундтреки"];
- const genres=[...new Set([...existingGenres,...tracks.flatMap(t=>splitTrackGenres(t.genre))])]
-  .filter(genre=>genre&&genre.trim()&&genre.trim().toLocaleLowerCase("ru")!=="моя музыка")
-  .sort((a,b)=>a.localeCompare(b,"ru"));
- const genreIcons={"поп":"♫","рок":"⚡","хип-хоп":"♬","рэп":"♩","техно":"◈","электроника":"⌁","r&b":"♥","джаз":"♪","классика":"𝄞","инди":"✳","метал":"⛓","регги":"☀","лоу-фай":"☾","хаус":"⌂","транс":"✧","драм-н-бейс":"▥","дабстеп":"≋","фонк":"♜","диско":"✦","шансон":"♬","k-pop":"♡","поп-рок":"⚡","саундтреки":"▹"};
+ const counts=new Map(MUSIC_GENRES.map(g=>[g,tracks.filter(t=>trackHasGenre(t,g)).length]));
+ const genreIcons={"Поп":"♫","Рок":"⚡","Рэп и хип-хоп":"♬","Электронная музыка":"⌁","R&B и соул":"♥","Джаз":"♪","Классика":"𝄞","Инди и альтернатива":"✳","Метал":"⛓","Регги":"☀","Шансон":"♬","K-pop":"♡","Саундтреки":"▹","Другое":"♪"};
  const addChip=(label,value,count)=>{
-  const b=document.createElement("button");b.type="button";b.className="catalog-genre-chip"+(activeCatalogGenre===value?" active":"");b.dataset.icon=genreIcons[label.toLocaleLowerCase("ru")]||"♫";b.append(document.createTextNode(label));
+  const b=document.createElement("button");b.type="button";b.className="catalog-genre-chip"+(activeCatalogGenre===value?" active":"");b.dataset.icon=genreIcons[label]||"♫";b.append(document.createTextNode(label));
   const n=document.createElement("span");n.textContent=count+" тр.";b.append(" ",n);
   b.setAttribute("aria-pressed",String(activeCatalogGenre===value));
   b.addEventListener("click",()=>{activeCatalogGenre=value;$("catalogSearch").value="";renderCatalog("");});
   root.append(b);
  };
- genres.forEach(genre=>addChip(genre,genre,tracks.filter(t=>trackHasGenre(t,genre)).length));
+ addChip("Все песни","Все песни",tracks.length);
+ MUSIC_GENRES.filter(g=>counts.get(g)>0).forEach(genre=>addChip(genre,genre,counts.get(genre)));
 }
 function renderCatalog(query=""){
  const q=String(query||"").trim().toLocaleLowerCase("ru");
@@ -706,13 +715,13 @@ function hideAdmin(){ $("adminPanel").hidden=true; }
 function renderAdminTracks(){
  const root=$("adminTrackList");root.replaceChildren();
  if(!adminState.tracks.length){const e=document.createElement("div");e.className="catalog-empty";e.textContent="Пока нет песен. Добавь первую выше.";root.append(e);return;}
- adminState.tracks.forEach(t=>{const row=document.createElement("div");row.className="admin-track";const info=document.createElement("div");info.className="admin-track-info";const title=document.createElement("b");title.textContent=t.title;const artist=document.createElement("small");artist.textContent=t.artist;info.append(title,artist);const actions=document.createElement("div");actions.className="admin-actions";const edit=document.createElement("button");edit.type="button";edit.textContent="Изменить";edit.addEventListener("click",()=>{ $("editTrackId").value=t.id;$("trackTitle").value=t.title;$("trackArtist").value=t.artist;$("trackGenre").value=t.genre||"Моя музыка";$("trackUrl").value=t.audioUrl;$("trackCover").value=t.cover||"";$("saveTrack").textContent="Сохранить";$("cancelEdit").hidden=false;});const del=document.createElement("button");del.type="button";del.className="delete";del.textContent="Удалить";del.addEventListener("click",async()=>{if(del.dataset.confirmed!=="yes"){del.dataset.confirmed="yes";del.textContent="Точно удалить?";del.setAttribute("aria-label","Подтвердить удаление "+t.title);return;}del.disabled=true;del.textContent="Удаляю…";try{await adminRequest("POST",{action:"delete",id:t.id});if(current()?.id===t.id){audio.pause();audio.removeAttribute("src");index=-1;playing=false;updatePlayback();}playbackQueue=playbackQueue.filter(id=>id!==t.id);await refreshAdmin();await loadMusicLibrary();if(!playbackQueue.length)playbackQueue=tracks.map(x=>x.id);renderCatalog($("catalogSearch").value);renderHomeTracks();adminStatus("Песня удалена.");}catch(e){del.disabled=false;del.dataset.confirmed="";del.textContent="Удалить";adminStatus("Не удалось удалить песню: "+e.message);}});actions.append(edit,del);row.append(info,actions);root.append(row);});
+ adminState.tracks.forEach(t=>{const row=document.createElement("div");row.className="admin-track";const info=document.createElement("div");info.className="admin-track-info";const title=document.createElement("b");title.textContent=t.title;const artist=document.createElement("small");artist.textContent=t.artist;info.append(title,artist);const actions=document.createElement("div");actions.className="admin-actions";const edit=document.createElement("button");edit.type="button";edit.textContent="Изменить";edit.addEventListener("click",()=>{ $("editTrackId").value=t.id;$("trackTitle").value=t.title;$("trackArtist").value=t.artist;$("trackGenre").value=canonicalGenre(t.genre);$("trackUrl").value=t.audioUrl;$("trackCover").value=t.cover||"";$("saveTrack").textContent="Сохранить";$("cancelEdit").hidden=false;});const del=document.createElement("button");del.type="button";del.className="delete";del.textContent="Удалить";del.addEventListener("click",async()=>{if(del.dataset.confirmed!=="yes"){del.dataset.confirmed="yes";del.textContent="Точно удалить?";del.setAttribute("aria-label","Подтвердить удаление "+t.title);return;}del.disabled=true;del.textContent="Удаляю…";try{await adminRequest("POST",{action:"delete",id:t.id});if(current()?.id===t.id){audio.pause();audio.removeAttribute("src");index=-1;playing=false;updatePlayback();}playbackQueue=playbackQueue.filter(id=>id!==t.id);await refreshAdmin();await loadMusicLibrary();if(!playbackQueue.length)playbackQueue=tracks.map(x=>x.id);renderCatalog($("catalogSearch").value);renderHomeTracks();adminStatus("Песня удалена.");}catch(e){del.disabled=false;del.dataset.confirmed="";del.textContent="Удалить";adminStatus("Не удалось удалить песню: "+e.message);}});actions.append(edit,del);row.append(info,actions);root.append(row);});
 }
 async function refreshAdmin(){const data=await adminRequest("GET");adminState.tracks=Array.isArray(data.tracks)?data.tracks:[];renderAdminTracks();}
 $("openAdmin").addEventListener("click",showAdmin);$("closeAdmin").addEventListener("click",hideAdmin);
 $("adminLoginForm").addEventListener("submit",async e=>{e.preventDefault();adminState.password=$("adminPassword").value;try{await adminRequest("POST",{action:"auth"});$("adminLoginForm").hidden=true;$("adminEditor").hidden=false;await refreshAdmin();adminStatus("Вход выполнен. Изменения сохраняются на сервере.");}catch(err){adminState.password="";$("adminEditor").hidden=true;adminStatus(err.message);$("adminStatus").style.display="block";$("adminLoginForm").insertAdjacentElement("afterend",$("adminStatus"));}});
 $("trackForm").addEventListener("submit",async e=>{e.preventDefault();const id=$("editTrackId").value;const body={id,title:$("trackTitle").value.trim(),artist:$("trackArtist").value.trim(),genre:$("trackGenre").value.trim(),audioUrl:$("trackUrl").value.trim(),cover:$("trackCover").value.trim()};try{await adminRequest(id?"PATCH":"POST",body);$("trackForm").reset();$("editTrackId").value="";$("saveTrack").textContent="Добавить песню";$("cancelEdit").hidden=true;await refreshAdmin();await loadMusicLibrary();renderCatalog($("catalogSearch").value);renderHomeTracks();adminStatus(id?"Изменения сохранены.":"Песня добавлена в каталог.");}catch(err){adminStatus(err.message);}});
-$("cancelEdit").addEventListener("click",()=>{$("trackForm").reset();$("trackGenre").value="Моя музыка";$("editTrackId").value="";$("saveTrack").textContent="Добавить песню";$("cancelEdit").hidden=true;});
+$("cancelEdit").addEventListener("click",()=>{$("trackForm").reset();$("trackGenre").value="Поп";$("editTrackId").value="";$("saveTrack").textContent="Добавить песню";$("cancelEdit").hidden=true;});
 
 (function(){
  const app=$("musicApp");
