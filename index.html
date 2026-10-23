@@ -67,7 +67,7 @@ body{background:radial-gradient(ellipse at 50% 15%,#2b4121 0,#121a10 34%,#080b09
 html,body{background:#020b0a}
 body{background:radial-gradient(ellipse at 50% 0%,#073c2d 0,#041a16 38%,#020908 78%);background-attachment:fixed}
 .app{max-width:560px;min-height:100dvh;padding:calc(16px + env(safe-area-inset-top)) 17px calc(172px + env(safe-area-inset-bottom));display:block}
-.top{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;margin-bottom:23px}
+.top{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;margin-bottom:23px}
 .brand{font-size:14px;letter-spacing:2.6px;color:#effff8}
 .catalog-trigger{order:2;padding:8px 11px;border:1px solid #1eea8b45;background:#0b3529;color:#5effb2}
 .profile{order:3;max-width:42px;padding:4px;border-color:#1eea8b40;background:#08241e;overflow:hidden}
@@ -381,7 +381,7 @@ button:focus-visible,input:focus-visible{outline:2px solid #b7ff75;outline-offse
 <body>
 <div id="musicApp">
 <main class="app">
-  <header class="top"><div class="brand">ГАРМОНИКА<b>.</b></div><div style="display:flex;gap:7px;align-items:center"><button type="button" class="catalog-trigger" id="openCatalog">♫ Каталог</button><button type="button" class="admin-trigger" id="openAdmin">Админ</button></div><div class="profile"><div class="avatar" id="profileAvatar"><span id="profileInitial">♫</span></div><div class="profile-name" id="profileName">Твой аккаунт</div></div></header>
+  <header class="top"><div class="brand">ГАРМОНИКА<b>.</b></div><button type="button" class="admin-trigger" id="openAdmin">Админ</button><div class="profile"><div class="avatar" id="profileAvatar"><span id="profileInitial">♫</span></div><div class="profile-name" id="profileName">Твой аккаунт</div></div></header>
   <section class="center" id="homeView">
     <div class="welcome-row"><div><div class="overline" id="statusLabel">ТВОЯ МУЗЫКА РЯДОМ</div><h1 class="headline" id="headline">Открывай<br>новые звуки</h1><p class="subline" id="subline">Любимая музыка — в одном месте.</p></div><div class="welcome-note">♫<span>HARMONIKA</span></div></div>
     <div class="feature-banner"><div class="feature-copy"><span class="feature-kicker">ТВОЙ МУЗЫКАЛЬНЫЙ МИР</span><h2>Включай настроение</h2><p>Найди свой ритм прямо сейчас</p><button id="featurePlay" type="button">▶ Слушать сейчас</button></div><div class="feature-orb">♫</div></div>
@@ -571,7 +571,7 @@ function renderCatalogGenres(){
  // а также остальные жанры, указанные у загруженных треков в библиотеке.
  const existingGenres=["Поп","Рок","Хип-хоп","Рэп","Техно","Электроника","R&B","Джаз","Классика","Инди","Метал","Регги","Лоу-фай","Хаус","Транс","Драм-н-бейс","Дабстеп","Фонк","Диско","Шансон","K-pop","Поп-рок","Саундтреки"];
  const genres=[...new Set([...existingGenres,...tracks.flatMap(t=>splitTrackGenres(t.genre))])]
-  .filter(genre=>genre&&genre.trim())
+  .filter(genre=>genre&&genre.trim()&&genre.trim().toLocaleLowerCase("ru")!=="моя музыка")
   .sort((a,b)=>a.localeCompare(b,"ru"));
  const addChip=(label,value,count)=>{
   const b=document.createElement("button");b.type="button";b.className="catalog-genre-chip"+(activeCatalogGenre===value?" active":"");b.append(document.createTextNode(label));
@@ -601,7 +601,7 @@ function renderCatalog(query=""){
 }
 function openCatalog(){ $("catalogPanel").hidden=false; $("homeView").hidden=true; if($("profileView"))$("profileView").hidden=true; document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view==="catalog")); loadMusicLibrary(); }
 function closeCatalog(){ $("catalogPanel").hidden=true; if($("homeView"))$("homeView").hidden=false; document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view==="home")); }
-$("openCatalog").addEventListener("click",openCatalog);
+if($("openCatalog"))$("openCatalog").addEventListener("click",openCatalog);
  $("featurePlay").addEventListener("click",async()=>{if(index<0||audio.ended)await startAvailableTrack();else await togglePlayback();});
  $("allTracks").addEventListener("click",openCatalog);
  document.querySelectorAll("[data-genre]").forEach(b=>b.addEventListener("click",()=>{const raw=b.dataset.genre||"";activeCatalogGenre=raw==="Электроника"?"Техно":raw;$("catalogSearch").value="";openCatalog();renderCatalog("");}));
