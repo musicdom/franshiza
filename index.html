@@ -558,7 +558,7 @@ function trackHasGenre(track,genre){
  if(!genre)return true;
  const normalize=value=>String(value||"").trim().toLocaleLowerCase("ru");
  const target=normalize(genre);
- const aliases={"электроника":"техно","электронная музыка":"техно"};
+ const aliases={"электроника":"техно","электронная музыка":"техно","рэп":"хип-хоп"};
  const wanted=aliases[target]||target;
  return splitTrackGenres(track.genre).some(g=>{
   const value=normalize(g);
@@ -569,7 +569,7 @@ function renderCatalogGenres(){
  const root=$("catalogGenres");if(!root)return;root.replaceChildren();
  // Всегда показываем жанры, уже доступные в интерфейсе главной страницы,
  // а также остальные жанры, указанные у загруженных треков в библиотеке.
- const existingGenres=["Поп","Рок","Хип-хоп","Техно"];
+ const existingGenres=["Поп","Рок","Хип-хоп","Рэп","Техно","Электроника","R&B","Джаз","Классика","Инди","Метал","Регги","Лоу-фай","Хаус","Транс","Драм-н-бейс","Дабстеп","Фонк","Диско","Шансон","K-pop","Поп-рок","Саундтреки"];
  const genres=[...new Set([...existingGenres,...tracks.flatMap(t=>splitTrackGenres(t.genre))])]
   .filter(genre=>genre&&genre.trim())
   .sort((a,b)=>a.localeCompare(b,"ru"));
