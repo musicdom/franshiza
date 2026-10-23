@@ -575,7 +575,6 @@ function renderCatalogGenres(){
   b.addEventListener("click",()=>{activeCatalogGenre=value;$("catalogSearch").value="";renderCatalog("");});
   root.append(b);
  };
- addChip("Все жанры","",tracks.length);
  genres.forEach(genre=>addChip(genre,genre,tracks.filter(t=>trackHasGenre(t,genre)).length));
 }
 function renderCatalog(query=""){
