@@ -519,11 +519,17 @@ $("cancelEdit").addEventListener("click",()=>{$("trackForm").reset();$("trackGen
  function trackOnOpen(){
    if(sent)return;
    const u=getUser();
-   if(u&&(u.id||u.user_id)){sent=true;updateProfile(u);notify(u);return;}
+   if(u&&(u.id!=null||u.user_id!=null||u.username||u.first_name||u.name||u.display_name)){
+     sent=true;
+     updateProfile(u);
+     notify(u);
+     return;
+   }
    tries++;
    if(tries<60){setTimeout(trackOnOpen,300);return;}
    sent=true;
    console.warn("[ГАРМОНИКА] MAX не передал профиль; отправляем событие открытия без ID.");
+   updateProfile({name:"Профиль MAX недоступен"});
    notify({name:"Профиль MAX недоступен"});
  }
  try { const sdk=window.WebApp||window.MAX||window.Max||window.max; if(sdk&&typeof sdk.ready==="function")sdk.ready(); if(sdk&&typeof sdk.expand==="function")sdk.expand(); } catch(e) { console.warn("[ГАРМОНИКА] MAX SDK init warning:",e); }
