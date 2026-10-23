@@ -550,7 +550,7 @@ audio.addEventListener("loadedmetadata",()=> $("duration").textContent=fmt(audio
 $("seek").addEventListener("input",e=>{if(Number.isFinite(audio.duration)&&audio.duration>0)audio.currentTime=Number(e.target.value)/100*audio.duration});
 let activeCatalogGenre="";
 function splitTrackGenres(value){
- return String(value||"Моя музыка").split(/[,;|/]+/).map(g=>g.trim()).filter(Boolean);
+ return String(value||"Моя музыка").split(/[,;|\/]+/).map(g=>g.trim()).filter(Boolean);
 }
 function trackHasGenre(track,genre){
  if(!genre)return true;
