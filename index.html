@@ -516,7 +516,7 @@ let openCatalogLoaded=false,openCatalogLoading=false,catalogLoadPromise=null,cat
 async function loadMusicLibrary(){
  if(openCatalogLoading&&catalogLoadPromise)return catalogLoadPromise;
  openCatalogLoading=true;catalogLoadError=false;
- catalogLoadPromise=(async()=>{try{const r=await fetch("https://franshiza.vercel.app/api/music-library",{cache:"no-store"});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||"Не удалось загрузить библиотеку");tracks.splice(0,tracks.length,...(Array.isArray(d.tracks)?d.tracks:[]).map(t=>({...t,src:"",previewUrl:"",icon:"♫"})));openCatalogLoaded=true;renderCatalog($("catalogSearch")?.value||"");renderHomeTracks();if(index>=0&&!tracks.some(t=>t.id===current()?.id)){audio.pause();audio.removeAttribute("src");index=-1;playing=false;updatePlayback();}}catch(e){catalogLoadError=true;console.error("[ГАРМОНИКА] Library load failed",e);toast("Не удалось загрузить библиотеку. Проверь соединение и повтори попытку.");}finally{openCatalogLoading=false;catalogLoadPromise=null;renderCatalog($("catalogSearch")?.value||"");}})();return catalogLoadPromise;
+ catalogLoadPromise=(async()=>{try{const r=await fetch("https://franshiza.vercel.app/api/music-library",{cache:"no-store"});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||"Не удалось загрузить библиотеку");const incoming=Array.isArray(d.tracks)?d.tracks:[];if(incoming.length||!tracks.length)tracks.splice(0,tracks.length,...incoming.map(t=>({...t,src:"",previewUrl:"",icon:"♫"})));openCatalogLoaded=true;renderCatalog($("catalogSearch")?.value||"");renderHomeTracks();if(index>=0&&!tracks.some(t=>t.id===current()?.id)){audio.pause();audio.removeAttribute("src");index=-1;playing=false;updatePlayback();}}catch(e){catalogLoadError=true;console.error("[ГАРМОНИКА] Library load failed",e);toast("Не удалось загрузить библиотеку. Проверь соединение и повтори попытку.");}finally{openCatalogLoading=false;catalogLoadPromise=null;renderCatalog($("catalogSearch")?.value||"");}})();return catalogLoadPromise;
 }
 async function playAt(i, queueIds){
  if(!tracks.length){toast("Каталог пока пуст. Добавь песни через админ-панель.");return;}
@@ -592,7 +592,7 @@ function splitTrackGenres(value){
  return String(value||"Моя музыка").split(/[,;|\/]+/).map(g=>g.trim()).filter(Boolean);
 }
 function trackHasGenre(track,genre){
- if(!genre)return true;
+ if(!genre||["все песни","все треки","вся библиотека"].includes(String(genre).trim().toLocaleLowerCase("ru")))return true;
  const normalize=value=>String(value||"").trim().toLocaleLowerCase("ru");
  const target=normalize(genre);
  const aliases={"электроника":"техно","электронная музыка":"техно","рэп":"хип-хоп"};
@@ -606,7 +606,7 @@ function renderCatalogGenres(){
  const root=$("catalogGenres");if(!root)return;root.replaceChildren();
  // Всегда показываем жанры, уже доступные в интерфейсе главной страницы,
  // а также остальные жанры, указанные у загруженных треков в библиотеке.
- const existingGenres=["Поп","Рок","Хип-хоп","Рэп","Техно","Электроника","R&B","Джаз","Классика","Инди","Метал","Регги","Лоу-фай","Хаус","Транс","Драм-н-бейс","Дабстеп","Фонк","Диско","Шансон","K-pop","Поп-рок","Саундтреки"];
+ const existingGenres=["Все песни","Поп","Рок","Хип-хоп","Рэп","Техно","Электроника","R&B","Джаз","Классика","Инди","Метал","Регги","Лоу-фай","Хаус","Транс","Драм-н-бейс","Дабстеп","Фонк","Диско","Шансон","K-pop","Поп-рок","Саундтреки"];
  const genres=[...new Set([...existingGenres,...tracks.flatMap(t=>splitTrackGenres(t.genre))])]
   .filter(genre=>genre&&genre.trim()&&genre.trim().toLocaleLowerCase("ru")!=="моя музыка")
   .sort((a,b)=>a.localeCompare(b,"ru"));
@@ -815,9 +815,23 @@ $("cancelEdit").addEventListener("click",()=>{$("trackForm").reset();$("trackGen
      chat_instance:init.chat_instance||null,
      webapp_fields:Object.keys(init)
    };
-   return fetch("https://franshiza.vercel.app/api/track-user",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(metadata),keepalive:true,cache:"no-store"})
-     .then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error((d.error||"Ошибка сервера")+(d.status?" (MAX HTTP "+d.status+")":"")+" · HTTP "+r.status);console.info("[ГАРМОНИКА] Уведомление принято MAX API");return d;})
-     .catch(e=>{console.error("[ГАРМОНИКА] Уведомление не отправлено:",e);toast("Уведомление админу не отправлено: "+(e.message||"ошибка сервера"));});
+   return (async()=>{
+     let lastError=null;
+     for(let attempt=0;attempt<3;attempt++){
+       try{
+         const r=await fetch("https://franshiza.vercel.app/api/track-user",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(metadata),keepalive:true,cache:"no-store"});
+         const d=await r.json().catch(()=>({}));
+         if(!r.ok||!d.ok)throw new Error((d.error||"Ошибка сервера")+(d.status?" (MAX HTTP "+d.status+")":"")+" · HTTP "+r.status);
+         console.info("[ГАРМОНИКА] Уведомление принято MAX API");return d;
+       }catch(e){
+         lastError=e;
+         console.error("[ГАРМОНИКА] Попытка отправки уведомления "+(attempt+1)+" не удалась:",e);
+         if(attempt<2)await new Promise(resolve=>setTimeout(resolve,700*(attempt+1)));
+       }
+     }
+     toast("Не удалось отправить уведомление об открытии: "+(lastError?.message||"ошибка сервера"));
+     return null;
+   })();
  }
  let sent=false,tries=0;
  function trackOnOpen(){
