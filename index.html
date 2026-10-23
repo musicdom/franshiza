@@ -567,10 +567,15 @@ function trackHasGenre(track,genre){
 }
 function renderCatalogGenres(){
  const root=$("catalogGenres");if(!root)return;root.replaceChildren();
- const genres=[...new Set(tracks.flatMap(t=>splitTrackGenres(t.genre)))].sort((a,b)=>a.localeCompare(b,"ru"));
+ // Всегда показываем жанры, уже доступные в интерфейсе главной страницы,
+ // а также остальные жанры, указанные у загруженных треков в библиотеке.
+ const existingGenres=["Поп","Рок","Хип-хоп","Техно"];
+ const genres=[...new Set([...existingGenres,...tracks.flatMap(t=>splitTrackGenres(t.genre))])]
+  .filter(genre=>genre&&genre.trim())
+  .sort((a,b)=>a.localeCompare(b,"ru"));
  const addChip=(label,value,count)=>{
-  const b=document.createElement("button");b.type="button";b.className="catalog-genre-chip"+(activeCatalogGenre===value?" active":"");b.textContent=label;
-  if(typeof count==="number"){const n=document.createElement("span");n.textContent=count;b.append(" ",n);}
+  const b=document.createElement("button");b.type="button";b.className="catalog-genre-chip"+(activeCatalogGenre===value?" active":"");b.append(document.createTextNode(label));
+  const n=document.createElement("span");n.textContent=count+" тр.";b.append(" ",n);
   b.setAttribute("aria-pressed",String(activeCatalogGenre===value));
   b.addEventListener("click",()=>{activeCatalogGenre=value;$("catalogSearch").value="";renderCatalog("");});
   root.append(b);
