@@ -626,8 +626,7 @@ function renderCatalogGenres(){
   b.addEventListener("click",()=>{activeCatalogGenre=value;$("catalogSearch").value="";renderCatalog("");});
   root.append(b);
  };
- addChip("Все песни","Все песни",tracks.length);
- MUSIC_GENRES.filter(g=>counts.get(g)>0).forEach(genre=>addChip(genre,genre,counts.get(genre)));
+ MUSIC_GENRES.forEach(genre=>addChip(genre,genre,counts.get(genre)||0));
 }
 function renderCatalog(query=""){
  const q=String(query||"").trim().toLocaleLowerCase("ru");
