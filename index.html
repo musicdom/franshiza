@@ -452,6 +452,28 @@ button:focus-visible,input:focus-visible{outline:2px solid #b7ff75;outline-offse
 .profile-menu button{min-height:54px;padding:14px 16px}
 @media(max-width:380px){.bottom-nav{left:8px;right:8px;padding:6px;gap:3px}.nav-item{min-height:51px}.nav-item small{font-size:9px}.nav-item .nav-icon svg{width:22px;height:22px}}
 
+
+/* Minimal home screen: one clear action and quick genre shortcuts */
+#homeView{justify-content:flex-start;text-align:left;align-items:stretch;padding-top:30px;padding-bottom:22px;gap:0}
+#homeView .welcome-row{padding:0;margin-bottom:22px;align-items:flex-start}
+#homeView .overline{font-size:10px;letter-spacing:2.4px;margin-bottom:11px}
+#homeView .headline{font-size:clamp(34px,8vw,43px);line-height:1.08;letter-spacing:-1.7px;margin-bottom:9px}
+#homeView .subline{font-size:13px;line-height:1.5;margin:0;max-width:260px}
+#homeView .feature-banner{min-height:172px;margin-bottom:27px;border-radius:22px;padding:21px 18px}
+#homeView .feature-copy{max-width:82%}
+#homeView .feature-kicker{font-size:9px;letter-spacing:1.5px}
+#homeView .feature-copy h2{font-size:21px;line-height:1.15;margin:9px 0 6px}
+#homeView .feature-copy p{font-size:11px;line-height:1.45;margin:0 0 15px}
+#homeView #featurePlay{min-height:40px;padding:0 15px;border-radius:13px;font-size:12px}
+#homeView .feature-orb{width:90px;height:90px;right:12px;font-size:38px;opacity:.72}
+#homeView .home-section-head{margin:0 0 12px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+#homeView .home-section-head h2{font-size:17px;margin:0;font-weight:800;letter-spacing:-.3px}
+#homeView .home-section-head>button{font-size:11px;padding:7px 0 7px 8px;white-space:nowrap}
+#homeView .genre-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+#homeView .genre-grid button{aspect-ratio:1/1;min-height:0;border-radius:17px;font-size:23px;gap:8px}
+#homeView .genre-grid span{font-size:10px;font-weight:650}
+@media(max-width:380px){#homeView{padding-top:22px}#homeView .welcome-row{margin-bottom:18px}#homeView .feature-banner{min-height:160px;padding:18px 14px;margin-bottom:23px}#homeView .feature-orb{width:72px;height:72px;right:5px;font-size:30px}#homeView .feature-copy{max-width:85%}#homeView .feature-copy h2{font-size:19px}#homeView .genre-grid{gap:7px}#homeView .genre-grid button{border-radius:14px}#homeView .genre-grid span{font-size:9px}}
+
 </style>
 </head>
 <body>
@@ -459,15 +481,9 @@ button:focus-visible,input:focus-visible{outline:2px solid #b7ff75;outline-offse
 <main class="app">
   <header class="top"><div class="brand">ГАРМОНИКА<b>.</b></div><button type="button" class="admin-trigger" id="openAdmin">Админ</button><div class="profile"><div class="avatar" id="profileAvatar"><span id="profileInitial">♫</span></div><div class="profile-name" id="profileName">Твой аккаунт</div></div></header>
   <section class="center" id="homeView">
-    <div class="welcome-row"><div><div class="overline" id="statusLabel">ТВОЯ МУЗЫКА РЯДОМ</div><h1 class="headline" id="headline">Открывай<br>новые звуки</h1><p class="subline" id="subline">Любимая музыка — в одном месте.</p></div><div class="welcome-note">♫<span>HARMONIKA</span></div></div>
-    <div class="feature-banner"><div class="feature-copy"><span class="feature-kicker">ТВОЙ МУЗЫКАЛЬНЫЙ МИР</span><h2>Включай настроение</h2><p>Найди свой ритм прямо сейчас</p><button id="featurePlay" type="button">▶ Слушать сейчас</button></div><div class="feature-orb">♫</div></div>
-    <div class="home-section-head"><h2>Популярное</h2><button type="button" id="allTracks">Все треки <span>↗</span></button></div>
-    <div class="popular-grid">
-      <button class="popular-card cover-red" data-genre="Поп"><span class="cover-symbol">✦</span><b>Русский поп</b><small>Хиты и новинки</small></button>
-      <button class="popular-card cover-blue" data-genre="Хип-хоп"><span class="cover-symbol">◉</span><b>Хип-хоп</b><small>Ритм улиц</small></button>
-      <button class="popular-card cover-green" data-genre="Поп"><span class="cover-symbol">♫</span><b>Мировые хиты</b><small>Слушай снова</small></button>
-    </div>
-    <div class="home-section-head genres-head"><h2>Жанры</h2><span>Выбери вайб</span></div>
+    <div class="welcome-row"><div><div class="overline" id="statusLabel">ГАРМОНИКА</div><h1 class="headline" id="headline">Твоя музыка.<br>Твой ритм.</h1><p class="subline" id="subline">Включай то, что чувствуешь.</p></div></div>
+    <div class="feature-banner"><div class="feature-copy"><span class="feature-kicker">ТВОЙ МУЗЫКАЛЬНЫЙ МИР</span><h2>Что послушаем?</h2><p>Твоя любимая музыка — в одном месте.</p><button id="featurePlay" type="button">▶ Слушать музыку</button></div><div class="feature-orb" aria-hidden="true">♫</div></div>
+    <div class="home-section-head genres-head"><h2>Жанры</h2><button type="button" id="allTracks">Весь каталог <span>↗</span></button></div>
     <div class="genre-grid"><button data-genre="Поп">♫ <span>Поп</span></button><button data-genre="Рок">⚡ <span>Рок</span></button><button data-genre="Хип-хоп">♬ <span>Хип-хоп</span></button><button data-genre="Техно">◈ <span>Электроника</span></button></div>
     
     <div class="legacy-launch"><button id="launch" class="launch" aria-label="Запустить музыкальную ленту"><span class="launch-icon" id="launchIcon">▶</span><span class="launch-label" id="launchLabel">ЗАПУСТИТЬ ЛЕНТУ</span><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span></button></div>
