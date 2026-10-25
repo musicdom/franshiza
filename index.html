@@ -566,18 +566,22 @@ function updateTrack(){
  $("headline").innerHTML="Твоя музыка.<br>Твой ритм.";$("subline").textContent=t.title+" · "+t.artist;
 }
 function updatePlayback(){
- const active=Boolean(current()&&playing&&!audio.paused);
+ // Источник истины — состояние HTMLAudioElement, а не отдельный флаг playing.
+ const active=Boolean(current()&&!audio.paused&&!audio.ended);
+ playing=active;
+ const setControl=(el,isActive,playLabel,pauseLabel)=>{if(!el)return;el.textContent=isActive?pauseLabel:playLabel;el.setAttribute("aria-label",isActive?"Пауза":"Воспроизвести");el.setAttribute("aria-pressed",String(isActive));el.dataset.playing=String(isActive);};
  $("launch").classList.toggle("playing",active);$("launchIcon").textContent=active?"Ⅱ":"▶";
  $("launchLabel").textContent=active?"ПАУЗА":"ПРОДОЛЖИТЬ ЛЕНТУ";
- $("miniPlay").textContent=active?"Ⅱ":"▶";$("sheetPlay").textContent=active?"Ⅱ":"▶";
+ setControl($("miniPlay"),active,"▶","Ⅱ");setControl($("sheetPlay"),active,"▶","Ⅱ");
  $("statusLabel").textContent=active?"СЕЙЧАС ИГРАЕТ":"ТВОЁ МУЗЫКАЛЬНОЕ ПРОСТРАНСТВО";
  $("bottomHint").textContent=active?"Нажми на нижнюю панель — узнать исполнителя":"МУЗЫКА В ОДНОМ КАСАНИИ";
  const feature=$("featurePlay"),featureStatus=$("featurePlayerStatus");
  if(feature&&featureStatus){
-  if(active){feature.textContent="Ⅱ Пауза";featureStatus.textContent="● Плеер работает — музыка играет";featureStatus.dataset.state="playing";}
-  else if(current()){feature.textContent="▶ Продолжить";featureStatus.textContent="Ⅱ Плеер готов — воспроизведение на паузе";featureStatus.dataset.state="ready";}
-  else if(tracks.length){feature.textContent="▶ Проверить плеер";featureStatus.textContent="✓ Плеер готов к запуску · треков: "+tracks.length;featureStatus.dataset.state="ready";}
-  else{feature.textContent="▶ Слушать музыку";featureStatus.textContent="Пока нет треков для проверки — открой каталог позже";featureStatus.dataset.state="empty";}
+  setControl(feature,active, current()?"▶ Продолжить":"▶ Слушать музыку","Ⅱ Пауза");
+  if(active){featureStatus.textContent="● Плеер работает — музыка играет";featureStatus.dataset.state="playing";}
+  else if(current()){featureStatus.textContent="Ⅱ Плеер готов — воспроизведение на паузе";featureStatus.dataset.state="ready";}
+  else if(tracks.length){featureStatus.textContent="✓ Плеер готов к запуску · треков: "+tracks.length;featureStatus.dataset.state="ready";}
+  else{featureStatus.textContent="Пока нет треков для проверки — открой каталог позже";featureStatus.dataset.state="empty";}
  }
 }
 let openCatalogLoaded=false,openCatalogLoading=false,catalogLoadPromise=null,catalogLoadError=false;
@@ -623,22 +627,21 @@ async function startAvailableTrack(){
 async function togglePlayback(){
  if(index<0||!current()){
   await startAvailableTrack();
+  updatePlayback();
   return;
  }
- if(audio.paused){
+ if(audio.paused||audio.ended){
   try{
+   if(audio.ended)audio.currentTime=0;
    await audio.play();
-   playing=true;
    updatePlayback();
   }catch(error){
-   playing=false;
    updatePlayback();
    console.error("[ГАРМОНИКА] Playback resume failed",error);
-   toast("Не удалось продолжить воспроизведение. Попробуй ещё раз.");
+   toast("Не удалось продолжить воспроизведение. Проверь доступность аудиофайла и попробуй ещё раз.");
   }
  }else{
   audio.pause();
-  playing=false;
   updatePlayback();
  }
 }
@@ -651,7 +654,7 @@ $("sheetPlay").addEventListener("click",togglePlayback);
 $("previous").addEventListener("click",()=>playQueueStep(-1));
 $("next").addEventListener("click",()=>playQueueStep(1));
 $("like").addEventListener("click",()=>{const t=current();if(!t)return;favorites.has(t.id)?favorites.delete(t.id):favorites.add(t.id);saveFavorites();$("like").textContent=favorites.has(t.id)?"♥":"♡";$("like").classList.toggle("active",favorites.has(t.id));toast(favorites.has(t.id)?"Добавлено в избранное":"Убрано из избранного")});
-audio.addEventListener("play",()=>{playing=true;updatePlayback()});audio.addEventListener("pause",()=>{playing=false;updatePlayback()});audio.addEventListener("ended",()=>playQueueStep(1));audio.addEventListener("error",()=>{if(current()&&audio.src.includes(encodeURIComponent(current().id))){playing=false;updatePlayback();toast("Не удалось загрузить песню. Проверь публичный доступ к аудиофайлу.");}});
+audio.addEventListener("play",()=>{playing=true;updatePlayback()});audio.addEventListener("playing",()=>{playing=true;updatePlayback()});audio.addEventListener("pause",()=>{playing=false;updatePlayback()});audio.addEventListener("ended",()=>{playing=false;updatePlayback();playQueueStep(1)});audio.addEventListener("error",()=>{if(current()&&audio.src.includes(encodeURIComponent(current().id))){playing=false;updatePlayback();toast("Не удалось загрузить песню. Проверь публичный доступ к аудиофайлу.");}});
 audio.addEventListener("timeupdate",()=>{$("elapsed").textContent=fmt(audio.currentTime);$("duration").textContent=fmt(audio.duration);if(Number.isFinite(audio.duration)&&audio.duration>0)$("seek").value=audio.currentTime/audio.duration*100});
 audio.addEventListener("loadedmetadata",()=> $("duration").textContent=fmt(audio.duration));
 $("seek").addEventListener("input",e=>{if(Number.isFinite(audio.duration)&&audio.duration>0)audio.currentTime=Number(e.target.value)/100*audio.duration});
@@ -724,7 +727,7 @@ function closeCatalog(){ $("catalogPanel").hidden=true; if($("homeView"))$("home
 function backToCatalogGenres(){activeCatalogGenre="";$("catalogSearch").value="";renderCatalog("");}
 $("catalogBack").addEventListener("click",backToCatalogGenres);
 if($("openCatalog"))$("openCatalog").addEventListener("click",openCatalog);
- $("featurePlay").addEventListener("click",async()=>{if(index<0||audio.ended)await startAvailableTrack();else await togglePlayback();});
+ $("featurePlay").addEventListener("click",async()=>{await togglePlayback();});
  $("allTracks").addEventListener("click",()=>{activeCatalogGenre="";$("catalogSearch").value="";openCatalog();renderCatalog("");});
  document.querySelectorAll("[data-genre]").forEach(b=>b.addEventListener("click",()=>{const raw=b.dataset.genre||"";activeCatalogGenre=raw==="Электроника"?"Техно":raw;$("catalogSearch").value="";openCatalog();renderCatalog("");}));
 $("closeCatalog").addEventListener("click",closeCatalog);
