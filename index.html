@@ -428,6 +428,30 @@ button:focus-visible,input:focus-visible{outline:2px solid #b7ff75;outline-offse
 .progress-line{gap:9px}
 .progress-line input{height:24px;cursor:pointer;accent-color:#19e889}
 @media(max-width:380px){.mini-player{left:8px;right:8px;padding:8px;gap:8px}.mini-art{width:35px;height:35px}.mini-controls{gap:6px}.mini-play,.mini-open{flex-basis:38px;width:38px;height:38px;min-width:38px}.sheet-controls{grid-template-columns:48px 62px 48px;gap:18px}.sheet-controls button{width:46px;height:46px}.sheet-controls .main-play{width:62px;height:62px;min-width:62px}}
+
+/* Refined bottom navigation and profile avatar */
+.bottom-nav{padding:7px;gap:4px;border:1px solid #244b3c;border-radius:21px;background:rgba(5,17,13,.96);box-shadow:0 12px 36px #0008,inset 0 1px #ffffff0b}
+.nav-item{position:relative;min-width:0;min-height:53px;justify-content:center;gap:5px;padding:6px 2px;border-radius:14px;color:#829b8f;transition:color .16s,background .16s,transform .16s}
+.nav-item .nav-icon{width:27px;height:25px;display:grid;place-items:center;line-height:1}
+.nav-item .nav-icon svg{display:block;width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav-item small{font-size:10px;line-height:1.15;font-weight:650;letter-spacing:.05px}
+.nav-item.active{color:#a7ffcf;background:linear-gradient(180deg,#19e88920,#19e88908);box-shadow:inset 0 0 0 1px #25f29a22}
+.nav-item.active .nav-icon svg{filter:drop-shadow(0 0 5px #19e88925)}
+.nav-item:active{transform:scale(.96)}
+.profile-big-avatar{position:relative;box-sizing:border-box;overflow:hidden}
+.profile-big-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
+.profile-big-avatar:has(img){background:transparent!important;border:0!important;box-shadow:none!important;padding:0}
+.avatar{position:relative;box-sizing:border-box}
+.avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
+.avatar:has(img){background:transparent!important;border:0!important;box-shadow:none!important;padding:0}
+.profile-hero{padding:27px 18px 24px;background:radial-gradient(ellipse at 50% 0%,#123d2d 0%,#0a1b14 66%);border-color:#244b3c;box-shadow:inset 0 1px #ffffff08}
+.profile-big-avatar:not(:has(img)){border:1px solid #2b8b62;background:linear-gradient(145deg,#174d37,#0b241a);color:#baffd8;box-shadow:0 8px 24px #0003}
+.profile-hero h2{margin-top:3px;font-size:21px;line-height:1.25;overflow-wrap:anywhere}
+.profile-hero .profile-user-id{margin:7px 0 12px;font-size:12px;line-height:1.5}
+.profile-menu{margin-top:14px;border-radius:18px}
+.profile-menu button{min-height:54px;padding:14px 16px}
+@media(max-width:380px){.bottom-nav{left:8px;right:8px;padding:6px;gap:3px}.nav-item{min-height:51px}.nav-item small{font-size:9px}.nav-item .nav-icon svg{width:22px;height:22px}}
+
 </style>
 </head>
 <body>
@@ -450,7 +474,7 @@ button:focus-visible,input:focus-visible{outline:2px solid #b7ff75;outline-offse
   </section>
   <section class="profile-view" id="profileView" hidden><div class="page-title">Профиль</div><div class="profile-hero"><div class="profile-big-avatar" id="profileBigAvatar">♫</div><h2 id="profileBigName">Загружаем профиль MAX…</h2><p id="profileUserId" class="profile-user-id">Ожидаем данные аккаунта MAX</p><p>Твоя музыка. Твоё пространство.</p></div><div class="profile-menu"><button id="profileFavorites">♡ <span>Избранное</span><b>›</b></button><button id="profileSettings">⚙ <span>Настройки приложения</span><b>›</b></button><button id="profileHelp">ⓘ <span>О Гармонике</span><b>›</b></button></div></section>
 </main>
-<nav class="bottom-nav" id="bottomNav" aria-label="Основная навигация"><button class="nav-item active" data-view="home"><span>⌂</span><small>Главная</small></button><button class="nav-item" data-view="catalog"><span>▤</span><small>Каталог</small></button><button class="nav-item" data-view="favorites"><span>♡</span><small>Избранное</small></button><button class="nav-item" data-view="profile"><span>♙</span><small>Профиль</small></button></nav>
+<nav class="bottom-nav" id="bottomNav" aria-label="Основная навигация"><button class="nav-item active" data-view="home" aria-label="Главная"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3.5 10.5 8.5-7 8.5 7v9a1.5 1.5 0 0 1-1.5 1.5h-14A1.5 1.5 0 0 1 3.5 19.5z"/><path d="M9 21v-7h6v7"/></svg></span><small>Главная</small></button><button class="nav-item" data-view="catalog" aria-label="Каталог"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4.5h6v6H4zM14 4.5h6v6h-6zM4 14.5h6v6H4zM14 14.5h6v6h-6z"/></svg></span><small>Каталог</small></button><button class="nav-item" data-view="favorites" aria-label="Избранное"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.5 8.8c0 5.1-8.5 10.2-8.5 10.2S3.5 13.9 3.5 8.8A4.6 4.6 0 0 1 12 6.2a4.6 4.6 0 0 1 8.5 2.6Z"/></svg></span><small>Избранное</small></button><button class="nav-item" data-view="profile" aria-label="Профиль"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg></span><small>Профиль</small></button></nav>
 <button class="mini-player" id="openSheet" aria-label="Открыть информацию о текущей песне">
   <div class="mini-art" id="miniArt">♫</div><div class="mini-info"><div class="mini-title" id="miniTitle">Лента ещё не запущена</div><div class="mini-artist" id="miniArtist">Нажми на круг, чтобы начать</div></div><span class="mini-open" aria-hidden="true">⌃</span><span class="mini-play" id="miniPlay" role="button" aria-label="Воспроизвести или поставить на паузу">▶</span>
 </button>
