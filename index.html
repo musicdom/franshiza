@@ -486,13 +486,12 @@ button:focus-visible,input:focus-visible{outline:2px solid #b7ff75;outline-offse
 <div id="musicApp">
 <main class="app">
   <header class="top"><div class="brand">ГАРМОНИКА<b>.</b></div><button type="button" class="admin-trigger" id="openAdmin">Админ</button><div class="profile"><div class="avatar" id="profileAvatar"><span id="profileInitial">♫</span></div><div class="profile-name" id="profileName">Твой аккаунт</div></div></header>
-  <section class="center" id="homeView">
-    <div class="welcome-row"><div><div class="overline" id="statusLabel">ГАРМОНИКА</div><h1 class="headline" id="headline">Твоя музыка.<br>Твой ритм.</h1><p class="subline" id="subline">Включай то, что чувствуешь.</p></div></div>
-    <div class="feature-banner"><div class="feature-copy"><span class="feature-kicker">ТВОЙ МУЗЫКАЛЬНЫЙ МИР</span><h2>Что послушаем?</h2><p>Твоя любимая музыка — в одном месте.</p><button id="featurePlay" type="button" aria-live="polite">▶ Проверить плеер</button><div class="feature-player-status" id="featurePlayerStatus" role="status" aria-live="polite">Проверяем готовность плеера…</div></div><div class="feature-orb" aria-hidden="true">♫</div></div>
-    <div class="home-section-head genres-head"><h2>Жанры</h2><button type="button" id="allTracks">Весь каталог <span>↗</span></button></div>
-    <div class="genre-grid"><button data-genre="Поп">♫ <span>Поп</span></button><button data-genre="Рок">⚡ <span>Рок</span></button><button data-genre="Хип-хоп">♬ <span>Хип-хоп</span></button><button data-genre="Техно">◈ <span>Электроника</span></button></div>
-    
-    <div class="legacy-launch"><button id="launch" class="launch" aria-label="Запустить музыкальную ленту"><span class="launch-icon" id="launchIcon">▶</span><span class="launch-label" id="launchLabel">ЗАПУСТИТЬ ЛЕНТУ</span><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span></button></div>
+  <section class="center" id="homeView" aria-label="Музыкальный плеер">
+    <div class="legacy-launch"><button id="launch" class="launch" aria-label="Запустить музыкальный плеер" aria-pressed="false"><span class="launch-icon" id="launchIcon">▶</span><span class="launch-label" id="launchLabel">ВКЛЮЧИТЬ МУЗЫКУ</span><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span></button></div>
+    <div class="player-status" id="bottomHint">Нажми, чтобы включить музыку</div>
+    <span class="sr-internal" id="statusLabel">ГАРМОНИКА</span><span class="sr-internal" id="headline">Твоя музыка.</span><span class="sr-internal" id="subline">Твой ритм.</span>
+    <button id="featurePlay" type="button" aria-live="polite" tabindex="-1">▶ Слушать музыку</button><div class="feature-player-status" id="featurePlayerStatus" role="status" aria-live="polite">Проверяем готовность плеера…</div>
+    <button type="button" id="allTracks" tabindex="-1">Весь каталог</button>
   </section>
   <section class="profile-view" id="profileView" hidden><div class="page-title">Профиль</div><div class="profile-hero"><div class="profile-big-avatar" id="profileBigAvatar">♫</div><h2 id="profileBigName">Загружаем профиль MAX…</h2><p id="profileUserId" class="profile-user-id">Ожидаем данные аккаунта MAX</p><p>Твоя музыка. Твоё пространство.</p></div><div class="profile-menu"><button id="profileFavorites">♡ <span>Избранное</span><b>›</b></button><button id="profileSettings">⚙ <span>Настройки приложения</span><b>›</b></button><button id="profileHelp">ⓘ <span>О Гармонике</span><b>›</b></button></div></section>
 </main>
@@ -934,3 +933,19 @@ $("cancelEdit").addEventListener("click",()=>{$("trackForm").reset();$("trackGen
 })();;
 </script>
 </body></html>
+<style>
+/* Минималистичная главная: только круг запуска и существующая навигация. */
+.sr-internal,#featurePlay,#featurePlayerStatus,#allTracks{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+#musicApp>.app>.top{display:none!important}
+#homeView{min-height:calc(100dvh - 210px);display:flex!important;flex-direction:column;align-items:center!important;justify-content:center!important;text-align:center!important;padding:0!important;margin:0!important}
+#homeView .legacy-launch{display:grid!important;place-items:center;width:100%;margin:0!important}
+#homeView .launch{width:min(66vw,270px)!important;height:min(66vw,270px)!important;max-width:270px;max-height:270px;aspect-ratio:1;border-radius:50%;gap:14px;border:1px solid #68ffbd8c;background:radial-gradient(circle at 35% 24%,#155c40,#073326 48%,#02140f 78%);box-shadow:0 0 0 12px #19e8890b,0 0 85px #19e88924,inset 0 0 48px #19e88916}
+#homeView .launch-icon{width:82px;height:82px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(145deg,#a7ffd2,#19e889);color:#032117;font-size:31px;box-shadow:0 0 44px #19e8894d}
+#homeView .launch-label{font-size:10px;letter-spacing:1.6px;color:#effff7}
+#homeView .eq{height:18px}
+#homeView .player-status{margin-top:24px;font-size:11px;letter-spacing:1.1px;color:#79a995}
+#homeView .launch.playing{box-shadow:0 0 0 14px #19e88910,0 0 110px #19e88945,inset 0 0 60px #19e88924}
+#homeView .launch.playing .launch-icon{background:#e0ffef}
+#musicApp>.app>.mini-player{display:none!important}
+@media(max-height:650px){#homeView{min-height:calc(100dvh - 170px)}#homeView .launch{width:min(52vw,205px)!important;height:min(52vw,205px)!important}#homeView .launch-icon{width:62px;height:62px}}
+</style>
