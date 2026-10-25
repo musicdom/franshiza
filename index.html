@@ -935,6 +935,40 @@ $("cancelEdit").addEventListener("click",()=>{$("trackForm").reset();$("trackGen
 </body></html>
 <style>
 /* Минималистичная главная: только круг запуска и существующая навигация. */
+
+/* Премиальный музыкальный пульс: анимация включается только при воспроизведении. */
+#homeView .legacy-launch{position:relative;isolation:isolate}
+#homeView .legacy-launch:before,#homeView .legacy-launch:after{content:"";position:absolute;left:50%;top:50%;width:min(66vw,270px);height:min(66vw,270px);max-width:270px;max-height:270px;border-radius:50%;border:1px solid #42ffb04a;transform:translate(-50%,-50%) scale(.86);opacity:0;pointer-events:none;z-index:-1}
+#homeView .legacy-launch:after{border-color:#a5ffd42c;transform:translate(-50%,-50%) scale(.72)}
+#homeView .launch{overflow:visible;isolation:isolate;transition:transform .3s cubic-bezier(.2,.8,.2,1),box-shadow .3s,border-color .3s}
+#homeView .launch:before{content:"";position:absolute;inset:-9px;border-radius:50%;border:1px solid #9dffd438;pointer-events:none}
+#homeView .launch:after{content:"";position:absolute;inset:-18px;border-radius:50%;background:conic-gradient(from 0deg,transparent 0 58%,#65ffbd8a 72%,transparent 82% 100%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 1px),#000 calc(100% - .5px));mask:radial-gradient(farthest-side,transparent calc(100% - 1px),#000 calc(100% - .5px));opacity:.35;pointer-events:none;transition:opacity .3s}
+#homeView .launch-icon{position:relative;transition:transform .3s,box-shadow .3s;background:linear-gradient(145deg,#d5ffe8,#4dffad 48%,#13c978);box-shadow:0 0 25px #19e88952,inset 0 1px 0 #ffffffb8}
+#homeView .launch-icon:after{content:"";position:absolute;inset:-8px;border-radius:50%;border:1px solid #8dffcb38}
+#homeView .eq{gap:5px}
+#homeView .eq i{width:4px;height:5px;border-radius:6px;box-shadow:0 0 8px #19e88970;transform-origin:center}
+#homeView .launch.playing{animation:groovePulse 1.35s ease-in-out infinite;box-shadow:0 0 0 9px #19e8890d,0 0 75px #19e88930,0 0 130px #19e88916,inset 0 0 55px #19e88922;border-color:#a8ffd8}
+#homeView .launch.playing:after{opacity:.95;animation:orbitSpin 5s linear infinite}
+#homeView .launch.playing .launch-icon{animation:iconBeat .72s ease-in-out infinite alternate;box-shadow:0 0 22px #19e88960,0 0 55px #19e88938,inset 0 1px 0 #ffffffc9}
+#homeView .launch.playing .eq i{animation:equalizerJump .48s ease-in-out infinite alternate}
+#homeView .launch.playing .eq i:nth-child(1){animation-delay:-.28s}
+#homeView .launch.playing .eq i:nth-child(2){animation-delay:-.1s}
+#homeView .launch.playing .eq i:nth-child(3){animation-delay:-.36s}
+#homeView .launch.playing .eq i:nth-child(4){animation-delay:-.18s}
+#homeView .launch.playing .eq i:nth-child(5){animation-delay:-.04s}
+#homeView .launch.playing .launch-label{letter-spacing:2px;text-shadow:0 0 14px #b7ffdb55}
+#homeView .legacy-launch:has(.launch.playing):before{animation:echoRing 2.4s ease-out infinite}
+#homeView .legacy-launch:has(.launch.playing):after{animation:echoRing 2.4s ease-out infinite .8s}
+#homeView .launch:not(.playing):hover{transform:scale(1.025);box-shadow:0 0 0 12px #19e88910,0 0 100px #19e88932,inset 0 0 48px #19e88920}
+#homeView .player-status{transition:color .25s,text-shadow .25s}
+#homeView:has(.launch.playing) .player-status{color:#a5ffd2;text-shadow:0 0 16px #19e8893b}
+@keyframes groovePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.018)}}
+@keyframes iconBeat{from{transform:scale(.96)}to{transform:scale(1.055)}}
+@keyframes equalizerJump{from{height:4px;opacity:.65}to{height:19px;opacity:1}}
+@keyframes echoRing{0%{opacity:.65;transform:translate(-50%,-50%) scale(.84)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.45)}}
+@keyframes orbitSpin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){#homeView .launch.playing,#homeView .launch.playing .launch-icon,#homeView .launch.playing:after,#homeView .legacy-launch:has(.launch.playing):before,#homeView .legacy-launch:has(.launch.playing):after{animation:none!important}}
+
 /* Не показывать круглый плеер на других вкладках: display:flex не должен перебивать hidden. */
 #homeView[hidden]{display:none!important}
 .sr-internal,#featurePlay,#featurePlayerStatus,#allTracks{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
