@@ -474,6 +474,12 @@ button:focus-visible,input:focus-visible{outline:2px solid #b7ff75;outline-offse
 #homeView .genre-grid span{font-size:10px;font-weight:650}
 @media(max-width:380px){#homeView{padding-top:22px}#homeView .welcome-row{margin-bottom:18px}#homeView .feature-banner{min-height:160px;padding:18px 14px;margin-bottom:23px}#homeView .feature-orb{width:72px;height:72px;right:5px;font-size:30px}#homeView .feature-copy{max-width:85%}#homeView .feature-copy h2{font-size:19px}#homeView .genre-grid{gap:7px}#homeView .genre-grid button{border-radius:14px}#homeView .genre-grid span{font-size:9px}}
 
+/* Live player state on the home feature card */
+#homeView .feature-player-status{position:relative;z-index:2;margin-top:9px;font-size:10px;line-height:1.4;color:#b5e8d1;min-height:14px}
+#homeView .feature-player-status[data-state="playing"]{color:#7dffc0}
+#homeView .feature-player-status[data-state="empty"]{color:#ffd18b}
+#homeView #featurePlay{transition:background .2s,transform .2s}
+#homeView #featurePlay:active{transform:scale(.98)}
 </style>
 </head>
 <body>
@@ -482,7 +488,7 @@ button:focus-visible,input:focus-visible{outline:2px solid #b7ff75;outline-offse
   <header class="top"><div class="brand">ГАРМОНИКА<b>.</b></div><button type="button" class="admin-trigger" id="openAdmin">Админ</button><div class="profile"><div class="avatar" id="profileAvatar"><span id="profileInitial">♫</span></div><div class="profile-name" id="profileName">Твой аккаунт</div></div></header>
   <section class="center" id="homeView">
     <div class="welcome-row"><div><div class="overline" id="statusLabel">ГАРМОНИКА</div><h1 class="headline" id="headline">Твоя музыка.<br>Твой ритм.</h1><p class="subline" id="subline">Включай то, что чувствуешь.</p></div></div>
-    <div class="feature-banner"><div class="feature-copy"><span class="feature-kicker">ТВОЙ МУЗЫКАЛЬНЫЙ МИР</span><h2>Что послушаем?</h2><p>Твоя любимая музыка — в одном месте.</p><button id="featurePlay" type="button">▶ Слушать музыку</button></div><div class="feature-orb" aria-hidden="true">♫</div></div>
+    <div class="feature-banner"><div class="feature-copy"><span class="feature-kicker">ТВОЙ МУЗЫКАЛЬНЫЙ МИР</span><h2>Что послушаем?</h2><p>Твоя любимая музыка — в одном месте.</p><button id="featurePlay" type="button" aria-live="polite">▶ Проверить плеер</button><div class="feature-player-status" id="featurePlayerStatus" role="status" aria-live="polite">Проверяем готовность плеера…</div></div><div class="feature-orb" aria-hidden="true">♫</div></div>
     <div class="home-section-head genres-head"><h2>Жанры</h2><button type="button" id="allTracks">Весь каталог <span>↗</span></button></div>
     <div class="genre-grid"><button data-genre="Поп">♫ <span>Поп</span></button><button data-genre="Рок">⚡ <span>Рок</span></button><button data-genre="Хип-хоп">♬ <span>Хип-хоп</span></button><button data-genre="Техно">◈ <span>Электроника</span></button></div>
     
@@ -566,6 +572,13 @@ function updatePlayback(){
  $("miniPlay").textContent=active?"Ⅱ":"▶";$("sheetPlay").textContent=active?"Ⅱ":"▶";
  $("statusLabel").textContent=active?"СЕЙЧАС ИГРАЕТ":"ТВОЁ МУЗЫКАЛЬНОЕ ПРОСТРАНСТВО";
  $("bottomHint").textContent=active?"Нажми на нижнюю панель — узнать исполнителя":"МУЗЫКА В ОДНОМ КАСАНИИ";
+ const feature=$("featurePlay"),featureStatus=$("featurePlayerStatus");
+ if(feature&&featureStatus){
+  if(active){feature.textContent="Ⅱ Пауза";featureStatus.textContent="● Плеер работает — музыка играет";featureStatus.dataset.state="playing";}
+  else if(current()){feature.textContent="▶ Продолжить";featureStatus.textContent="Ⅱ Плеер готов — воспроизведение на паузе";featureStatus.dataset.state="ready";}
+  else if(tracks.length){feature.textContent="▶ Проверить плеер";featureStatus.textContent="✓ Плеер готов к запуску · треков: "+tracks.length;featureStatus.dataset.state="ready";}
+  else{feature.textContent="▶ Слушать музыку";featureStatus.textContent="Пока нет треков для проверки — открой каталог позже";featureStatus.dataset.state="empty";}
+ }
 }
 let openCatalogLoaded=false,openCatalogLoading=false,catalogLoadPromise=null,catalogLoadError=false;
 async function loadMusicLibrary(){
