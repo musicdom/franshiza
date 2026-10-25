@@ -413,6 +413,21 @@ button:focus-visible,input:focus-visible{outline:2px solid #b7ff75;outline-offse
 .catalog-genre-chip.active span{background:#0a3827;color:#c7ffdf;border-color:#27895d}
 @media(max-width:360px){.catalog-genres{gap:8px}.catalog-genre-chip{padding:7px 3px;gap:5px}.catalog-genre-chip::before{width:35px;height:35px;flex-basis:35px;font-size:20px}.catalog-genre-chip span{font-size:8px;padding:2px 5px}}
 
+
+/* Player controls alignment and touch targets */
+.mini-player{gap:10px;padding:9px 11px;min-height:62px}
+.mini-controls{display:flex;align-items:center;justify-content:center;gap:8px;flex-shrink:0}
+.mini-play,.mini-open{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;min-width:42px;padding:0;line-height:1;border:1px solid #36e99b40;border-radius:50%;font-size:17px;font-weight:800;box-sizing:border-box}
+.mini-play{background:linear-gradient(145deg,#49ffad,#16d982);color:#032016;box-shadow:0 3px 14px #19e88930}
+.mini-open{background:#0b3025;color:#b6ffdd;border-color:#1b6a4a;font-size:18px}
+.mini-play:active,.mini-open:active,.sheet-controls button:active{transform:scale(.94)}
+.sheet-controls{display:grid;grid-template-columns:56px 68px 56px;align-items:center;justify-content:center;gap:24px;margin:22px auto 20px;width:max-content;max-width:100%}
+.sheet-controls button{display:grid;place-items:center;width:52px;height:52px;padding:0;border:1px solid #ffffff20;border-radius:50%;background:#ffffff08;color:#e7fff2;font-size:22px;font-weight:700;line-height:1;transition:transform .12s,background .12s,border-color .12s}
+.sheet-controls button:first-child,.sheet-controls button:last-child{justify-self:center;color:#b6ffda;background:#0a3024;border-color:#1b6749;font-size:20px}
+.sheet-controls .main-play{width:68px;height:68px;min-width:68px;border:0;border-radius:50%;background:linear-gradient(145deg,#61ffb5,#19e889 65%,#0dbd70);color:#032016;font-size:25px;box-shadow:0 7px 24px #19e88935,inset 0 1px #ffffff65}
+.progress-line{gap:9px}
+.progress-line input{height:24px;cursor:pointer;accent-color:#19e889}
+@media(max-width:380px){.mini-player{left:8px;right:8px;padding:8px;gap:8px}.mini-art{width:35px;height:35px}.mini-controls{gap:6px}.mini-play,.mini-open{flex-basis:38px;width:38px;height:38px;min-width:38px}.sheet-controls{grid-template-columns:48px 62px 48px;gap:18px}.sheet-controls button{width:46px;height:46px}.sheet-controls .main-play{width:62px;height:62px;min-width:62px}}
 </style>
 </head>
 <body>
@@ -446,7 +461,7 @@ button:focus-visible,input:focus-visible{outline:2px solid #b7ff75;outline-offse
   <div class="art-large" id="artLarge"><span>♫</span></div>
   <div class="song-info"><div class="song-text"><div class="song-title" id="songTitle">Лента ещё не запущена</div><div class="song-artist" id="songArtist">Исполнитель появится здесь</div><div class="song-genre" id="songGenre">ГАРМОНИКА</div></div><button class="like" id="like" aria-label="Добавить в избранное">♡</button></div>
   <div class="progress-line"><span id="elapsed">0:00</span><input id="seek" type="range" min="0" max="100" value="0" aria-label="Позиция в песне"><span id="duration">0:00</span></div>
-  <div class="sheet-controls"><button id="previous" aria-label="Предыдущая песня">↶</button><button class="main-play" id="sheetPlay" aria-label="Пауза или воспроизведение">▶</button><button id="next" aria-label="Следующая песня">↷</button></div>
+  <div class="sheet-controls"><button id="previous" aria-label="Предыдущая песня" title="Предыдущая песня">⏮</button><button class="main-play" id="sheetPlay" aria-label="Пауза или воспроизведение">▶</button><button id="next" aria-label="Следующая песня" title="Следующая песня">⏭</button></div>
   <p class="sheet-note">Потяни вниз или нажми ×, чтобы закрыть</p>
 </section>
 <section class="catalog-panel" id="catalogPanel" hidden aria-label="Музыкальный каталог">
