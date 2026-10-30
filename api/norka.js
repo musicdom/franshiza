@@ -86,9 +86,9 @@ module.exports=async function handler(req,res){
    const reward=Math.max(0,Math.floor(Number(t.reward)||0)),now=new Date().toISOString();
    const ledgerItem=JSON.stringify({type:"task_reward",title:"Награда: "+t.title,berries:reward,at:now});
    const script=[
-    "if redis.call('GET',KEYS[1]) then return redis.error_reply('ALREADY') end;",
+    "if redis.call('GET',KEYS[1]) then return redis.error_reply('TASK_ALREADY') end;",
     "local claimsRaw=redis.call('GET',KEYS[4]); local claims={}; if claimsRaw then claims=cjson.decode(claimsRaw) end;",
-    "if claims[ARGV[2]]=='done' then return redis.error_reply('ALREADY') end;",
+    "if claims[ARGV[2]]=='done' then return redis.error_reply('TASK_ALREADY') end;",
     "local current=tonumber(redis.call('HGET',KEYS[2],'berries') or '0');",
     "redis.call('HINCRBY',KEYS[2],'berries',tonumber(ARGV[1]));",
     "redis.call('SET',KEYS[1],'1','EX','31536000');",
@@ -111,7 +111,7 @@ module.exports=async function handler(req,res){
    const ledgerItem=JSON.stringify({type:"daily",title:"Ежедневная награда",berries:reward,at:now});
    const script=[
     "local raw=redis.call('GET',KEYS[1]); if not raw then return redis.error_reply('USER_NOT_FOUND') end;",
-    "local user=cjson.decode(raw); if user.lastDaily==ARGV[1] then return redis.error_reply('ALREADY') end;",
+    "local user=cjson.decode(raw); if user.lastDaily==ARGV[1] then return redis.error_reply('DAILY_ALREADY') end;",
     "local current=tonumber(redis.call('HGET',KEYS[2],'berries') or '0');",
     "redis.call('HINCRBY',KEYS[2],'berries',tonumber(ARGV[2]));",
     "user.lastDaily=ARGV[1]; redis.call('SET',KEYS[1],cjson.encode(user));",
@@ -133,9 +133,9 @@ module.exports=async function handler(req,res){
    const reward=Math.max(0,Math.floor(Number(t.reward)||0)),now=new Date().toISOString();
    const ledgerItem=JSON.stringify({type:"task_reward",title:"Награда: "+t.title,berries:reward,at:now});
    const script=[
-    "if redis.call('GET',KEYS[1]) or redis.call('GET',KEYS[5]) then return redis.error_reply('ALREADY') end;",
+    "if redis.call('GET',KEYS[1]) or redis.call('GET',KEYS[5]) then return redis.error_reply('SUBSCRIPTION_ALREADY') end;",
     "local claimsRaw=redis.call('GET',KEYS[4]); local claims={}; if claimsRaw then claims=cjson.decode(claimsRaw) end;",
-    "if claims[ARGV[1]]=='done' then return redis.error_reply('ALREADY') end;",
+    "if claims[ARGV[1]]=='done' then return redis.error_reply('SUBSCRIPTION_ALREADY') end;",
     "local current=tonumber(redis.call('HGET',KEYS[2],'berries') or '0');",
     "redis.call('HINCRBY',KEYS[2],'berries',tonumber(ARGV[2]));",
     "redis.call('SET',KEYS[1],'1','EX','31536000');",
@@ -153,9 +153,9 @@ module.exports=async function handler(req,res){
    if(claims[taskId])return json(res,409,{ok:false,error:"Задание уже отправлено или выполнено"});
    const p={userId:id,taskId,title:t.title,name:clean(profile.name,100),at:new Date().toISOString()};
    const script=[
-    "if redis.call('GET',KEYS[1]) then return redis.error_reply('ALREADY') end;",
+    "if redis.call('GET',KEYS[1]) then return redis.error_reply('TASK_ALREADY') end;",
     "local raw=redis.call('GET',KEYS[2]); local claims={}; if raw then claims=cjson.decode(raw) end;",
-    "if claims[ARGV[1]] then return redis.error_reply('ALREADY') end;",
+    "if claims[ARGV[1]] then return redis.error_reply('TASK_ALREADY') end;",
     "redis.call('SET',KEYS[1],'1','NX','EX','31536000');",
     "claims[ARGV[1]]='pending'; redis.call('SET',KEYS[2],cjson.encode(claims));",
     "redis.call('LPUSH',KEYS[3],ARGV[2]); return 1"
@@ -199,5 +199,5 @@ module.exports=async function handler(req,res){
    return json(res,200,{ok:true,wallet:w});
   }
   return json(res,400,{ok:false,error:"Неизвестное действие"});
- }catch(e){const msg=String(e&&e.message||"Ошибка сервера");if(msg.includes("INSUFFICIENT"))return json(res,409,{ok:false,error:"Недостаточно средств на балансе"});if(msg.includes("ALREADY"))return json(res,409,{ok:false,error:"Ты уже участвуешь в этом розыгрыше"});console.error("NORKA API:",msg);return json(res,500,{ok:false,error:"Внутренняя ошибка. Проверьте настройки Redis в Vercel."});}
+ }catch(e){const msg=String(e&&e.message||"Ошибка сервера");if(msg.includes("INSUFFICIENT"))return json(res,409,{ok:false,error:"Недостаточно средств на балансе"});if(msg.includes("DAILY_ALREADY"))return json(res,409,{ok:false,error:"Ежедневная награда уже получена"});if(msg.includes("SUBSCRIPTION_ALREADY"))return json(res,409,{ok:false,error:"Награда за подписку уже получена"});if(msg.includes("TASK_ALREADY"))return json(res,409,{ok:false,error:"Заявка уже отправлена или задание подтверждено"});if(msg.includes("ALREADY"))return json(res,409,{ok:false,error:"Ты уже участвуешь в этом розыгрыше"});console.error("NORKA API:",msg);return json(res,500,{ok:false,error:"Внутренняя ошибка. Проверьте настройки Redis в Vercel."});}
 };
