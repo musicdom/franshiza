@@ -97,7 +97,7 @@ module.exports = async function handler(req, res) {
     let returning = false;
     try {
       if (identified && getRedisConfig()) {
-        const key = "volna:user:tracked:" + id;
+        const key = "norka:user:tracked:" + id;
         returning = Boolean(await redis(["GET", key]));
         await redis(["SET", key, JSON.stringify({ id, name, username: username || null, last_opened_at: new Date().toISOString() }), "EX", "31536000"]);
       }
@@ -106,7 +106,7 @@ module.exports = async function handler(req, res) {
     }
     const profile = identified ? "[Открыть профиль](max://user/" + encodeURIComponent(id) + ")" : "MAX не передал ID пользователя";
     const text = [
-      identified ? (returning ? "🔄 Повторное открытие мини-приложения «Гармоника»" : "🎵 Пользователь открыл мини-приложение «Гармоника»") : "⚠️ Открытие мини-приложения «Гармоника»: профиль MAX недоступен",
+      identified ? (returning ? "🔄 Повторное открытие мини-приложения «Норка»" : "🎵 Пользователь открыл мини-приложение «Гармоника»") : "⚠️ Открытие мини-приложения «Норка»: профиль MAX недоступен",
       "",
       "👤 Имя: " + escapeText(name),
       "🆔 ID: " + escapeText(id || "не получен"),
