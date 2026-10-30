@@ -17,6 +17,8 @@ jobs:
       - name: Check server JavaScript
         run: |
           node --check api/norka.js
+          node --check api/norka-payment.js
+          node --check api/yoomoney/notify.js
           node --check api/webhook.js
           node --check api/track-user.js
           node --check api/setup-webhook.js
