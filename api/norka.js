@@ -133,7 +133,7 @@ module.exports=async function handler(req,res){
    const reward=Math.max(0,Math.floor(Number(t.reward)||0)),now=new Date().toISOString();
    const ledgerItem=JSON.stringify({type:"task_reward",title:"Награда: "+t.title,berries:reward,at:now});
    const script=[
-    "if redis.call('GET',KEYS[1]) then return redis.error_reply('ALREADY') end;",
+    "if redis.call('GET',KEYS[1]) or redis.call('GET',KEYS[5]) then return redis.error_reply('ALREADY') end;",
     "local claimsRaw=redis.call('GET',KEYS[4]); local claims={}; if claimsRaw then claims=cjson.decode(claimsRaw) end;",
     "if claims[ARGV[1]]=='done' then return redis.error_reply('ALREADY') end;",
     "local current=tonumber(redis.call('HGET',KEYS[2],'berries') or '0');",
@@ -143,7 +143,7 @@ module.exports=async function handler(req,res){
     "redis.call('LPUSH',KEYS[3],ARGV[3]); redis.call('LTRIM',KEYS[3],'0','99');",
     "return {current+tonumber(ARGV[2]),tonumber(redis.call('HGET',KEYS[2],'coins') or '0')}"
    ].join(" ");
-   const result=await redis(["EVAL",script,"4","norka:taskclaim:"+id+":channel","norka:wallet:"+id,"norka:ledger:"+id,"norka:claims:"+id,"channel",String(reward),ledgerItem]);
+   const result=await redis(["EVAL",script,"5","norka:taskclaim:"+id+":channel","norka:wallet:"+id,"norka:ledger:"+id,"norka:claims:"+id,"norka:taskapproved:"+id+":channel","channel",String(reward),ledgerItem]);
    return json(res,200,{ok:true,wallet:{berries:Number(result[0])||0,coins:Number(result[1])||0},reward,claims:{channel:"done"}});
   }
   if(action==="request_task"){
