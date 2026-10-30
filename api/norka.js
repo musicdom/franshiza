@@ -64,7 +64,7 @@ async function grantProgress(id,eventId,kind,day){
   "local raw=redis.call('GET',KEYS[1]); local p=raw and cjson.decode(raw) or {xp=0,level=1,streak=0,bestStreak=0,lastVisit='',lastVisitAt=''};",
   "if redis.call('SISMEMBER',KEYS[4],ARGV[1])==1 then return {0,p.xp or 0,p.level or 1,p.streak or 0,0,0} end;",
   "local today=ARGV[2]; local kind=ARGV[3]; local oldLevel=tonumber(p.level) or 1;",
-  "if kind=='visit' then if p.lastVisit~=today then local y=os.date('!%Y-%m-%d',os.time({year=tonumber(string.sub(today,1,4)),month=tonumber(string.sub(today,6,7)),day=tonumber(string.sub(today,9,10))})-86400); if p.lastVisit==y then p.streak=(tonumber(p.streak) or 0)+1 else p.streak=1 end; p.lastVisit=today; p.lastVisitAt=ARGV[8]; if p.streak>(tonumber(p.bestStreak) or 0) then p.bestStreak=p.streak end end end;",
+  "if kind=='visit' then if p.lastVisit~=today then local y=ARGV[9]; if p.lastVisit==y then p.streak=(tonumber(p.streak) or 0)+1 else p.streak=1 end; p.lastVisit=today; p.lastVisitAt=ARGV[8]; if p.streak>(tonumber(p.bestStreak) or 0) then p.bestStreak=p.streak end end end;",
   "p.xp=(tonumber(p.xp) or 0)+tonumber(ARGV[4]);",
   "local thresholds=cjson.decode(ARGV[5]); local level=1; for i=1,#thresholds do if p.xp>=tonumber(thresholds[i]) then level=i end end; p.level=level;",
   "redis.call('SADD',KEYS[4],ARGV[1]);",
@@ -76,7 +76,7 @@ async function grantProgress(id,eventId,kind,day){
   "if berries>0 then redis.call('HINCRBY',KEYS[2],'berries',berries); for _,item in ipairs(ledger) do redis.call('LPUSH',KEYS[3],item) end; redis.call('LTRIM',KEYS[3],'0','99') end;",
   "redis.call('SET',KEYS[1],cjson.encode(p)); return {1,p.xp,p.level,p.streak,berries,#unlocked}"
  ].join(" ");
- const result=await redis(["EVAL",script,"7","norka:progress:"+id,"norka:wallet:"+id,"norka:ledger:"+id,"norka:progress:events:"+id,"norka:achievements:"+id,"norka:streak:rewards:"+id,"norka:level:rewards:"+id,eventId,day,kind,String(xp),JSON.stringify(thresholds),JSON.stringify(config.streakRewards),JSON.stringify(config.levelRewards),new Date().toISOString()]);
+ const result=await redis(["EVAL",script,"7","norka:progress:"+id,"norka:wallet:"+id,"norka:ledger:"+id,"norka:progress:events:"+id,"norka:achievements:"+id,"norka:streak:rewards:"+id,"norka:level:rewards:"+id,eventId,day,kind,String(xp),JSON.stringify(thresholds),JSON.stringify(config.streakRewards),JSON.stringify(config.levelRewards),new Date().toISOString(),new Date(Date.parse(day+"T00:00:00Z")-86400000).toISOString().slice(0,10)]);
  return {applied:Number(result[0])===1,xp:Number(result[1])||0,level:Number(result[2])||1,streak:Number(result[3])||0,berries:Number(result[4])||0};
 }
 async function readProgress(id){
