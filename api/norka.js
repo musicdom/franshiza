@@ -253,7 +253,7 @@ module.exports=async function handler(req,res){
     "return {result.berries,result.coins,1}"
    ].join(" ");
    const result=await redis(["EVAL",script,"3","norka:wallet:"+id,"norka:ledger:"+id,"norka:exchange:request:"+id+":"+requestId,String(-spent),String(coins),ledgerItem]);
-   if(Number(result[2])===1)await grantProgress(id,"exchange:"+requestId,"exchange",new Date().toISOString().slice(0,10));return json(res,200,{ok:true,wallet:{berries:Number(result[0])||0,coins:Number(result[1])||0},coins,duplicate:Number(result[2])===0,progress:await readProgress(id)});
+   await grantProgress(id,"exchange:"+requestId,"exchange",new Date().toISOString().slice(0,10));return json(res,200,{ok:true,wallet:{berries:Number(result[0])||0,coins:Number(result[1])||0},coins,duplicate:Number(result[2])===0,progress:await readProgress(id)});
   }
   if(action==="enter_giveaway"){
    const giveawayId=clean(body.giveawayId,60),gs=await giveaways(),g=gs.find(x=>x.id===giveawayId&&x.status==="active");
