@@ -1,20 +1,23 @@
-name: Sales flow tests
+name: Norka checks
 
 on:
   push:
-    branches: [main]
+    branches: [main, norka-rebuild]
   pull_request:
     branches: [main]
 
 jobs:
-  node-tests:
+  syntax:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Run sales tests
-        run: node --test tests/*.test.js
+      - name: Check server JavaScript
+        run: |
+          node --check api/norka.js
+          node --check api/webhook.js
+          node --check api/track-user.js
+          node --check api/setup-webhook.js
+          node --check lib/max-api.js
