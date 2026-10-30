@@ -85,7 +85,7 @@ module.exports = async function handler(req, res) {
       "local coins=tonumber(order.coins);",
       "if coins==nil or coins<1 or coins~=math.floor(coins) or not order.userId then return redis.error_reply('ORDER_INVALID') end;",
       "local existing=redis.call('GET',KEYS[3]);",
-      "if existing then if existing==ARGV[2] then return {2,coins} else return redis.error_reply('DUPLICATE_OPERATION') end end;",
+      "if existing then if existing==tostring(order.id) then return {2,coins} else return redis.error_reply('DUPLICATE_OPERATION') end end;",
       "redis.call('HINCRBY',KEYS[2],'coins',coins);",
       "redis.call('SET',KEYS[3],ARGV[2]);",
       "order.status='paid'; order.operationId=ARGV[2]; order.paidAmount=tonumber(ARGV[3]); order.withdrawAmount=tonumber(ARGV[1]); order.paidAt=ARGV[4];",
