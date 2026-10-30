@@ -1,4 +1,4 @@
-const { requestMax } = require("../lib/max-api");
+const { createHmac, timingSafeEqual } = require("crypto");
 
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function cfg(){const url=process.env.KV_REST_API_URL||process.env.UPSTASH_REDIS_REST_URL;const token=process.env.KV_REST_API_TOKEN||process.env.UPSTASH_REDIS_REST_TOKEN;return url&&token?{url:url.replace(/\/$/,""),token}:null;}
@@ -6,7 +6,27 @@ async function redis(parts){const c=cfg();if(!c)throw new Error("Redis is not co
 async function get(key){const v=await redis(["GET",key]);if(!v)return null;try{return JSON.parse(v);}catch{return v;}}
 async function set(key,value){return redis(["SET",key,JSON.stringify(value)]);}
 function clean(v,n=160){return typeof v==="string"?v.trim().slice(0,n):"";}
-function userId(req){const h=req.headers["x-norka-user"];return clean(String(h||req.body?.userId||req.query?.userId||""),80).replace(/[^a-zA-Z0-9_-]/g,"");}
+function verifyInitData(req){
+ const raw=String(req.headers["x-norka-initdata"]||req.body?.initData||"");
+ const token=process.env.MAX_BOT_TOKEN;
+ if(!raw||!token||raw.length>12000)return null;
+ try{
+  const params=new URLSearchParams(raw),entries=[...params.entries()];
+  if(entries.some(([k])=>params.getAll(k).length!==1))return null;
+  const hash=params.get("hash"),authDate=Number(params.get("auth_date"));
+  if(!hash||!/^[a-f0-9]{64}$/i.test(hash)||!Number.isFinite(authDate))return null;
+  const age=Math.floor(Date.now()/1000)-authDate;
+  if(age>86400||age< -60)return null;
+  const check=entries.filter(([k])=>k!=="hash").sort((a,b)=>a[0]<b[0]?-1:a[0]>b[0]?1:0).map(([k,v])=>k+"="+v).join("\n");
+  const secret=createHmac("sha256","WebAppData").update(token).digest();
+  const expected=createHmac("sha256",secret).update(check).digest();
+  const supplied=Buffer.from(hash,"hex");
+  if(supplied.length!==expected.length||!timingSafeEqual(supplied,expected))return null;
+  const user=JSON.parse(params.get("user")||"null");
+  if(!user||!user.id)return null;
+  return {id:String(user.id),profile:{name:[user.first_name,user.last_name].filter(Boolean).join(" ")||user.name||user.username||"Участник Норки",avatar:user.photo_url||""}};
+ }catch{return null;}
+}
 function userKey(id){return "norka:user:"+id;}
 async function ensureUser(id,profile={}){let u=await get(userKey(id));if(!u){u={id, name:clean(profile.name,100)||"Участник Норки", avatar:clean(profile.avatar,500), berries:0,coins:0,createdAt:new Date().toISOString(),lastDaily:null};await set(userKey(id),u);}return u;}
 async function ledger(id,item){await redis(["LPUSH","norka:ledger:"+id,JSON.stringify({...item,at:new Date().toISOString()})]);await redis(["LTRIM","norka:ledger:"+id,"0","99"]);}
@@ -32,8 +52,8 @@ module.exports=async function handler(req,res){
    if(action==="admin_approve_task"){const id=clean(body.userId,80),taskId=clean(body.taskId,50);if(!id||!taskId)return json(res,400,{ok:false,error:"Нет пользователя или задания"});const pending=await list("norka:pending");const p=pending.find(x=>x.userId===id&&x.taskId===taskId);if(!p)return json(res,404,{ok:false,error:"Заявка не найдена"});const ts=await tasks();const t=ts.find(x=>x.id===taskId);if(!t)return json(res,404,{ok:false,error:"Задание не найдено"});await ensureUser(id);const w=await updateBalances(id,Number(t.reward),0);await ledger(id,{type:"task_reward",title:"Награда: "+t.title,berries:Number(t.reward)});const claims=await get("norka:claims:"+id)||{};claims[taskId]="done";await set("norka:claims:"+id,claims);await redis(["LREM","norka:pending","1",JSON.stringify(p)]);return json(res,200,{ok:true,wallet:w});}
    return json(res,400,{ok:false,error:"Неизвестное действие"});
   }
-  const id=userId(req);if(!id)return json(res,400,{ok:false,error:"Не получен ID пользователя MAX"});
-  const profile=body.profile||{};await ensureUser(id,profile);
+  const verified=verifyInitData(req);if(!verified)return json(res,401,{ok:false,error:"Не удалось проверить данные MAX. Перезапусти мини-приложение."});
+  const id=verified.id;const profile=verified.profile;await ensureUser(id,profile);
   if(action==="bootstrap"){const u=await get(userKey(id));const w=await readWallet(id);const history=await list("norka:ledger:"+id);const ts=(await tasks()).filter(t=>t.active);const gs=(await giveaways()).filter(g=>g.status==="active");const claims=await get("norka:claims:"+id)||{};return json(res,200,{ok:true,user:u,wallet:w,tasks:ts,giveaways:gs,history,claims});}
   if(action==="daily_claim"){const u=await get(userKey(id));const day=new Date().toISOString().slice(0,10);if(u.lastDaily===day)return json(res,409,{ok:false,error:"Награда за сегодня уже получена"});const t=(await tasks()).find(x=>x.type==="daily"&&x.active);const reward=t?Number(t.reward):10;const w=await updateBalances(id,reward,0);u.lastDaily=day;await set(userKey(id),u);await ledger(id,{type:"daily",title:"Ежедневная награда",berries:reward});return json(res,200,{ok:true,wallet:w,reward});}
   if(action==="request_task"){const taskId=clean(body.taskId,50);const ts=await tasks();const t=ts.find(x=>x.id===taskId&&x.active&&x.type!=="daily");if(!t)return json(res,404,{ok:false,error:"Задание не найдено"});const claims=await get("norka:claims:"+id)||{};if(claims[taskId])return json(res,409,{ok:false,error:"Задание уже отправлено или выполнено"});const p={userId:id,taskId,title:t.title,name:clean(profile.name,100),at:new Date().toISOString()};await redis(["LPUSH","norka:pending",JSON.stringify(p)]);claims[taskId]="pending";await set("norka:claims:"+id,claims);return json(res,200,{ok:true,message:"Заявка отправлена на проверку"});}
