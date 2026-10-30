@@ -57,21 +57,33 @@ module.exports=async function handler(req,res){
    if(action==="admin_overview"){const ids=await redis(["KEYS","norka:user:*"]);const users=Array.isArray(ids)?ids.length:0;const pending=await list("norka:pending");const rate=Number(await redis(["GET","norka:exchange-rate"]))||100;return json(res,200,{ok:true,users,pending,giveaways:await giveaways(),tasks:await tasks(),rate});}
    if(action==="admin_set_rate"){const rate=Math.floor(Number(body.rate));if(!Number.isFinite(rate)||rate<1||rate>100000)return json(res,400,{ok:false,error:"Курс должен быть от 1 до 100000 ягод"});await redis(["SET","norka:exchange-rate",String(rate)]);return json(res,200,{ok:true,rate});}
    if(action==="admin_draw_winner"){
-    const giveawayId=clean(body.giveawayId,60),items=await giveaways(),item=items.find(x=>x.id===giveawayId);
-    if(!item)return json(res,404,{ok:false,error:"Розыгрыш не найден"});
-    if(item.status!=="active")return json(res,409,{ok:false,error:"Розыгрыш уже завершён"});
-    const entrants=await redis(["SMEMBERS","norka:entries:"+giveawayId]);
-    if(!Array.isArray(entrants)||!entrants.length)return json(res,409,{ok:false,error:"В розыгрыше пока нет участников"});
-    const winnerId=String(entrants[randomInt(entrants.length)]),drawnAt=new Date().toISOString();
-    const script=[
+    const giveawayId=clean(body.giveawayId,60);
+    const freezeScript=[
      "local n=redis.call('LLEN',KEYS[1]);",
      "for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[1],i); if raw then local item=cjson.decode(raw);",
-     "if tostring(item.id)==ARGV[1] then if item.status~='active' then return redis.error_reply('ALREADY') end;",
+     "if tostring(item.id)==ARGV[1] then if item.status=='completed' then return redis.error_reply('DRAW_ALREADY') end;",
+     "if item.status=='active' then item.status='drawing'; redis.call('LSET',KEYS[1],i,cjson.encode(item)); return 1 end;",
+     "if item.status=='drawing' then return 1 end; return redis.error_reply('DRAW_ALREADY') end end end;",
+     "return redis.error_reply('NOT_FOUND')"
+    ].join(" ");
+    await redis(["EVAL",freezeScript,"1","norka:giveaways",giveawayId]);
+    const entrants=await redis(["SMEMBERS","norka:entries:"+giveawayId]);
+    if(!Array.isArray(entrants)||!entrants.length){
+     const restoreScript="local n=redis.call('LLEN',KEYS[1]); for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[1],i); if raw then local item=cjson.decode(raw); if tostring(item.id)==ARGV[1] and item.status=='drawing' then item.status='active'; redis.call('LSET',KEYS[1],i,cjson.encode(item)); return 1 end end end; return 0";
+     await redis(["EVAL",restoreScript,"1","norka:giveaways",giveawayId]);
+     return json(res,409,{ok:false,error:"В розыгрыше пока нет участников"});
+    }
+    const winnerId=String(entrants[randomInt(entrants.length)]),drawnAt=new Date().toISOString();
+    const finishScript=[
+     "local n=redis.call('LLEN',KEYS[1]);",
+     "for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[1],i); if raw then local item=cjson.decode(raw);",
+     "if tostring(item.id)==ARGV[1] then if item.status~='drawing' then return redis.error_reply('DRAW_ALREADY') end;",
      "item.status='completed'; item.winnerId=ARGV[2]; item.drawnAt=ARGV[3]; redis.call('LSET',KEYS[1],i,cjson.encode(item)); return 1 end end end;",
      "return redis.error_reply('NOT_FOUND')"
     ].join(" ");
-    await redis(["EVAL",script,"1","norka:giveaways",giveawayId,winnerId,drawnAt]);
-    return json(res,200,{ok:true,winnerId,title:item.title,prize:item.prize,entries:entrants.length});
+    await redis(["EVAL",finishScript,"1","norka:giveaways",giveawayId,winnerId,drawnAt]);
+    const item=(await giveaways()).find(x=>x.id===giveawayId);
+    return json(res,200,{ok:true,winnerId,title:item?.title||"",prize:item?.prize||"",entries:entrants.length});
    }
    if(action==="admin_create_giveaway"){const item={id:"g"+Date.now(),title:clean(body.title,100),description:clean(body.description,500),prize:clean(body.prize,120),cost:Math.max(1,Math.min(100000,Number(body.cost)||1)),endsAt:clean(body.endsAt,40),status:"active",createdAt:new Date().toISOString(),entries:0};if(!item.title||!item.prize)return json(res,400,{ok:false,error:"Заполните название и приз"});await redis(["LPUSH","norka:giveaways",JSON.stringify(item)]);return json(res,200,{ok:true,item});}
    if(action==="admin_save_tasks"){if(!Array.isArray(body.tasks))return json(res,400,{ok:false,error:"Некорректные задания"});const safe=body.tasks.slice(0,30).map(t=>({id:clean(t.id,40),title:clean(t.title,100),description:clean(t.description,250),reward:Math.max(0,Math.min(10000,Number(t.reward)||0)),type:["daily","subscription","activity"].includes(t.type)?t.type:"activity",url:clean(t.url,500),active:Boolean(t.active)}));await set("norka:tasks",safe);return json(res,200,{ok:true,tasks:safe});}
@@ -181,23 +193,29 @@ module.exports=async function handler(req,res){
   if(action==="enter_giveaway"){
    const giveawayId=clean(body.giveawayId,60),gs=await giveaways(),g=gs.find(x=>x.id===giveawayId&&x.status==="active");
    if(!g)return json(res,404,{ok:false,error:"Розыгрыш не найден"});
-   if(g.endsAt&&(!Number.isFinite(new Date(g.endsAt).getTime())||Date.now()>new Date(g.endsAt).getTime()))return json(res,409,{ok:false,error:"Срок участия завершён"});
+   const endMs=g.endsAt?new Date(g.endsAt).getTime():0;
+   if(g.endsAt&&(!Number.isFinite(endMs)||Date.now()>endMs))return json(res,409,{ok:false,error:"Срок участия завершён"});
    const cost=Math.floor(Number(g.cost)||0);
    if(cost<1)return json(res,409,{ok:false,error:"Некорректная стоимость участия"});
    const now=new Date().toISOString(),ledgerItem=JSON.stringify({type:"giveaway_entry",title:"Участие: "+g.title,coins:-cost,at:now});
    const script=[
+    "local n=redis.call('LLEN',KEYS[5]); local found=false;",
+    "for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[5],i); if raw then local item=cjson.decode(raw);",
+    "if tostring(item.id)==ARGV[3] then found=true; if item.status~='active' then return redis.error_reply('CLOSED') end;",
+    "local endMs=tonumber(ARGV[4]) or 0; if endMs>0 and tonumber(ARGV[5])>endMs then return redis.error_reply('CLOSED') end; break end end end;",
+    "if not found then return redis.error_reply('NOT_FOUND') end;",
     "if redis.call('SISMEMBER',KEYS[1],ARGV[1])==1 then return redis.error_reply('ALREADY') end;",
     "local c=tonumber(redis.call('HGET',KEYS[2],'coins') or '0'); local cost=tonumber(ARGV[2]);",
     "if c<cost then return redis.error_reply('INSUFFICIENT') end;",
     "redis.call('HSET',KEYS[2],'coins',c-cost); redis.call('SADD',KEYS[1],ARGV[1]);",
     "redis.call('HINCRBY',KEYS[3],ARGV[3],1);",
-    "redis.call('LPUSH',KEYS[4],ARGV[4]); redis.call('LTRIM',KEYS[4],'0','99');",
+    "redis.call('LPUSH',KEYS[4],ARGV[6]); redis.call('LTRIM',KEYS[4],'0','99');",
     "return {c-cost}"
    ].join(" ");
-   await redis(["EVAL",script,"4","norka:entries:"+giveawayId,"norka:wallet:"+id,"norka:giveaway-counts","norka:ledger:"+id,id,String(cost),giveawayId,ledgerItem]);
+   await redis(["EVAL",script,"5","norka:entries:"+giveawayId,"norka:wallet:"+id,"norka:giveaway-counts","norka:ledger:"+id,"norka:giveaways",id,String(cost),giveawayId,String(endMs),String(Date.now()),ledgerItem]);
    const w=await readWallet(id);
    return json(res,200,{ok:true,wallet:w});
   }
   return json(res,400,{ok:false,error:"Неизвестное действие"});
- }catch(e){const msg=String(e&&e.message||"Ошибка сервера");if(msg.includes("INSUFFICIENT"))return json(res,409,{ok:false,error:"Недостаточно средств на балансе"});if(msg.includes("DAILY_ALREADY"))return json(res,409,{ok:false,error:"Ежедневная награда уже получена"});if(msg.includes("SUBSCRIPTION_ALREADY"))return json(res,409,{ok:false,error:"Награда за подписку уже получена"});if(msg.includes("TASK_ALREADY"))return json(res,409,{ok:false,error:"Заявка уже отправлена или задание подтверждено"});if(msg.includes("ALREADY"))return json(res,409,{ok:false,error:"Ты уже участвуешь в этом розыгрыше"});console.error("NORKA API:",msg);return json(res,500,{ok:false,error:"Внутренняя ошибка. Проверьте настройки Redis в Vercel."});}
+ }catch(e){const msg=String(e&&e.message||"Ошибка сервера");if(msg.includes("INSUFFICIENT"))return json(res,409,{ok:false,error:"Недостаточно средств на балансе"});if(msg.includes("DAILY_ALREADY"))return json(res,409,{ok:false,error:"Ежедневная награда уже получена"});if(msg.includes("SUBSCRIPTION_ALREADY"))return json(res,409,{ok:false,error:"Награда за подписку уже получена"});if(msg.includes("TASK_ALREADY"))return json(res,409,{ok:false,error:"Заявка уже отправлена или задание подтверждено"});if(msg.includes("DRAW_ALREADY"))return json(res,409,{ok:false,error:"Победитель уже определяется или розыгрыш завершён"});if(msg.includes("CLOSED"))return json(res,409,{ok:false,error:"Розыгрыш уже завершён"});if(msg.includes("ALREADY"))return json(res,409,{ok:false,error:"Ты уже участвуешь в этом розыгрыше"});console.error("NORKA API:",msg);return json(res,500,{ok:false,error:"Внутренняя ошибка. Проверьте настройки Redis в Vercel."});}
 };
