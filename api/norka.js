@@ -56,13 +56,14 @@ async function progressConfig(){
   achievementRewards:{...(saved.achievementRewards||{})}
  };
 }
+async function notifyUser(id,eventId,message){try{const key="norka:notify:sent:"+id+":"+eventId;if(await redis(["GET",key]))return;const token=process.env.MAX_BOT_TOKEN;if(!token)return;const sent=await requestMax({token,method:"POST",apiPath:"/messages?user_id="+encodeURIComponent(String(id)),body:{text:message}});if(sent.ok)await redis(["SET",key,"1","EX","2592000"]);else console.error("NORKA notification rejected:",sent.status);}catch(error){console.error("NORKA notification failed:",error&&error.message||"unknown");}}
 async function grantProgress(id,eventId,kind,day){
  const config=await progressConfig(),xp=Math.max(0,Math.floor(Number(config.xp[kind])||0));
  const thresholds=config.thresholds.map(x=>Math.max(0,Math.floor(Number(x)||0)));
  if(thresholds[0]!==0||thresholds.some((x,i)=>i>0&&x<=thresholds[i-1]))throw new Error("Invalid progress thresholds");
  const script=[
   "local raw=redis.call('GET',KEYS[1]); local p=raw and cjson.decode(raw) or {xp=0,level=1,streak=0,bestStreak=0,lastVisit='',lastVisitAt=''};",
-  "if redis.call('SISMEMBER',KEYS[4],ARGV[1])==1 then return {0,p.xp or 0,p.level or 1,p.streak or 0,0,0} end;",
+  "if redis.call('SISMEMBER',KEYS[4],ARGV[1])==1 then return {0,p.xp or 0,p.level or 1,p.streak or 0,0,0,p.level or 1} end;",
   "local today=ARGV[2]; local kind=ARGV[3]; local oldLevel=tonumber(p.level) or 1;",
   "if kind=='visit' then if p.lastVisit~=today then local y=ARGV[9]; if p.lastVisit==y then p.streak=(tonumber(p.streak) or 0)+1 else p.streak=1 end; p.lastVisit=today; p.lastVisitAt=ARGV[8]; if p.streak>(tonumber(p.bestStreak) or 0) then p.bestStreak=p.streak end end end;",
   "p.xp=(tonumber(p.xp) or 0)+tonumber(ARGV[4]);",
@@ -74,10 +75,10 @@ async function grantProgress(id,eventId,kind,day){
   "if kind=='visit' then local milestones={3,7,14,30}; for _,m in ipairs(milestones) do if tonumber(p.streak)==m and redis.call('SADD',KEYS[6],tostring(m))==1 then local reward=tonumber(streakRewards[tostring(m)]) or 0; if reward>0 then berries=berries+reward; table.insert(ledger,cjson.encode({type='streak_reward',title='Награда за серию '..m..' дней',berries=reward,at=ARGV[8]})) end; achievement('streak_'..m) end end end;",
   "local levelRewards=cjson.decode(ARGV[7]); for l=oldLevel+1,level do local reward=tonumber(levelRewards[tostring(l)]) or 0; if reward>0 and redis.call('SADD',KEYS[7],tostring(l))==1 then berries=berries+reward; table.insert(ledger,cjson.encode({type='level_reward',title='Награда за уровень '..l,berries=reward,at=ARGV[8]})) end; if l==5 or l==10 then achievement('level_'..l) end end;",
   "if berries>0 then redis.call('HINCRBY',KEYS[2],'berries',berries); for _,item in ipairs(ledger) do redis.call('LPUSH',KEYS[3],item) end; redis.call('LTRIM',KEYS[3],'0','99') end;",
-  "redis.call('SET',KEYS[1],cjson.encode(p)); return {1,p.xp,p.level,p.streak,berries,#unlocked}"
+  "redis.call('SET',KEYS[1],cjson.encode(p)); return {1,p.xp,p.level,p.streak,berries,#unlocked,oldLevel}"
  ].join(" ");
  const result=await redis(["EVAL",script,"7","norka:progress:"+id,"norka:wallet:"+id,"norka:ledger:"+id,"norka:progress:events:"+id,"norka:achievements:"+id,"norka:streak:rewards:"+id,"norka:level:rewards:"+id,eventId,day,kind,String(xp),JSON.stringify(thresholds),JSON.stringify(config.streakRewards),JSON.stringify(config.levelRewards),new Date().toISOString(),new Date(Date.parse(day+"T00:00:00Z")-86400000).toISOString().slice(0,10)]);
- return {applied:Number(result[0])===1,xp:Number(result[1])||0,level:Number(result[2])||1,streak:Number(result[3])||0,berries:Number(result[4])||0};
+ const progress={applied:Number(result[0])===1,xp:Number(result[1])||0,level:Number(result[2])||1,streak:Number(result[3])||0,berries:Number(result[4])||0};if(progress.applied&&(progress.berries>0||Number(result[5])>0||progress.level>Number(result[6])))await notifyUser(id,"progress:"+eventId,"🌿 Отличная работа в Норке!\nУровень: "+progress.level+" · Опыт: "+progress.xp+" XP\nСерия: "+progress.streak+" дней\n"+(progress.berries>0?"🍓 Начислено ягод: "+progress.berries:"Новое достижение открыто!"));return progress;
 }
 async function readProgress(id){
  const p=await get("norka:progress:"+id)||{xp:0,level:1,streak:0,bestStreak:0,lastVisit:""};
