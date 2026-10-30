@@ -38,5 +38,5 @@ module.exports=async function handler(req,res){
    return json(res,200,{ok:true});
   }
   return json(res,200,{ok:true,ignored:type||"unknown update type"});
- }catch(e){console.error("NORKA webhook:",e&&e.message||"unknown error");return json(res,200,{ok:true,processing_error:true});}
+ }catch(e){if(dedupeKey){try{await redis(["DEL",dedupeKey]);}catch{}}console.error("NORKA webhook:",e&&e.message||"unknown error");return json(res,200,{ok:true,processing_error:true});}
 };
