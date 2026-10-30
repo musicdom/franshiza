@@ -67,6 +67,13 @@ module.exports = async function handler(req, res) {
       return json(res, 400, { ok: false, error: "INVALID_PAYMENT" });
     }
 
+    const orderRaw = await redis(["GET", "norka:payment:order:" + orderId]);
+    if (!orderRaw) return json(res, 404, { ok: false, error: "ORDER_NOT_FOUND" });
+    let orderSnapshot;
+    try { orderSnapshot = JSON.parse(orderRaw); } catch { return json(res, 500, { ok: false, error: "ORDER_INVALID" }); }
+    const userId = String(orderSnapshot.userId || "");
+    if (!userId) return json(res, 400, { ok: false, error: "ORDER_INVALID" });
+
     const now = new Date().toISOString();
     const script = [
       "local raw=redis.call('GET',KEYS[1]);",
@@ -91,9 +98,9 @@ module.exports = async function handler(req, res) {
     const result = await redis([
       "EVAL", script, "4",
       "norka:payment:order:" + orderId,
-      "norka:wallet:" + String(fields.label && (await redis(["GET", "norka:payment:order:" + orderId])) ? JSON.parse(await redis(["GET", "norka:payment:order:" + orderId])).userId : ""),
+      "norka:wallet:" + userId,
       "norka:payment:operation:" + operationId,
-      "norka:ledger:" + String((await redis(["GET", "norka:payment:order:" + orderId])) ? JSON.parse(await redis(["GET", "norka:payment:order:" + orderId])).userId : ""),
+      "norka:ledger:" + userId,
       String(withdrawAmount), operationId, String(amount), now
     ]);
 
