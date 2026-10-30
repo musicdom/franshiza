@@ -37,6 +37,55 @@ async function list(key){const ids=await redis(["LRANGE",key,"0","99"]);return A
 async function admin(req){const expected=process.env.NORKA_ADMIN_PASSWORD;if(!expected)return false;const supplied=clean(req.headers["x-norka-admin"]||req.body?.adminPassword,300);return supplied===expected;}
 const DEFAULT_TASKS=[{id:"daily",title:"Ежедневный визит",description:"Заглядывай в Норку каждый день",reward:10,type:"daily",active:true},{id:"channel",title:"Подписка на канал",description:"Подпишись на канал Норки и отправь заявку на проверку",reward:30,type:"subscription",url:process.env.NORKA_CHANNEL_URL||"https://max.ru/join/L_PrwMy9zacHRuwZDM8NF49IhSs_p_XpLuXUfzjXEpk",active:true}];
 async function tasks(){const saved=await get("norka:tasks");if(!Array.isArray(saved))return DEFAULT_TASKS;const out=saved.slice();const base=DEFAULT_TASKS.find(t=>t.id==="channel");const index=out.findIndex(t=>t.id==="channel");if(index<0)out.push(base);else if(!out[index].url)out[index]={...out[index],url:base.url};return out;}
+
+const DEFAULT_PROGRESS_CONFIG={
+ xp:{visit:2,daily:5,task:20,exchange:3,giveaway:5},
+ thresholds:[0,100,250,450,700,1000,1400,1900,2500,3200,4000],
+ streakRewards:{"3":10,"7":30,"14":70,"30":200},
+ levelRewards:{"5":25,"10":75},
+ achievementRewards:{}
+};
+async function progressConfig(){
+ const saved=await get("norka:progress:config");
+ if(!saved||typeof saved!=="object")return DEFAULT_PROGRESS_CONFIG;
+ return {
+  xp:{...DEFAULT_PROGRESS_CONFIG.xp,...(saved.xp||{})},
+  thresholds:Array.isArray(saved.thresholds)&&saved.thresholds.length>=2?saved.thresholds:DEFAULT_PROGRESS_CONFIG.thresholds,
+  streakRewards:{...DEFAULT_PROGRESS_CONFIG.streakRewards,...(saved.streakRewards||{})},
+  levelRewards:{...DEFAULT_PROGRESS_CONFIG.levelRewards,...(saved.levelRewards||{})},
+  achievementRewards:{...(saved.achievementRewards||{})}
+ };
+}
+async function grantProgress(id,eventId,kind,day){
+ const config=await progressConfig(),xp=Math.max(0,Math.floor(Number(config.xp[kind])||0));
+ const thresholds=config.thresholds.map(x=>Math.max(0,Math.floor(Number(x)||0)));
+ if(thresholds[0]!==0||thresholds.some((x,i)=>i>0&&x<=thresholds[i-1]))throw new Error("Invalid progress thresholds");
+ const script=[
+  "local raw=redis.call('GET',KEYS[1]); local p=raw and cjson.decode(raw) or {xp=0,level=1,streak=0,bestStreak=0,lastVisit='',lastVisitAt=''};",
+  "if redis.call('SISMEMBER',KEYS[4],ARGV[1])==1 then return {0,p.xp or 0,p.level or 1,p.streak or 0,0,0} end;",
+  "local today=ARGV[2]; local kind=ARGV[3]; local oldLevel=tonumber(p.level) or 1;",
+  "if kind=='visit' then if p.lastVisit~=today then local y=os.date('!%Y-%m-%d',os.time({year=tonumber(string.sub(today,1,4)),month=tonumber(string.sub(today,6,7)),day=tonumber(string.sub(today,9,10))})-86400); if p.lastVisit==y then p.streak=(tonumber(p.streak) or 0)+1 else p.streak=1 end; p.lastVisit=today; p.lastVisitAt=ARGV[8]; if p.streak>(tonumber(p.bestStreak) or 0) then p.bestStreak=p.streak end end end;",
+  "p.xp=(tonumber(p.xp) or 0)+tonumber(ARGV[4]);",
+  "local thresholds=cjson.decode(ARGV[5]); local level=1; for i=1,#thresholds do if p.xp>=tonumber(thresholds[i]) then level=i end end; p.level=level;",
+  "redis.call('SADD',KEYS[4],ARGV[1]);",
+  "local unlocked={}; local function achievement(a) if redis.call('SADD',KEYS[5],a)==1 then table.insert(unlocked,a) end end;",
+  "if kind=='visit' then achievement('first_visit') end; if kind=='daily' then achievement('first_daily') end; if kind=='task' then achievement('first_task') end; if kind=='exchange' then achievement('first_exchange') end; if kind=='giveaway' then achievement('first_giveaway') end;",
+  "local berries=0; local ledger={}; local streakRewards=cjson.decode(ARGV[6]);",
+  "if kind=='visit' then local milestones={3,7,14,30}; for _,m in ipairs(milestones) do if tonumber(p.streak)==m and redis.call('SADD',KEYS[6],tostring(m))==1 then local reward=tonumber(streakRewards[tostring(m)]) or 0; if reward>0 then berries=berries+reward; table.insert(ledger,cjson.encode({type='streak_reward',title='Награда за серию '..m..' дней',berries=reward,at=ARGV[8]})) end; achievement('streak_'..m) end end end;",
+  "local levelRewards=cjson.decode(ARGV[7]); for l=oldLevel+1,level do local reward=tonumber(levelRewards[tostring(l)]) or 0; if reward>0 and redis.call('SADD',KEYS[7],tostring(l))==1 then berries=berries+reward; table.insert(ledger,cjson.encode({type='level_reward',title='Награда за уровень '..l,berries=reward,at=ARGV[8]})) end; if l==5 or l==10 then achievement('level_'..l) end end;",
+  "if berries>0 then redis.call('HINCRBY',KEYS[2],'berries',berries); for _,item in ipairs(ledger) do redis.call('LPUSH',KEYS[3],item) end; redis.call('LTRIM',KEYS[3],'0','99') end;",
+  "redis.call('SET',KEYS[1],cjson.encode(p)); return {1,p.xp,p.level,p.streak,berries,#unlocked}"
+ ].join(" ");
+ const result=await redis(["EVAL",script,"7","norka:progress:"+id,"norka:wallet:"+id,"norka:ledger:"+id,"norka:progress:events:"+id,"norka:achievements:"+id,"norka:streak:rewards:"+id,"norka:level:rewards:"+id,eventId,day,kind,String(xp),JSON.stringify(thresholds),JSON.stringify(config.streakRewards),JSON.stringify(config.levelRewards),new Date().toISOString()]);
+ return {applied:Number(result[0])===1,xp:Number(result[1])||0,level:Number(result[2])||1,streak:Number(result[3])||0,berries:Number(result[4])||0};
+}
+async function readProgress(id){
+ const p=await get("norka:progress:"+id)||{xp:0,level:1,streak:0,bestStreak:0,lastVisit:""};
+ const achievements=await redis(["SMEMBERS","norka:achievements:"+id]);
+ const config=await progressConfig(),thresholds=config.thresholds;
+ const level=Math.max(1,Number(p.level)||1),current=Number(thresholds[level-1])||0,next=Number(thresholds[level])||current;
+ return {...p,level,currentLevelXp:current,nextLevelXp:next,levelProgress:next>current?Math.max(0,Math.min(100,Math.round((Number(p.xp)-current)/(next-current)*100))):100,achievements:Array.isArray(achievements)?achievements:[],thresholds};
+}
 async function giveaways(){const items=await list("norka:giveaways");await Promise.all(items.map(async item=>{item.entries=Number(await redis(["HGET","norka:giveaway-counts",item.id]))||0;}));return items;}
 module.exports=async function handler(req,res){
  if(req.method==="OPTIONS"){res.setHeader("Access-Control-Allow-Origin","*");res.setHeader("Access-Control-Allow-Headers","Content-Type,X-Norka-InitData,X-Norka-Admin");res.setHeader("Access-Control-Allow-Methods","GET,POST,OPTIONS");return res.status(204).end();}
