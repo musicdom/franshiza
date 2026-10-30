@@ -104,7 +104,7 @@ module.exports = async function handler(req, res) {
       String(withdrawAmount), operationId, String(amount), now
     ]);
 
-    return json(res, 200, { ok: true, status: Array.isArray(result) && Number(result[0]) === 2 ? "paid" : "paid", coinsAdded: Array.isArray(result) ? Number(result[1]) || 0 : 0 });
+    return json(res, 200, { ok: true, status: "paid", coinsAdded: Array.isArray(result) ? Number(result[1]) || 0 : 0 });
   } catch (error) {
     const message = String(error && error.message || "PAYMENT_HANDLER_ERROR");
     if (message.includes("ORDER_NOT_FOUND")) return json(res, 404, { ok: false, error: "ORDER_NOT_FOUND" });
