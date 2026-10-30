@@ -56,7 +56,23 @@ module.exports=async function handler(req,res){
    }
    if(action==="admin_overview"){const ids=await redis(["KEYS","norka:user:*"]);const users=Array.isArray(ids)?ids.length:0;const pending=await list("norka:pending");const rate=Number(await redis(["GET","norka:exchange-rate"]))||100;return json(res,200,{ok:true,users,pending,giveaways:await giveaways(),tasks:await tasks(),rate});}
    if(action==="admin_set_rate"){const rate=Math.floor(Number(body.rate));if(!Number.isFinite(rate)||rate<1||rate>100000)return json(res,400,{ok:false,error:"Курс должен быть от 1 до 100000 ягод"});await redis(["SET","norka:exchange-rate",String(rate)]);return json(res,200,{ok:true,rate});}
-   if(action==="admin_draw_winner"){const giveawayId=clean(body.giveawayId,60);const items=await giveaways();const index=items.findIndex(x=>x.id===giveawayId);if(index<0)return json(res,404,{ok:false,error:"Розыгрыш не найден"});const item=items[index];if(item.status!=="active")return json(res,409,{ok:false,error:"Розыгрыш уже завершён"});const entrants=await redis(["SMEMBERS","norka:entries:"+giveawayId]);if(!Array.isArray(entrants)||!entrants.length)return json(res,409,{ok:false,error:"В розыгрыше пока нет участников"});const winnerId=entrants[randomInt(entrants.length)];item.status="completed";item.winnerId=String(winnerId);item.drawnAt=new Date().toISOString();await redis(["LSET","norka:giveaways",String(index),JSON.stringify(item)]);return json(res,200,{ok:true,winnerId:item.winnerId,title:item.title,prize:item.prize,entries:entrants.length});}
+   if(action==="admin_draw_winner"){
+    const giveawayId=clean(body.giveawayId,60),items=await giveaways(),item=items.find(x=>x.id===giveawayId);
+    if(!item)return json(res,404,{ok:false,error:"Розыгрыш не найден"});
+    if(item.status!=="active")return json(res,409,{ok:false,error:"Розыгрыш уже завершён"});
+    const entrants=await redis(["SMEMBERS","norka:entries:"+giveawayId]);
+    if(!Array.isArray(entrants)||!entrants.length)return json(res,409,{ok:false,error:"В розыгрыше пока нет участников"});
+    const winnerId=String(entrants[randomInt(entrants.length)]),drawnAt=new Date().toISOString();
+    const script=[
+     "local n=redis.call('LLEN',KEYS[1]);",
+     "for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[1],i); if raw then local item=cjson.decode(raw);",
+     "if tostring(item.id)==ARGV[1] then if item.status~='active' then return redis.error_reply('ALREADY') end;",
+     "item.status='completed'; item.winnerId=ARGV[2]; item.drawnAt=ARGV[3]; redis.call('LSET',KEYS[1],i,cjson.encode(item)); return 1 end end end;",
+     "return redis.error_reply('NOT_FOUND')"
+    ].join(" ");
+    await redis(["EVAL",script,"1","norka:giveaways",giveawayId,winnerId,drawnAt]);
+    return json(res,200,{ok:true,winnerId,title:item.title,prize:item.prize,entries:entrants.length});
+   }
    if(action==="admin_create_giveaway"){const item={id:"g"+Date.now(),title:clean(body.title,100),description:clean(body.description,500),prize:clean(body.prize,120),cost:Math.max(1,Math.min(100000,Number(body.cost)||1)),endsAt:clean(body.endsAt,40),status:"active",createdAt:new Date().toISOString(),entries:0};if(!item.title||!item.prize)return json(res,400,{ok:false,error:"Заполните название и приз"});await redis(["LPUSH","norka:giveaways",JSON.stringify(item)]);return json(res,200,{ok:true,item});}
    if(action==="admin_save_tasks"){if(!Array.isArray(body.tasks))return json(res,400,{ok:false,error:"Некорректные задания"});const safe=body.tasks.slice(0,30).map(t=>({id:clean(t.id,40),title:clean(t.title,100),description:clean(t.description,250),reward:Math.max(0,Math.min(10000,Number(t.reward)||0)),type:["daily","subscription","activity"].includes(t.type)?t.type:"activity",url:clean(t.url,500),active:Boolean(t.active)}));await set("norka:tasks",safe);return json(res,200,{ok:true,tasks:safe});}
    if(action==="admin_approve_task"){
