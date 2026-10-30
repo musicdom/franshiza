@@ -49,7 +49,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== "POST") return json(res, 405, { ok: false, error: "METHOD_NOT_ALLOWED" });
 
   try {
-    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const body = typeof req.body === "string" ? Object.fromEntries(new URLSearchParams(req.body)) : req.body && typeof req.body === "object" ? req.body : {};
     const fields = body.fields && typeof body.fields === "object" ? body.fields : body;
     if (!fields || !validSignature(fields)) return json(res, 401, { ok: false, error: "INVALID_NOTIFICATION_SIGNATURE" });
 
