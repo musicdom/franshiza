@@ -159,13 +159,13 @@ module.exports=async function handler(req,res){
     "return {current+tonumber(ARGV[1]),tonumber(redis.call('HGET',KEYS[2],'coins') or '0')}"
    ].join(" ");
    const result=await redis(["EVAL",script,"5","norka:taskapproved:"+id+":"+taskId,"norka:wallet:"+id,"norka:ledger:"+id,"norka:claims:"+id,"norka:pending",String(reward),taskId,ledgerItem,JSON.stringify(p)]);
-   return json(res,200,{ok:true,wallet:{berries:Number(result[0])||0,coins:Number(result[1])||0}});
+   await grantProgress(id,"task:"+taskId,"task",new Date().toISOString().slice(0,10));return json(res,200,{ok:true,wallet:await readWallet(id),progress:await readProgress(id)});
   }
    return json(res,400,{ok:false,error:"Неизвестное действие"});
   }
   const verified=verifyInitData(req);if(!verified)return json(res,401,{ok:false,error:"Не удалось проверить данные MAX. Перезапусти мини-приложение."});
   const id=verified.id;const profile=verified.profile;await ensureUser(id,profile);
-  if(action==="bootstrap"){const u=await get(userKey(id));const w=await readWallet(id);const history=await list("norka:ledger:"+id);const ts=(await tasks()).filter(t=>t.active);const gs=(await giveaways()).filter(g=>g.status==="active");await Promise.all(gs.map(async g=>{g.joined=Number(await redis(["SISMEMBER","norka:entries:"+g.id,id]))===1;}));const claims=await get("norka:claims:"+id)||{};const rate=Number(await redis(["GET","norka:exchange-rate"]))||100;return json(res,200,{ok:true,user:u,wallet:w,tasks:ts,giveaways:gs,history,claims,rate});}
+  if(action==="bootstrap"){const day=new Date().toISOString().slice(0,10);await grantProgress(id,"visit:"+day,"visit",day);const u=await get(userKey(id));const w=await readWallet(id);const history=await list("norka:ledger:"+id);const ts=(await tasks()).filter(t=>t.active);const gs=(await giveaways()).filter(g=>g.status==="active");await Promise.all(gs.map(async g=>{g.joined=Number(await redis(["SISMEMBER","norka:entries:"+g.id,id]))===1;}));const claims=await get("norka:claims:"+id)||{};const rate=Number(await redis(["GET","norka:exchange-rate"]))||100;const progress=await readProgress(id);return json(res,200,{ok:true,user:u,wallet:w,tasks:ts,giveaways:gs,history,claims,rate,progress});}
   if(action==="daily_claim"){
    const day=new Date().toISOString().slice(0,10),t=(await tasks()).find(x=>x.type==="daily"&&x.active);
    const reward=t?Math.max(0,Math.floor(Number(t.reward)||0)):10,now=new Date().toISOString();
@@ -182,7 +182,7 @@ module.exports=async function handler(req,res){
     "return {current+tonumber(ARGV[2]),tonumber(redis.call('HGET',KEYS[2],'coins') or '0')}"
    ].join(" ");
    const result=await redis(["EVAL",script,"4",userKey(id),"norka:wallet:"+id,"norka:ledger:"+id,"norka:daily:"+id+":"+day,day,String(reward),ledgerItem]);
-   return json(res,200,{ok:true,wallet:{berries:Number(result[0])||0,coins:Number(result[1])||0},reward});
+   await grantProgress(id,"daily:"+day,"daily",day);const wallet=await readWallet(id);return json(res,200,{ok:true,wallet,reward,progress:await readProgress(id)});
   }
   if(action==="check_subscription"){
    const t=(await tasks()).find(x=>x.id==="channel"&&x.active&&x.type==="subscription");
@@ -207,7 +207,7 @@ module.exports=async function handler(req,res){
     "return {current+tonumber(ARGV[2]),tonumber(redis.call('HGET',KEYS[2],'coins') or '0')}"
    ].join(" ");
    const result=await redis(["EVAL",script,"5","norka:taskclaim:"+id+":channel","norka:wallet:"+id,"norka:ledger:"+id,"norka:claims:"+id,"norka:taskapproved:"+id+":channel","channel",String(reward),ledgerItem]);
-   return json(res,200,{ok:true,wallet:{berries:Number(result[0])||0,coins:Number(result[1])||0},reward,claims:{channel:"done"}});
+   await grantProgress(id,"task:channel","task",new Date().toISOString().slice(0,10));return json(res,200,{ok:true,wallet:await readWallet(id),reward,claims:{channel:"done"},progress:await readProgress(id)});
   }
   if(action==="request_task"){
    const taskId=clean(body.taskId,50),ts=await tasks(),t=ts.find(x=>x.id===taskId&&x.id!=="channel"&&x.active&&x.type!=="daily");
@@ -242,7 +242,7 @@ module.exports=async function handler(req,res){
     "return {result.berries,result.coins,1}"
    ].join(" ");
    const result=await redis(["EVAL",script,"3","norka:wallet:"+id,"norka:ledger:"+id,"norka:exchange:request:"+id+":"+requestId,String(-spent),String(coins),ledgerItem]);
-   return json(res,200,{ok:true,wallet:{berries:Number(result[0])||0,coins:Number(result[1])||0},coins,duplicate:Number(result[2])===0});
+   if(Number(result[2])===1)await grantProgress(id,"exchange:"+requestId,"exchange",new Date().toISOString().slice(0,10));return json(res,200,{ok:true,wallet:{berries:Number(result[0])||0,coins:Number(result[1])||0},coins,duplicate:Number(result[2])===0,progress:await readProgress(id)});
   }
   if(action==="enter_giveaway"){
    const giveawayId=clean(body.giveawayId,60),gs=await giveaways(),g=gs.find(x=>x.id===giveawayId&&x.status==="active");
@@ -267,8 +267,8 @@ module.exports=async function handler(req,res){
     "return {c-cost}"
    ].join(" ");
    await redis(["EVAL",script,"5","norka:entries:"+giveawayId,"norka:wallet:"+id,"norka:giveaway-counts","norka:ledger:"+id,"norka:giveaways",id,String(cost),giveawayId,String(endMs),String(Date.now()),ledgerItem]);
-   const w=await readWallet(id);
-   return json(res,200,{ok:true,wallet:w});
+   await grantProgress(id,"giveaway:"+giveawayId,"giveaway",new Date().toISOString().slice(0,10));const w=await readWallet(id);
+   return json(res,200,{ok:true,wallet:w,progress:await readProgress(id)});
   }
   return json(res,400,{ok:false,error:"Неизвестное действие"});
  }catch(e){const msg=String(e&&e.message||"Ошибка сервера");if(msg.includes("INSUFFICIENT"))return json(res,409,{ok:false,error:"Недостаточно средств на балансе"});if(msg.includes("DAILY_ALREADY"))return json(res,409,{ok:false,error:"Ежедневная награда уже получена"});if(msg.includes("SUBSCRIPTION_ALREADY"))return json(res,409,{ok:false,error:"Награда за подписку уже получена"});if(msg.includes("TASK_ALREADY"))return json(res,409,{ok:false,error:"Заявка уже отправлена или задание подтверждено"});if(msg.includes("DRAW_ALREADY"))return json(res,409,{ok:false,error:"Победитель уже определяется или розыгрыш завершён"});if(msg.includes("CLOSED"))return json(res,409,{ok:false,error:"Розыгрыш уже завершён"});if(msg.includes("ALREADY"))return json(res,409,{ok:false,error:"Ты уже участвуешь в этом розыгрыше"});console.error("NORKA API:",msg);return json(res,500,{ok:false,error:"Внутренняя ошибка. Проверьте настройки Redis в Vercel."});}
