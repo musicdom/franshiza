@@ -81,7 +81,7 @@ button,input{font:inherit}button{cursor:pointer;touch-action:manipulation}button
 <nav class="tabs"><div class="tabrow"><button class="tab active" data-tab="home"><b>⌂</b>Главная</button><button class="tab" data-tab="giveaways"><b>🎁</b>Призы</button><button class="tab" data-tab="earn"><b>🍓</b>Ягоды</button><button class="tab" data-tab="profile"><b>☺</b>Профиль</button></div></nav><div class="notice" id="notice"></div>
 <script>
 const API="https://franshiza.vercel.app/api", $=id=>document.getElementById(id);
-let S={id:"",initData:"",profile:{},wallet:{berries:0,coins:0},tasks:[],giveaways:[],history:[],claims:{},admin:"",rate:100,user:{},channelOpened:false};
+let S={id:"",initData:"",profile:{},wallet:{berries:0,coins:0},tasks:[],giveaways:[],history:[],claims:{},progress:{xp:0,level:1,streak:0,bestStreak:0,achievements:[]},admin:"",rate:100,user:{},channelOpened:false};
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function fmt(n){return new Intl.NumberFormat("ru-RU").format(Number(n)||0);}
 function msg(s){$("notice").textContent=s;$("notice").classList.add("show");setTimeout(()=>$("notice").classList.remove("show"),3000);}
