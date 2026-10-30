@@ -22,6 +22,7 @@ jobs:
           node --check api/webhook.js
           node --check api/track-user.js
           node --check api/setup-webhook.js
+          node --check api/cron/norka.js
           node --check lib/max-api.js
       - name: Check browser script syntax
         run: node tests/check-app.js
