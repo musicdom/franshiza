@@ -8,8 +8,9 @@ module.exports=async function handler(req,res){
  if(req.method!=="POST"){res.setHeader("Allow","POST");return json(res,405,{ok:false,error:"Method not allowed"});}
  const secret=process.env.MAX_WEBHOOK_SECRET;if(!secret)return json(res,503,{ok:false,error:"Webhook secret is not configured"});
  if(req.headers["x-max-bot-api-secret"]!==secret)return json(res,401,{ok:false,error:"Unauthorized"});
- const u=req.body&&typeof req.body==="object"?req.body:{};const type=u.update_type;const chatId=u.chat_id||(u.message&&u.message.recipient&&u.message.recipient.chat_id)||(u.callback&&u.callback.message&&u.callback.message.recipient&&u.callback.message.recipient.chat_id);
+ const u=req.body&&typeof req.body==="object"?req.body:{};const type=u.update_type;const eventId=clean(String(u.update_id||u.updateId||u.event_id||(u.message&&u.message.body&&u.message.body.mid)||""),120);const dedupeKey=eventId?"norka:webhook:processed:"+eventId:"";const chatId=u.chat_id||(u.message&&u.message.recipient&&u.message.recipient.chat_id)||(u.callback&&u.callback.message&&u.callback.message.recipient&&u.callback.message.recipient.chat_id);
  try{
+  if(dedupeKey){const claimed=await redis(["SET",dedupeKey,"1","NX","EX","604800"]);if(!claimed)return json(res,200,{ok:true,duplicate:true});}
   if(type==="bot_added" && u.is_channel && chatId){
    await redis(["SET","norka:channel:chat_id",String(chatId)]);
    await redis(["SET","norka:channel:added_at",new Date().toISOString()]);
