@@ -142,7 +142,7 @@ module.exports=async function handler(req,res){
      "return redis.error_reply('NOT_FOUND')"
     ].join(" ");
     await redis(["EVAL",finishScript,"1","norka:giveaways",giveawayId,winnerId,drawnAt]);
-    const item=(await giveaways()).find(x=>x.id===giveawayId);
+    const item=(await giveaways()).find(x=>x.id===giveawayId);await notifyUser(winnerId,"giveaway-winner:"+giveawayId,"🏆 Поздравляем! Ты победил в розыгрыше «"+(item?.title||"Норка")+"»!\n🎁 Приз: "+(item?.prize||"уточни у организатора")); 
     return json(res,200,{ok:true,winnerId,title:item?.title||"",prize:item?.prize||"",entries:entrants.length});
    }
    if(action==="admin_create_giveaway"){const cost=Number(body.cost),endsAt=clean(body.endsAt,40);if(!clean(body.title,100)||!clean(body.prize,120))return json(res,400,{ok:false,error:"Заполните название и приз"});if(!Number.isInteger(cost)||cost<1||cost>100000)return json(res,400,{ok:false,error:"Стоимость участия должна быть от 1 до 100000 монет"});if(endsAt&&(!Number.isFinite(new Date(endsAt).getTime())||new Date(endsAt).getTime()<=Date.now()))return json(res,400,{ok:false,error:"Укажите корректный срок завершения в будущем"});const item={id:"g"+Date.now()+"_"+randomInt(100000,999999),title:clean(body.title,100),description:clean(body.description,500),prize:clean(body.prize,120),cost,endsAt,status:"active",createdAt:new Date().toISOString(),entries:0};await redis(["LPUSH","norka:giveaways",JSON.stringify(item)]);return json(res,200,{ok:true,item});}
@@ -170,7 +170,7 @@ module.exports=async function handler(req,res){
     "return {current+tonumber(ARGV[1]),tonumber(redis.call('HGET',KEYS[2],'coins') or '0')}"
    ].join(" ");
    const result=await redis(["EVAL",script,"5","norka:taskapproved:"+id+":"+taskId,"norka:wallet:"+id,"norka:ledger:"+id,"norka:claims:"+id,"norka:pending",String(reward),taskId,ledgerItem,JSON.stringify(p)]);
-   await grantProgress(id,"task:"+taskId,"task",new Date().toISOString().slice(0,10));return json(res,200,{ok:true,wallet:await readWallet(id),progress:await readProgress(id)});
+   await grantProgress(id,"task:"+taskId,"task",new Date().toISOString().slice(0,10));await notifyUser(id,"task-approved:"+taskId,"✅ Твоё задание «"+t.title+"» подтверждено!\n🍓 Начислено ягод: "+reward);return json(res,200,{ok:true,wallet:await readWallet(id),progress:await readProgress(id)});
   }
    return json(res,400,{ok:false,error:"Неизвестное действие"});
   }
