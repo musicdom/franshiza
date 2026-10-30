@@ -6,7 +6,7 @@ module.exports=async function(req,res){const secret=process.env.CRON_SECRET;if(!
   const rows=await redis(["LRANGE","norka:giveaways","0","99"]);
   for(const raw of Array.isArray(rows)?rows:[]){
    let item;try{item=JSON.parse(raw)}catch{continue;}
-   if(!item.endsAt||new Date(item.endsAt).getTime()>Date.now())continue;
+   const endTime=item.endsAt?new Date(item.endsAt).getTime():0;if(!item.endsAt||!Number.isFinite(endTime)||endTime>Date.now())continue;
    if(item.status==="active"){
     const script="local n=redis.call('LLEN',KEYS[1]); for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[1],i); if raw then local g=cjson.decode(raw); if tostring(g.id)==ARGV[1] and g.status=='active' then g.status='completed'; redis.call('LSET',KEYS[1],i,cjson.encode(g)); return 1 end end end; return 0";
     if(Number(await redis(["EVAL",script,"1","norka:giveaways",String(item.id)]))===1)closedGiveaways++;
