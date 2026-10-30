@@ -31,6 +31,7 @@
 - `KV_REST_API_URL` и `KV_REST_API_TOKEN` (или переменные Upstash)
 - `NORKA_ADMIN_PASSWORD`
 - `NORKA_CHANNEL_URL` (необязательно)
+- `CRON_SECRET` (для защищённого ежедневного задания Vercel Cron)
 
 После настройки переменных нужен новый deployment.
 
