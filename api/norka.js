@@ -111,7 +111,7 @@ module.exports=async function handler(req,res){
     const safeXp={};for(const key of ["visit","daily","task","exchange","giveaway"]){const n=Number(xp[key]);if(!Number.isInteger(n)||n<0||n>1000)return json(res,400,{ok:false,error:"XP для каждого действия должен быть от 0 до 1000"});safeXp[key]=n;}
     const thresholds=Array.isArray(input.thresholds)?input.thresholds.map(Number):[];
     if(thresholds.length<2||thresholds.length>50||thresholds[0]!==0||thresholds.some((n,i)=>!Number.isInteger(n)||n<0||n>100000000||(i>0&&n<=thresholds[i-1])))return json(res,400,{ok:false,error:"Пороги уровней должны возрастать, начинаться с нуля и содержать не более 50 значений"});
-    const cleanRewards=source=>{const out={};if(source&&typeof source==="object")for(const [key,value] of Object.entries(source)){const n=Number(value);if(/^\\d+$/.test(key)&&Number.isInteger(n)&&n>=0&&n<=100000)out[key]=n;}return out;};
+    const cleanRewards=source=>{const out={};if(source&&typeof source==="object")for(const [key,value] of Object.entries(source)){const n=Number(value);if(/^\d+$/.test(key)&&Number.isInteger(n)&&n>=0&&n<=100000)out[key]=n;}return out;};
     const config={xp:safeXp,thresholds,streakRewards:cleanRewards(input.streakRewards),levelRewards:cleanRewards(input.levelRewards),achievementRewards:{}};
     await set("norka:progress:config",config);return json(res,200,{ok:true,config});
    }
