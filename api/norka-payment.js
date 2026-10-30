@@ -31,7 +31,7 @@ function verify(req) {
     const hash = p.get("hash"), authDate = Number(p.get("auth_date"));
     if (!hash || !/^[a-f0-9]{64}$/i.test(hash) || !Number.isFinite(authDate)) return null;
     const age = Math.floor(Date.now() / 1000) - authDate;
-    if (age > 86400 || age < -60) return null;
+    if (age > 3600 || age < -60) return null;
     const check = entries.filter(([k]) => k !== "hash").sort((a,b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0).map(([k,v]) => k + "=" + v).join("\n");
     const secret = createHmac("sha256", "WebAppData").update(token).digest();
     const expected = createHmac("sha256", secret).update(check).digest();
