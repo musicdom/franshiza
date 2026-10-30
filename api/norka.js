@@ -34,7 +34,7 @@ async function updateBalances(id,berryDelta,coinDelta){const script="local b=ton
 async function readWallet(id){let w=await redis(["HGETALL","norka:wallet:"+id]);if(!Array.isArray(w)||!w.length)return {berries:0,coins:0};const o={};for(let i=0;i<w.length;i+=2)o[w[i]]=Number(w[i+1]);return {berries:o.berries||0,coins:o.coins||0};}
 async function list(key){const ids=await redis(["LRANGE",key,"0","99"]);return Array.isArray(ids)?ids.map(x=>{try{return JSON.parse(x)}catch{return null}}).filter(Boolean):[];}
 async function admin(req){const expected=process.env.NORKA_ADMIN_PASSWORD;if(!expected)return false;const supplied=clean(req.headers["x-norka-admin"]||req.body?.adminPassword,300);return supplied===expected;}
-const DEFAULT_TASKS=[{id:"daily",title:"Ежедневный визит",description:"Заглядывай в Норку каждый день",reward:10,type:"daily",active:true},{id:"channel",title:"Подписка на канал",description:"Подпишись на канал Норки и отправь заявку на проверку",reward:30,type:"subscription",url:process.env.NORKA_CHANNEL_URL||"",active:true}];
+const DEFAULT_TASKS=[{id:"daily",title:"Ежедневный визит",description:"Заглядывай в Норку каждый день",reward:10,type:"daily",active:true},{id:"channel",title:"Подписка на канал",description:"Подпишись на канал Норки и отправь заявку на проверку",reward:30,type:"subscription",url:process.env.NORKA_CHANNEL_URL||"",active:Boolean(process.env.NORKA_CHANNEL_URL)}];
 async function tasks(){return (await get("norka:tasks"))||DEFAULT_TASKS;}
 async function giveaways(){const items=await list("norka:giveaways");for(const item of items)item.entries=Number(await redis(["HGET","norka:giveaway-counts",item.id]))||0;return items;}
 module.exports=async function handler(req,res){
