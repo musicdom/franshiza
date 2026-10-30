@@ -35,7 +35,7 @@ async function readWallet(id){let w=await redis(["HGETALL","norka:wallet:"+id]);
 async function list(key){const ids=await redis(["LRANGE",key,"0","99"]);return Array.isArray(ids)?ids.map(x=>{try{return JSON.parse(x)}catch{return null}}).filter(Boolean):[];}
 async function admin(req){const expected=process.env.NORKA_ADMIN_PASSWORD;if(!expected)return false;const supplied=clean(req.headers["x-norka-admin"]||req.body?.adminPassword,300);return supplied===expected;}
 const DEFAULT_TASKS=[{id:"daily",title:"Ежедневный визит",description:"Заглядывай в Норку каждый день",reward:10,type:"daily",active:true},{id:"channel",title:"Подписка на канал",description:"Подпишись на канал Норки и отправь заявку на проверку",reward:30,type:"subscription",url:process.env.NORKA_CHANNEL_URL||"https://max.ru/join/L_PrwMy9zacHRuwZDM8NF49IhSs_p_XpLuXUfzjXEpk",active:true}];
-async function tasks(){return (await get("norka:tasks"))||DEFAULT_TASKS;}
+async function tasks(){const saved=await get("norka:tasks");if(!Array.isArray(saved))return DEFAULT_TASKS;const out=saved.slice();const base=DEFAULT_TASKS.find(t=>t.id==="channel");const index=out.findIndex(t=>t.id==="channel");if(index<0)out.push(base);else if(!out[index].url)out[index]={...out[index],url:base.url};return out;}
 async function giveaways(){const items=await list("norka:giveaways");for(const item of items)item.entries=Number(await redis(["HGET","norka:giveaway-counts",item.id]))||0;return items;}
 module.exports=async function handler(req,res){
  if(req.method==="OPTIONS"){res.setHeader("Access-Control-Allow-Origin","*");res.setHeader("Access-Control-Allow-Headers","Content-Type,X-Norka-InitData,X-Norka-Admin");res.setHeader("Access-Control-Allow-Methods","GET,POST,OPTIONS");return res.status(204).end();}
