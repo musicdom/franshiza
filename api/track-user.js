@@ -11,7 +11,7 @@ function verifyInitData(raw,token){
   if(entries.some(([key])=>params.getAll(key).length!==1))return null;
   const hash=params.get("hash"),authDate=Number(params.get("auth_date"));
   if(!hash||!/^[a-f0-9]{64}$/i.test(hash)||!Number.isFinite(authDate))return null;
-  const age=Math.floor(Date.now()/1000)-authDate;if(age>86400||age< -60)return null;
+  const age=Math.floor(Date.now()/1000)-authDate;if(age>3600||age< -60)return null;
   const check=entries.filter(([key])=>key!=="hash").sort((a,b)=>a[0]<b[0]?-1:a[0]>b[0]?1:0).map(([key,value])=>key+"="+value).join("\n");
   const secret=createHmac("sha256","WebAppData").update(token).digest();
   const expected=createHmac("sha256",secret).update(check).digest();
