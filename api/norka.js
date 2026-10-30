@@ -39,7 +39,7 @@ async function tasks(){return (await get("norka:tasks"))||DEFAULT_TASKS;}
 async function giveaways(){const items=await list("norka:giveaways");for(const item of items)item.entries=Number(await redis(["HGET","norka:giveaway-counts",item.id]))||0;return items;}
 module.exports=async function handler(req,res){
  if(req.method==="OPTIONS"){res.setHeader("Access-Control-Allow-Origin","*");res.setHeader("Access-Control-Allow-Headers","Content-Type,X-Norka-InitData,X-Norka-Admin");res.setHeader("Access-Control-Allow-Methods","GET,POST,OPTIONS");return res.status(204).end();}
- res.setHeader("Access-Control-Allow-Origin","*");res.setHeader("Access-Control-Allow-Headers","Content-Type,X-Norka-User,X-Norka-Admin");res.setHeader("Access-Control-Allow-Methods","GET,POST,OPTIONS");
+ res.setHeader("Access-Control-Allow-Origin","*");res.setHeader("Access-Control-Allow-Headers","Content-Type,X-Norka-InitData,X-Norka-Admin");res.setHeader("Access-Control-Allow-Methods","GET,POST,OPTIONS");
  if(!["GET","POST"].includes(req.method))return json(res,405,{ok:false,error:"Method not allowed"});
  try{
   const body=req.body&&typeof req.body==="object"?req.body:{};const action=clean(req.method==="GET"?req.query?.action:body.action,60);
