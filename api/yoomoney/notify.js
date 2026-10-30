@@ -31,8 +31,8 @@ function validSignature(fields) {
   if (!secret || !/^[a-f0-9]{64}$/.test(received)) return false;
   const payload = Object.entries(fields)
     .filter(([key]) => key !== "sign")
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, value]) => encodeURIComponent(key) + "=" + encodeURIComponent(String(value)))
+    .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
+    .map(([key, value]) => key + "=" + encodeURIComponent(String(value)).replace(/[!'()*]/g, ch => "%" + ch.charCodeAt(0).toString(16).toUpperCase()))
     .join("&");
   const calculated = crypto.createHmac("sha256", secret).update(payload).digest();
   const supplied = Buffer.from(received, "hex");
@@ -49,7 +49,8 @@ module.exports = async function handler(req, res) {
   if (req.method !== "POST") return json(res, 405, { ok: false, error: "METHOD_NOT_ALLOWED" });
 
   try {
-    const fields = req.body && typeof req.body.fields === "object" && req.body.fields ? req.body.fields : null;
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const fields = body.fields && typeof body.fields === "object" ? body.fields : body;
     if (!fields || !validSignature(fields)) return json(res, 401, { ok: false, error: "INVALID_NOTIFICATION_SIGNATURE" });
 
     const orderId = String(fields.label || "");
