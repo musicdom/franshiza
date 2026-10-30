@@ -123,14 +123,16 @@ module.exports=async function handler(req,res){
    const ledgerItem=JSON.stringify({type:"daily",title:"Ежедневная награда",berries:reward,at:now});
    const script=[
     "local raw=redis.call('GET',KEYS[1]); if not raw then return redis.error_reply('USER_NOT_FOUND') end;",
+    "if redis.call('GET',KEYS[4]) then return redis.error_reply('DAILY_ALREADY') end;",
     "local user=cjson.decode(raw); if user.lastDaily==ARGV[1] then return redis.error_reply('DAILY_ALREADY') end;",
     "local current=tonumber(redis.call('HGET',KEYS[2],'berries') or '0');",
     "redis.call('HINCRBY',KEYS[2],'berries',tonumber(ARGV[2]));",
     "user.lastDaily=ARGV[1]; redis.call('SET',KEYS[1],cjson.encode(user));",
+    "redis.call('SET',KEYS[4],'1','EX','172800');",
     "redis.call('LPUSH',KEYS[3],ARGV[3]); redis.call('LTRIM',KEYS[3],'0','99');",
     "return {current+tonumber(ARGV[2]),tonumber(redis.call('HGET',KEYS[2],'coins') or '0')}"
    ].join(" ");
-   const result=await redis(["EVAL",script,"3",userKey(id),"norka:wallet:"+id,"norka:ledger:"+id,day,String(reward),ledgerItem]);
+   const result=await redis(["EVAL",script,"4",userKey(id),"norka:wallet:"+id,"norka:ledger:"+id,"norka:daily:"+id+":"+day,day,String(reward),ledgerItem]);
    return json(res,200,{ok:true,wallet:{berries:Number(result[0])||0,coins:Number(result[1])||0},reward});
   }
   if(action==="check_subscription"){
@@ -176,19 +178,22 @@ module.exports=async function handler(req,res){
    return json(res,200,{ok:true,message:"Заявка отправлена на проверку"});
   }
   if(action==="exchange"){
-   const rate=Number(await redis(["GET","norka:exchange-rate"]))||100,amount=Math.floor(Number(body.berries)||0);
+   const rate=Number(await redis(["GET","norka:exchange-rate"]))||100,amount=Math.floor(Number(body.berries)||0),requestId=clean(body.requestId,80);
+   if(!requestId||!/^[a-zA-Z0-9_-]{8,80}$/.test(requestId))return json(res,400,{ok:false,error:"Не удалось идентифицировать операцию обмена. Повтори попытку."});
    if(!Number.isFinite(amount)||amount<rate||amount>100000)return json(res,400,{ok:false,error:"Укажи количество ягод от "+rate+" до 100000"});
    const coins=Math.floor(amount/rate),spent=coins*rate,now=new Date().toISOString();
    const ledgerItem=JSON.stringify({type:"exchange",title:"Обмен ягод на монеты",berries:-spent,coins,at:now});
    const script=[
+    "local previous=redis.call('GET',KEYS[3]); if previous then local result=cjson.decode(previous); return {tonumber(result.berries),tonumber(result.coins),0} end;",
     "local b=tonumber(redis.call('HGET',KEYS[1],'berries') or '0'); local c=tonumber(redis.call('HGET',KEYS[1],'coins') or '0');",
     "local db=tonumber(ARGV[1]); local dc=tonumber(ARGV[2]); if b+db<0 then return redis.error_reply('INSUFFICIENT') end;",
     "redis.call('HSET',KEYS[1],'berries',b+db,'coins',c+dc);",
     "redis.call('LPUSH',KEYS[2],ARGV[3]); redis.call('LTRIM',KEYS[2],'0','99');",
-    "return {b+db,c+dc}"
+    "local result={berries=b+db,coins=c+dc}; redis.call('SET',KEYS[3],cjson.encode(result),'EX','86400');",
+    "return {result.berries,result.coins,1}"
    ].join(" ");
-   const result=await redis(["EVAL",script,"2","norka:wallet:"+id,"norka:ledger:"+id,String(-spent),String(coins),ledgerItem]);
-   return json(res,200,{ok:true,wallet:{berries:Number(result[0])||0,coins:Number(result[1])||0},coins});
+   const result=await redis(["EVAL",script,"3","norka:wallet:"+id,"norka:ledger:"+id,"norka:exchange:request:"+id+":"+requestId,String(-spent),String(coins),ledgerItem]);
+   return json(res,200,{ok:true,wallet:{berries:Number(result[0])||0,coins:Number(result[1])||0},coins,duplicate:Number(result[2])===0});
   }
   if(action==="enter_giveaway"){
    const giveawayId=clean(body.giveawayId,60),gs=await giveaways(),g=gs.find(x=>x.id===giveawayId&&x.status==="active");
