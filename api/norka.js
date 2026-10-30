@@ -1,4 +1,5 @@
-const { createHmac, timingSafeEqual, randomInt } = require("crypto");\nconst { requestMax } = require("../lib/max-api");
+const { createHmac, timingSafeEqual, randomInt } = require("crypto");
+const { requestMax } = require("../lib/max-api");
 
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function cfg(){const url=process.env.KV_REST_API_URL||process.env.UPSTASH_REDIS_REST_URL;const token=process.env.KV_REST_API_TOKEN||process.env.UPSTASH_REDIS_REST_TOKEN;return url&&token?{url:url.replace(/\/$/,""),token}:null;}
