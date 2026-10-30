@@ -103,7 +103,17 @@ module.exports=async function handler(req,res){
     if(!r.ok)return json(res,502,{ok:false,error:"MAX не принял подписку на события",details:r.data||r.raw});
     return json(res,200,{ok:true,message:"Подписка на события MAX обновлена",webhookUrl});
    }
-   if(action==="admin_overview"){const ids=await redis(["KEYS","norka:user:*"]);const users=Array.isArray(ids)?ids.length:0;const pending=await list("norka:pending");const rate=Number(await redis(["GET","norka:exchange-rate"]))||100;return json(res,200,{ok:true,users,pending,giveaways:await giveaways(),tasks:await tasks(),rate});}
+   if(action==="admin_overview"){const ids=await redis(["KEYS","norka:user:*"]);const users=Array.isArray(ids)?ids.length:0;const pending=await list("norka:pending");const rate=Number(await redis(["GET","norka:exchange-rate"]))||100;return json(res,200,{ok:true,users,pending,giveaways:await giveaways(),tasks:await tasks(),rate,progressConfig:await progressConfig()});}
+   if(action==="admin_progress_config"){return json(res,200,{ok:true,config:await progressConfig()});}
+   if(action==="admin_save_progress_config"){
+    const input=body.config&&typeof body.config==="object"?body.config:{},xp=input.xp&&typeof input.xp==="object"?input.xp:{};
+    const safeXp={};for(const key of ["visit","daily","task","exchange","giveaway"]){const n=Number(xp[key]);if(!Number.isInteger(n)||n<0||n>1000)return json(res,400,{ok:false,error:"XP для каждого действия должен быть от 0 до 1000"});safeXp[key]=n;}
+    const thresholds=Array.isArray(input.thresholds)?input.thresholds.map(Number):[];
+    if(thresholds.length<2||thresholds.length>50||thresholds[0]!==0||thresholds.some((n,i)=>!Number.isInteger(n)||n<0||n>100000000||(i>0&&n<=thresholds[i-1])))return json(res,400,{ok:false,error:"Пороги уровней должны возрастать, начинаться с нуля и содержать не более 50 значений"});
+    const cleanRewards=source=>{const out={};if(source&&typeof source==="object")for(const [key,value] of Object.entries(source)){const n=Number(value);if(/^\\d+$/.test(key)&&Number.isInteger(n)&&n>=0&&n<=100000)out[key]=n;}return out;};
+    const config={xp:safeXp,thresholds,streakRewards:cleanRewards(input.streakRewards),levelRewards:cleanRewards(input.levelRewards),achievementRewards:{}};
+    await set("norka:progress:config",config);return json(res,200,{ok:true,config});
+   }
    if(action==="admin_set_rate"){const rate=Math.floor(Number(body.rate));if(!Number.isFinite(rate)||rate<1||rate>100000)return json(res,400,{ok:false,error:"Курс должен быть от 1 до 100000 ягод"});await redis(["SET","norka:exchange-rate",String(rate)]);return json(res,200,{ok:true,rate});}
    if(action==="admin_draw_winner"){
     const giveawayId=clean(body.giveawayId,60);
