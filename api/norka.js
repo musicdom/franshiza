@@ -302,11 +302,23 @@ module.exports=async function handler(req,res){
     "local c=tonumber(redis.call('HGET',KEYS[2],'coins') or '0'); local cost=tonumber(ARGV[2]);",
     "if c<cost then return redis.error_reply('INSUFFICIENT') end;",
     "redis.call('HSET',KEYS[2],'coins',c-cost); redis.call('SADD',KEYS[1],ARGV[1]);",
-    "redis.call('HINCRBY',KEYS[3],ARGV[3],1);",
+    "local soldNow=redis.call('HINCRBY',KEYS[3],ARGV[3],1);",
     "redis.call('LPUSH',KEYS[4],ARGV[6]); redis.call('LTRIM',KEYS[4],'0','99');",
-    "return {c-cost,tonumber(redis.call('HGET',KEYS[2],'berries') or '0')}"
+    "if cap>0 and soldNow>=cap then for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[5],i); if raw then local item=cjson.decode(raw); if tostring(item.id)==ARGV[3] and item.status=='active' then item.status='drawing'; redis.call('LSET',KEYS[5],i,cjson.encode(item)); break end end end end;",
+    "return {c-cost,tonumber(redis.call('HGET',KEYS[2],'berries') or '0'),(cap>0 and soldNow>=cap) and 1 or 0}"
    ].join(" ");
    const result=await redis(["EVAL",script,"5","norka:entries:"+giveawayId,"norka:wallet:"+id,"norka:giveaway-counts","norka:ledger:"+id,"norka:giveaways",id,String(cost),giveawayId,String(endMs),String(Date.now()),ledgerItem]);
+   let winnerId=null;
+   if(Number(result[2])===1){
+    const entrants=await redis(["SMEMBERS","norka:entries:"+giveawayId]);
+    if(Array.isArray(entrants)&&entrants.length){
+     const selected=String(entrants[randomInt(entrants.length)]),drawnAt=new Date().toISOString();
+     const finishScript="local n=redis.call('LLEN',KEYS[1]); for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[1],i); if raw then local item=cjson.decode(raw); if tostring(item.id)==ARGV[1] then if item.status~='drawing' then return 0 end; item.status='completed'; item.winnerId=ARGV[2]; item.drawnAt=ARGV[3]; redis.call('LSET',KEYS[1],i,cjson.encode(item)); return 1 end end end; return 0";
+     await redis(["EVAL",finishScript,"1","norka:giveaways",giveawayId,selected,drawnAt]);
+     const current=(await giveaways()).find(x=>x.id===giveawayId);winnerId=current?.winnerId||null;
+     if(winnerId)await notifyUser(winnerId,"giveaway-winner:"+giveawayId,"🏆 Поздравляем! Ты победил в розыгрыше «"+(current?.title||"Норка")+"»!\\n🎁 Твой приз: "+(current?.prize||"уточни у организатора")+"\\nДля получения приза свяжись с организатором через поддержку приложения.");
+    }
+   }
    let progress=null;
    try{
     await grantProgress(id,"giveaway:"+giveawayId,"giveaway",new Date().toISOString().slice(0,10));
@@ -314,7 +326,7 @@ module.exports=async function handler(req,res){
    }catch(error){
     console.error("NORKA giveaway progress failed:",error&&error.message||"unknown");
    }
-   return json(res,200,{ok:true,wallet:{coins:Number(result[0])||0,berries:Number(result[1])||0},progress});
+   return json(res,200,{ok:true,wallet:{coins:Number(result[0])||0,berries:Number(result[1])||0},giveawayCompleted:Boolean(winnerId),winnerId,progress});
   }
   return json(res,400,{ok:false,error:"Неизвестное действие"});
  }catch(e){const msg=String(e&&e.message||"Ошибка сервера");if(msg.includes("INSUFFICIENT"))return json(res,409,{ok:false,error:"Недостаточно средств на балансе"});if(msg.includes("DAILY_ALREADY"))return json(res,409,{ok:false,error:"Ежедневная награда уже получена"});if(msg.includes("SUBSCRIPTION_ALREADY"))return json(res,409,{ok:false,error:"Награда за подписку уже получена"});if(msg.includes("TASK_ALREADY"))return json(res,409,{ok:false,error:"Заявка уже отправлена или задание подтверждено"});if(msg.includes("DRAW_ALREADY"))return json(res,409,{ok:false,error:"Победитель уже определяется или розыгрыш завершён"});if(msg.includes("CLOSED"))return json(res,409,{ok:false,error:"Розыгрыш уже завершён"});if(msg.includes("ALREADY"))return json(res,409,{ok:false,error:"Ты уже участвуешь в этом розыгрыше"});if(msg.includes("SOLD_OUT"))return json(res,409,{ok:false,error:"Все места в этом розыгрыше уже заняты"});console.error("NORKA API:",msg);return json(res,500,{ok:false,error:"Внутренняя ошибка. Проверьте настройки Redis в Vercel."});}
