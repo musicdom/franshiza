@@ -182,6 +182,19 @@ module.exports=async function handler(req,res){
    const existingUser=Boolean(await get(userKey(id)));
    return json(res,200,{ok:true,authenticated:true,redis:pong,existingUser});
   }
+  if(action==="snapshot_check"){
+   const u=await get(userKey(id));
+   const wallet=await readWallet(id);
+   const progress=await readProgress(id);
+   const historyCount=Number(await redis(["LLEN","norka:ledger:"+id]))||0;
+   return json(res,200,{ok:true,snapshot:{
+    userExists:Boolean(u),
+    userWallet:{berries:Number(u?.berries)||0,coins:Number(u?.coins)||0,lastDaily:u?.lastDaily||null},
+    wallet,
+    progress,
+    historyCount
+   }});
+  }
   await ensureUser(id,profile);
   if(action==="bootstrap"){const day=new Date().toISOString().slice(0,10);await grantProgress(id,"visit:"+day,"visit",day);const u=await get(userKey(id));if(u?.lastDaily)await grantProgress(id,"daily:"+u.lastDaily,"daily",u.lastDaily);const w=await readWallet(id);const history=await list("norka:ledger:"+id);const ts=(await tasks()).filter(t=>t.active);const gs=(await giveaways()).filter(g=>g.status==="active");await Promise.all(gs.map(async g=>{g.joined=Number(await redis(["SISMEMBER","norka:entries:"+g.id,id]))===1;}));const claims=await get("norka:claims:"+id)||{};const rate=Number(await redis(["GET","norka:exchange-rate"]))||100;const progress=await readProgress(id);return json(res,200,{ok:true,user:u,wallet:w,tasks:ts,giveaways:gs,history,claims,rate,progress});}
   if(action==="daily_claim"){
