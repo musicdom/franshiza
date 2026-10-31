@@ -1,7 +1,7 @@
 const routes = {
   norka: require("./api/norka"),
   payment: require("./api/norka-payment"),
-  track-user: require("./api/track-user")
+  "track-user": require("./api/track-user")
 };
 
 function response(statusCode, body, headers = {}) {
