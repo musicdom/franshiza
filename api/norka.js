@@ -316,7 +316,7 @@ module.exports=async function handler(req,res){
      const finishScript="local n=redis.call('LLEN',KEYS[1]); for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[1],i); if raw then local item=cjson.decode(raw); if tostring(item.id)==ARGV[1] then if item.status~='drawing' then return 0 end; item.status='completed'; item.winnerId=ARGV[2]; item.drawnAt=ARGV[3]; redis.call('LSET',KEYS[1],i,cjson.encode(item)); return 1 end end end; return 0";
      await redis(["EVAL",finishScript,"1","norka:giveaways",giveawayId,selected,drawnAt]);
      const current=(await giveaways()).find(x=>x.id===giveawayId);winnerId=current?.winnerId||null;
-     if(winnerId)await notifyUser(winnerId,"giveaway-winner:"+giveawayId,"🏆 Поздравляем! Ты победил в розыгрыше «"+(current?.title||"Норка")+"»!\\n🎁 Твой приз: "+(current?.prize||"уточни у организатора")+"\\nДля получения приза свяжись с организатором через поддержку приложения.");
+     if(winnerId)await notifyUser(winnerId,"giveaway-winner:"+giveawayId,"🏆 Поздравляем! Ты победил в розыгрыше «"+(current?.title||"Норка")+"»!\n🎁 Твой приз: "+(current?.prize||"уточни у организатора")+"\nДля получения приза свяжись с организатором через поддержку приложения.");
     }
    }
    let progress=null;
