@@ -143,7 +143,7 @@ button,input{font:inherit}button{cursor:pointer;touch-action:manipulation}button
 .achievement-gallery .achievement-card{position:relative;isolation:isolate;overflow:hidden;background:#24243a;background-image:none}
 .achievement-gallery .achievement-card::before{content:"";position:absolute;z-index:0;inset:-7px;background-image:var(--achievement-image);background-size:cover;background-position:center;background-repeat:no-repeat;transition:filter .2s ease,opacity .2s ease}
 .achievement-gallery .achievement-card.unlocked{border:1px solid #a99aff75;border-radius:19px;box-shadow:0 9px 24px #020b1045,inset 0 0 0 1px #ffffff0c;background:#24243a}
-.achievement-gallery .achievement-card.unlocked::before{filter:none;opacity:1;background-size:cover;background-position:center}
+.achievement-gallery .achievement-card.unlocked::before{background-image:linear-gradient(90deg,rgba(34,31,55,.72) 0%,rgba(34,31,55,.34) 43%,rgba(34,31,55,0) 100%),var(--achievement-image);filter:brightness(1.12) saturate(1.08);opacity:1;background-size:cover;background-position:center right}
 .achievement-gallery .achievement-card.unlocked .achievement-state{border:1px solid #c8baff55;box-shadow:0 3px 12px #08071455}
 .achievement-gallery .achievement-card.locked::before{filter:blur(6px) brightness(.42) saturate(.5);opacity:.8}
 .achievement-gallery .achievement-copy,.achievement-gallery .achievement-state{position:relative;z-index:1}
