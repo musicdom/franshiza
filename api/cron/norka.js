@@ -63,11 +63,11 @@ module.exports=async function(req,res){const secret=process.env.CRON_SECRET;if(!
      if(await send(item.winnerId,message)){await redis(["SET",mark,"1","EX","2592000"]);winnerMessages++;}
     }
    }
-   if(item.status==="completed"&&item.endsAt&&Number.isFinite(endTime)&&endTime<=Date.now()){
+   if(item.status==="completed"&&item.winnerId){
     const entrants=await redis(["SMEMBERS","norka:entries:"+item.id]);
     for(const userId of Array.isArray(entrants)?entrants:[]){
      if(String(userId)===String(item.winnerId||""))continue;
-     const mark="norka:notify:giveaway-end:"+item.id+":"+userId;if(await redis(["GET",mark]))continue;
+     const mark="norka:notify:sent:"+userId+":giveaway-end:"+item.id;if(await redis(["GET",mark]))continue;
      if(await send(userId,"⏰ Розыгрыш «"+String(item.title||"Норка").slice(0,100)+"» завершён. Спасибо за участие! Результаты доступны в приложении.")){await redis(["SET",mark,"1","EX","2592000"]);finishMessages++;}
     }
    }
