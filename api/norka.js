@@ -355,10 +355,10 @@ module.exports=async function handler(req,res){
     const entrants=await redis(["SMEMBERS","norka:entries:"+giveawayId]);
     if(Array.isArray(entrants)&&entrants.length){
      const selected=String(entrants[randomInt(entrants.length)]),drawnAt=new Date().toISOString();
-     const finishScript="local n=redis.call('LLEN',KEYS[1]); for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[1],i); if raw then local item=cjson.decode(raw); if tostring(item.id)==ARGV[1] then if item.status~='drawing' then return 0 end; item.status='completed'; item.winnerId=ARGV[2]; item.drawnAt=ARGV[3]; redis.call('LSET',KEYS[1],i,cjson.encode(item)); return 1 end end end; return 0";
-     await redis(["EVAL",finishScript,"1","norka:giveaways",giveawayId,selected,drawnAt]);
-     const current=(await giveaways()).find(x=>x.id===giveawayId);winnerId=current?.winnerId||null;
-     if(winnerId)await notifyGiveawayResult(current||{id:giveawayId},entrants,winnerId);
+     const completed=await completeGiveaway(giveawayId,selected,drawnAt);
+     const current=(await giveaways()).find(x=>x.id===giveawayId);
+     winnerId=completed.completed?(completed.winnerId||selected):current?.winnerId||null;
+     if(winnerId){await ensureGiveawayReward(current||{id:giveawayId},winnerId);await notifyGiveawayResult(current||{id:giveawayId},entrants,winnerId);}
     }
    }
    let progress=null;
