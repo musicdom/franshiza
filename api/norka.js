@@ -109,9 +109,17 @@ async function ensureGiveawayReward(item,winnerId){
  const script="if redis.call('GET',KEYS[2]) then return 0 end; redis.call('LPUSH',KEYS[1],ARGV[1]); redis.call('LTRIM',KEYS[1],'0','49'); redis.call('SET',KEYS[2],ARGV[1]); return 1";
  return Number(await redis(["EVAL",script,"2","norka:rewards:"+String(winnerId),"norka:giveaway:reward:"+String(item.id),JSON.stringify(gift)]))===1;
 }
+async function markFullGiveawayDrawing(item){
+ const script="local n=redis.call('LLEN',KEYS[1]); for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[1],i); if raw then local g=cjson.decode(raw); if tostring(g.id)==ARGV[1] then local cap=tonumber(g.capacity) or 0; local sold=redis.call('SCARD',KEYS[2]); if g.status=='active' and cap>0 and sold>=cap then g.status='drawing'; redis.call('LSET',KEYS[1],i,cjson.encode(g)); return 1 end; return 0 end end end; return 0";
+ return Number(await redis(["EVAL",script,"2","norka:giveaways","norka:entries:"+item.id,String(item.id)]))===1;
+}
 async function processGiveawayLifecycle(){
  const items=await list("norka:giveaways");
  for(let item of items){
+  if(item.status==="active"&&Number(item.capacity)>0){
+   const entrants=await redis(["SMEMBERS","norka:entries:"+item.id]);
+   if(Array.isArray(entrants)&&entrants.length>=Number(item.capacity))item.status=await markFullGiveawayDrawing(item)?"drawing":item.status;
+  }
   if(item.status==="drawing"){
    const entrants=await redis(["SMEMBERS","norka:entries:"+item.id]);
    if(Array.isArray(entrants)&&entrants.length){
