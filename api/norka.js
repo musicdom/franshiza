@@ -153,6 +153,7 @@ module.exports=async function handler(req,res){
   if(action.startsWith("admin_")){
    if(!process.env.NORKA_ADMIN_PASSWORD)return json(res,503,{ok:false,error:"Не задан пароль админ-панели. Добавь NORKA_ADMIN_PASSWORD в переменные окружения backend и перезапусти функцию."});
    if(!(await admin(req)))return json(res,401,{ok:false,error:"Неверный пароль админ-панели. Проверь NORKA_ADMIN_PASSWORD."});
+   if(action==="admin_auth")return json(res,200,{ok:true,authenticated:true});
    if(action==="admin_set_channel_id"){const channelId=clean(String(body.channelId||""),40);if(!/^-?\d{1,30}$/.test(channelId))return json(res,400,{ok:false,error:"Укажите числовой ID канала MAX"});await redis(["SET","norka:channel:chat_id",channelId]);return json(res,200,{ok:true,channelId});}
     if(action==="admin_setup_channel_tracking"){
     const token=process.env.MAX_BOT_TOKEN,secret=process.env.MAX_WEBHOOK_SECRET;
