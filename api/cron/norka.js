@@ -28,7 +28,7 @@ module.exports=async function(req,res){
    if(item.status==="completed"&&item.winnerId){
     if(await ensureGift(item,item.winnerId))giftsCreated++;
     const winnerText="🏆 Поздравляем! Ты победил в розыгрыше «"+String(item.title||"Норка").slice(0,100)+"»!\n🎁 Твой приз: "+String(item.prize||"Приз от Норки").slice(0,120)+"\nОткрой личный кабинет → «Мои подарки» и нажми «Забрать». Кнопка получения пока работает как заглушка.";
-    if(await notifyOnce(item.winnerId,"giveaway-winner:"+item.id,winnerText))winnerMessages++;
+    if(await notifyOnce(item.winnerId,"giveaway-winner-gift:"+item.id,winnerText))winnerMessages++;
     const entrants=await redis(["SMEMBERS","norka:entries:"+item.id]);
     for(const userId of Array.isArray(entrants)?entrants:[]){if(String(userId)===String(item.winnerId))continue;const message="⏰ Розыгрыш «"+String(item.title||"Норка").slice(0,100)+"» завершён. Спасибо за участие! Победитель уже определён. Результаты доступны в приложении.";if(await notifyOnce(userId,"giveaway-end:"+item.id,message))finishMessages++;}
    }
