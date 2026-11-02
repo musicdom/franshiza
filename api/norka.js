@@ -126,6 +126,10 @@ async function processGiveawayLifecycle(){
     const selected=String(entrants[randomInt(entrants.length)]);
     const result=await completeGiveaway(item.id,selected,new Date().toISOString());
     if(result.completed){const fresh=await list("norka:giveaways");item=fresh.find(x=>String(x.id)===String(item.id))||item;}
+   }else{
+    const script="local n=redis.call('LLEN',KEYS[1]); for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[1],i); if raw then local g=cjson.decode(raw); if tostring(g.id)==ARGV[1] and g.status=='drawing' then g.status='cancelled'; g.cancelledAt=ARGV[2]; g.cancelReason='no_participants'; redis.call('LSET',KEYS[1],i,cjson.encode(g)); return 1 end end end; return 0";
+    await redis(["EVAL",script,"1","norka:giveaways",String(item.id),new Date().toISOString()]);
+    item.status="cancelled";
    }
   }
   if(item.status==="completed"&&item.winnerId){
