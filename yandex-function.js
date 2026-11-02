@@ -29,7 +29,7 @@ async function health() {
   const r = await fetch(pair.url.replace(/\/$/, ""), {
     method: "POST",
     headers: {
-      Authorization: "Bearer " + token,
+      Authorization: "Bearer " + pair.token,
       "Content-Type": "application/json"
     },
     body: JSON.stringify(["PING"])
