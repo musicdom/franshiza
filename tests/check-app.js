@@ -19,6 +19,7 @@ const api = fs.readFileSync("api/norka.js", "utf8");
 for (const action of ["admin_save_progress_config", "admin_delete_giveaway", "admin_draw_winner", "admin_create_giveaway", "bootstrap", "daily_claim", "admin_approve_task", "exchange", "enter_giveaway"]) if (!api.includes("action===\"" + action + "\"")) throw new Error("Missing Norka action: " + action);
 for (const marker of ["completeGiveaway", "ensureGiveawayReward", "processGiveawayLifecycle", "NORKA_BACKEND_VERSION", "norka:rewards:", "norka:giveaway:reward:"]) if (!api.includes(marker)) throw new Error("Missing giveaway lifecycle component: " + marker);
 if (!html.includes("id=\"profileGifts\"") || !match[1].includes("function renderGifts")) throw new Error("Winner gifts UI is missing");
+if (match[1].includes("confirm(")) throw new Error("Native browser confirmations must not block MAX admin actions");
 if (!api.includes("participantsRemoved") || !api.includes("backendVersion:NORKA_BACKEND_VERSION")) throw new Error("Giveaway deletion diagnostics are missing");
 for (const key of ["norka:progress:", "norka:progress:events:", "norka:achievements:", "norka:streak:rewards:", "norka:level:rewards:"]) if (!api.includes(key)) throw new Error("Missing progress storage key: " + key);
 if (!html.includes('id="collection"') || !match[1].includes("function renderProgress")) throw new Error("Progress and collection UI are missing");
