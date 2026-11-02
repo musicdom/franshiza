@@ -152,6 +152,31 @@ button,input{font:inherit}button{cursor:pointer;touch-action:manipulation}button
 .achievement-gallery .achievement-copy h3{color:#fff;text-shadow:0 1px 5px #000}
 .achievement-gallery .achievement-copy p{color:#e4e0ee;text-shadow:0 1px 4px #000}
 .achievement-gallery .achievement-state{align-self:flex-start;padding:4px 7px;border-radius:7px;background:#171526a8}
+
+/* Achievement detail modal */
+.achievement-gallery .achievement-card{width:100%;font:inherit;text-align:left;cursor:pointer}
+.achievement-gallery .achievement-card:focus-visible{outline:2px solid #c8baff;outline-offset:3px}
+.achievement-modal[hidden]{display:none}
+.achievement-modal{position:fixed;z-index:30;inset:0;display:flex;align-items:center;justify-content:center;padding:16px}
+.achievement-modal-backdrop{position:absolute;inset:0;background:#050812d9;backdrop-filter:blur(9px)}
+.achievement-modal-panel{position:relative;z-index:1;width:min(100%,460px);max-height:88dvh;overflow:auto;border:1px solid #b5a3ff70;border-radius:25px;background:linear-gradient(155deg,#292849,#172b39 75%);box-shadow:0 25px 80px #000b;animation:achievementModalIn .2s ease-out}
+@keyframes achievementModalIn{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+.achievement-modal-close{position:absolute;z-index:3;right:12px;top:12px;width:38px;height:38px;border:1px solid #ffffff55;border-radius:50%;background:#101322c9;color:#fff;font-size:27px;line-height:1}
+.achievement-modal-art{position:relative;height:218px;background:#24243a center 35%/cover no-repeat;border-radius:24px 24px 0 0;display:flex;align-items:flex-end;padding:17px}
+.achievement-modal-art:after{content:"";position:absolute;inset:35% 0 0;background:linear-gradient(0deg,#171b2cdd,transparent);pointer-events:none}
+.achievement-modal-art span{position:relative;z-index:1;border:1px solid #d5c7ff66;border-radius:99px;padding:6px 10px;background:#171526c9;color:#e2d8ff;font-size:9px;font-weight:950;letter-spacing:1.4px}
+.achievement-modal-body{padding:19px 19px 21px}
+.achievement-modal-kicker{font-size:9px;font-weight:950;letter-spacing:1.8px;color:#c1afff}
+.achievement-modal-body h2{font-size:25px;line-height:1.12;margin:6px 42px 17px 0;letter-spacing:-.5px}
+.achievement-modal-section{padding:13px 14px;border:1px solid #ffffff16;border-radius:15px;background:#ffffff08}
+.achievement-modal-section small,.achievement-modal-reward>span,.achievement-modal-story>span{display:block;font-size:9px;letter-spacing:1.2px;font-weight:900;color:#b9a9ee}
+.achievement-modal-section p,.achievement-modal-story p{font-size:12px;line-height:1.55;color:#e1e3ef;margin:6px 0 0}
+.achievement-modal-reward{margin-top:11px;padding:14px;border-radius:15px;border:1px solid #7de5d344;background:linear-gradient(110deg,#1b514d66,#273b4a)}
+.achievement-modal-reward>span{color:#8ce9d9}
+.achievement-modal-reward strong{display:block;margin-top:6px;font-size:13px;line-height:1.45;color:#f5fffd}
+.achievement-modal-story{padding:14px 2px 0}
+.achievement-modal-story p{color:#c6c9d8;font-style:italic}
+@media(max-width:390px){.achievement-modal{padding:10px}.achievement-modal-panel{max-height:91dvh;border-radius:21px}.achievement-modal-art{height:190px}.achievement-modal-body{padding:16px}.achievement-modal-body h2{font-size:23px}}
 </style></head><body><div class="app">
 <header class="top"><div class="brand"><span class="mark">⌂</span> НОРКА</div><button class="profile" id="profileBtn">👤 Профиль</button></header>
 <main><section class="view active home-view" id="home">
@@ -168,7 +193,7 @@ button,input{font:inherit}button{cursor:pointer;touch-action:manipulation}button
 <section class="view profile-view" id="profile"><div class="profile-hero"><span>ЛИЧНЫЙ КАБИНЕТ · MAX</span><div class="profile-main"><img class="user-avatar" id="userAvatar" alt="Аватар профиля MAX" hidden><div><h1 id="profileHeading">Мой профиль</h1><strong id="userName">Участник Норки</strong><small id="userId"></small></div></div></div><div class="profile-assets"><div><span>🍓 ЯГОДЫ</span><strong class="berry" id="profileBerry">0</strong></div><div><span>🪙 МОНЕТЫ</span><strong class="coin" id="profileCoin">0</strong></div></div><button class="profile-topup" data-tab="wallet"><b>＋ Пополнить кошелёк</b><span>Купить монеты для розыгрышей →</span></button><div class="profile-history-block"><h2>История пополнений</h2><div id="profilePurchases" class="profile-history-list"></div></div><div class="profile-history-block"><h2>Мои подарки</h2><div id="profileGifts" class="profile-history-list"></div></div><div class="profile-history-block"><h2>История получения наград</h2><div id="profileRewards" class="profile-history-list"></div></div><div class="profile-menu"><button data-tab="collection"><i>🏅</i><span><b>Мои достижения</b><small>Уровень, серии и награды</small></span><strong>›</strong></button><button id="supportBtn"><i>✉</i><span><b>Поддержка</b><small>Связаться с командой Норки</small></span><strong>›</strong></button></div><button class="secondary profile-admin-toggle" id="adminOpen">⚙️ Администрирование</button>
 <div class="admin" id="admin"><h3>Админ-панель Норки</h3><input class="field" id="adminPassword" type="password" placeholder="Пароль NORKA_ADMIN_PASSWORD"><button class="primary" id="adminLogin">Войти</button><button class="secondary" id="setupChannelTracking" type="button">Подключить проверку подписки MAX</button><div class="head"><h2>Канал для проверки подписки</h2></div><input class="field" id="adminChannelId" inputmode="numeric" placeholder="Числовой ID канала MAX"><button class="secondary" id="saveChannelId" type="button">Сохранить ID канала</button><p class="small" id="channelIdStatus">ID канала должен прийти от MAX после добавления бота в канал.</p><div id="adminContent" hidden><div class="head"><h2>Игровой прогресс и награды</h2></div><textarea class="field" id="progressConfigJson" rows="12" spellcheck="false"></textarea><button class="secondary" id="saveProgressConfig" type="button">Сохранить настройки прогресса</button><div class="head"><h2>Курс обмена</h2></div><input class="field" id="adminRate" type="number" min="1" value="100" placeholder="Ягод за 1 монету"><button class="secondary" id="saveRate">Сохранить курс</button><div class="head"><h2>Новый розыгрыш</h2></div><input class="field" id="gTitle" placeholder="Название розыгрыша"><input class="field" id="gPrize" placeholder="Приз"><input class="field" id="gDescription" placeholder="Описание и условия"><label class="small">Цена входа · монеты</label><input class="field" id="gCost" type="number" min="1" value="10" placeholder="Цена участия в монетах"><label class="small">Всего мест в розыгрыше</label><input class="field" id="gCapacity" type="number" min="1" max="1000000" value="100" placeholder="Количество мест"><button class="primary" id="createGiveaway">Создать розыгрыш</button><div class="head"><h2>Список розыгрышей</h2></div><div id="adminGiveaways"></div><div class="head"><h2>Управление заданиями</h2></div><input class="field" id="newTaskTitle" placeholder="Название нового задания"><textarea class="field" id="newTaskDescription" rows="2" placeholder="Описание и условия выполнения"></textarea><input class="field" id="newTaskUrl" type="url" placeholder="Ссылка для перехода (необязательно)"><label class="small">Награда за выполнение · ягоды</label><input class="field" id="newTaskReward" type="number" min="0" max="10000" value="30"><button class="primary" id="createTask" type="button">Добавить задание</button><div id="adminTasks"></div><button class="secondary" id="saveTaskRewards" type="button">Сохранить награды заданий</button><div class="head"><h2>Заявки на задания</h2></div><div id="pendingTasks"></div><p class="small">Заявки на подписку пока подтверждаются администратором вручную.</p></div></div></section>
 <section class="view collection-view" id="collection"><div class="achievements-heading"><span>ТВОЙ ПУТЬ В НОРКЕ</span><h1>Достижения</h1><p>Награды за активность, серии посещений и участие в жизни Норки.</p><div class="achievement-progress"><div><small>ОТКРЫТО</small><strong id="achievementCount">0 из 11</strong></div><div><small>УРОВЕНЬ</small><strong id="collectionLevel">1</strong></div><div><small>ЛУЧШАЯ СЕРИЯ</small><strong id="collectionBestStreak">0 дней</strong></div></div><small id="collectionXp">0 XP</small></div><div class="achievement-gallery-heading"><h2>Твои достижения</h2><span id="collectionLockedCount">11 осталось</span></div><div id="achievementList" class="achievement-gallery"></div></section></main><div class="footer">НОРКА</div></div>
-<nav class="tabs"><div class="tabrow"><button class="tab active" data-tab="home"><b>⌂</b>Главная</button><button class="tab" data-tab="giveaways"><b>🎁</b>Призы</button><button class="tab" data-tab="earn"><b>🍓</b>Ягоды</button><button class="tab" data-tab="collection"><b>🏅</b>Достижения</button><button class="tab" data-tab="profile"><b>☺</b>Профиль</button></div></nav><div class="notice" id="notice"></div>
+<nav class="tabs"><div class="tabrow"><button class="tab active" data-tab="home"><b>⌂</b>Главная</button><button class="tab" data-tab="giveaways"><b>🎁</b>Призы</button><button class="tab" data-tab="earn"><b>🍓</b>Ягоды</button><button class="tab" data-tab="collection"><b>🏅</b>Достижения</button><button class="tab" data-tab="profile"><b>☺</b>Профиль</button></div></nav><div class="notice" id="notice"></div><div class="achievement-modal" id="achievementModal" hidden role="dialog" aria-modal="true" aria-labelledby="achievementModalTitle"><div class="achievement-modal-backdrop" data-achievement-close></div><article class="achievement-modal-panel"><button class="achievement-modal-close" id="achievementModalClose" type="button" aria-label="Закрыть">×</button><div class="achievement-modal-art" id="achievementModalArt"><span id="achievementModalStatus">ДОСТИЖЕНИЕ</span></div><div class="achievement-modal-body"><span class="achievement-modal-kicker">ТВОЯ КОЛЛЕКЦИЯ</span><h2 id="achievementModalTitle"></h2><div class="achievement-modal-section"><small>ЧТО НУЖНО СДЕЛАТЬ</small><p id="achievementModalDescription"></p></div><div class="achievement-modal-reward"><span>ЧТО ДАЁТ ДОСТИЖЕНИЕ</span><strong id="achievementModalBenefit"></strong></div><div class="achievement-modal-story"><span>ИСТОРИЯ НОРКИ</span><p id="achievementModalStory"></p></div></div></article></div>
 <script>
 const API="https://franshiza.vercel.app/api", YANDEX_FUNCTION="https://functions.yandexcloud.net/d4erur78tndi5tkkafn0", $=id=>document.getElementById(id);
 let S={id:"",initData:"",profile:{},wallet:{berries:0,coins:0},tasks:[],giveaways:[],history:[],rewards:[],claims:{},progress:{xp:0,level:1,streak:0,bestStreak:0,achievements:[]},admin:"",rate:100,user:{},channelOpened:false};
@@ -182,26 +207,19 @@ function hdr(){return {"Content-Type":"application/json","X-Norka-InitData":S.in
 async function call(action,data){const r=await fetch(YANDEX_FUNCTION+"?route=norka",{method:"POST",headers:hdr(),body:JSON.stringify(Object.assign({action:action,userId:S.id,profile:S.profile},data||{}))});const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||"Ошибка");return d;}
 async function load(){const url=YANDEX_FUNCTION+"?route=norka&action=bootstrap&userId="+encodeURIComponent(S.id);let r;try{r=await fetch(url,{headers:hdr()});}catch(e){const err=new Error("BOOTSTRAP_NETWORK_ERROR · Не удалось связаться с сервером: "+(e&&e.message||"сетевая ошибка"));err.code="BOOTSTRAP_NETWORK_ERROR";err.stage="network";throw err;}const raw=await r.text();let d;try{d=JSON.parse(raw);}catch(e){const err=new Error("BOOTSTRAP_INVALID_RESPONSE · Сервер вернул не JSON · HTTP "+r.status+" · "+raw.slice(0,180));err.code="BOOTSTRAP_INVALID_RESPONSE";err.stage="response_parse";err.status=r.status;throw err;}if(!r.ok||!d.ok){const parts=[d.error||"Сервер отклонил загрузку","HTTP "+r.status];if(d.code)parts.push("код "+d.code);if(d.stage)parts.push("этап "+d.stage);if(d.backendVersion)parts.push("backend "+d.backendVersion);const err=new Error(parts.join(" · "));err.code=d.code||"BOOTSTRAP_HTTP_ERROR";err.stage=d.stage||"http";err.status=r.status;err.backendVersion=d.backendVersion||"";throw err;}S.wallet=d.wallet;S.rate=Number(d.rate)||100;S.tasks=d.tasks||[];S.giveaways=d.giveaways||[];S.history=d.history||[];S.rewards=d.rewards||[];S.claims=d.claims||{};S.user=d.user||{};S.progress=d.progress||S.progress;render();}
 const ACHIEVEMENTS=[
-{id:"first_visit",icon:"🌱",title:"Первый шаг",description:"Открой Норку впервые"},
-{id:"first_daily",icon:"🌞",title:"Первые ягоды",description:"Получи первую ежедневную награду"},
-{id:"first_task",icon:"🎯",title:"Выполнено!",description:"Выполни первое подтверждённое задание"},
-{id:"first_exchange",icon:"🔄",title:"Обмен состоялся",description:"Обменивай ягоды на монеты впервые"},
-{id:"first_giveaway",icon:"🎁",title:"В игре",description:"Прими первое участие в розыгрыше"},
-{id:"streak_3",icon:"🔥",title:"Три дня подряд",description:"Посещай Норку 3 дня подряд"},
-{id:"streak_7",icon:"⚡",title:"Неделя активности",description:"Посещай Норку 7 дней подряд"},
-{id:"streak_14",icon:"💎",title:"Две недели",description:"Посещай Норку 14 дней подряд"},
-{id:"streak_30",icon:"👑",title:"Месяц с Норкой",description:"Посещай Норку 30 дней подряд"},
-{id:"level_5",icon:"🏆",title:"Пятый уровень",description:"Достигни 5 уровня"},
-{id:"level_10",icon:"👑",title:"Десятый уровень",description:"Достигни 10 уровня"}
+{id:"first_visit",icon:"🌱",title:"Первый шаг",description:"Открой Норку впервые",benefit:"+2 XP и первая отметка в коллекции.",story:"Любое большое приключение начинается с одного шага. Норка выглянула из своего уютного домика, заметила тебя и поняла: впереди вас ждёт много интересного."},
+{id:"first_daily",icon:"🌞",title:"Первые ягоды",description:"Получи первую ежедневную награду",benefit:"+5 XP за первый ежедневный сбор. Сами ежедневные ягоды начисляются отдельно по правилам задания.",story:"Утро в норкином саду начинается с росы и спелых ягод. Ты заглянул вовремя — и Норка с радостью вручила тебе первый сладкий урожай."},
+{id:"first_task",icon:"🎯",title:"Выполнено!",description:"Выполни первое подтверждённое задание",benefit:"+20 XP. Ягоды за само задание начисляются отдельно после подтверждения.",story:"Первое поручение позади! Норка довольно кивает: теперь она знает, что на тебя можно положиться. Это только начало большой коллекции побед."},
+{id:"first_exchange",icon:"🔄",title:"Обмен состоялся",description:"Обменивай ягоды на монеты впервые",benefit:"+3 XP за первый обмен. Монеты начисляются по действующему курсу обмена.",story:"Ягодки отправились в волшебный обменник и превратились в монеты. Норка бережно пересчитала их и записала твой первый успешный обмен в летопись."},
+{id:"first_giveaway",icon:"🎁",title:"В игре",description:"Прими первое участие в розыгрыше",benefit:"+5 XP за первое участие. Само участие оплачивается отдельно по цене розыгрыша.",story:"Твой первый билет уже в лапках Норки! Теперь остаётся немного удачи и ожидания — вдруг именно тебе улыбнётся фортуна."},
+{id:"streak_3",icon:"🔥",title:"Три дня подряд",description:"Посещай Норку 3 дня подряд",benefit:"+10 🍓 к балансу и отметка за серию из трёх дней.",story:"Три дня ты не забывал заглянуть в гости. В норкином домике уже привыкли к твоим шагам, а на полке появился первый огонёк постоянства."},
+{id:"streak_7",icon:"⚡",title:"Неделя активности",description:"Посещай Норку 7 дней подряд",benefit:"+30 🍓 к балансу за недельную серию.",story:"Целая неделя вместе! Норка собрала для тебя особую корзинку и украсила её молнией — такой ритм заслуживает настоящего уважения."},
+{id:"streak_14",icon:"💎",title:"Две недели",description:"Посещай Норку 14 дней подряд",benefit:"+70 🍓 к балансу за две недели без пропусков.",story:"Четырнадцать дней верности своему маленькому уголку удачи. Среди ягод Норка нашла сияющий кристалл — символ твоего упорства."},
+{id:"streak_30",icon:"👑",title:"Месяц с Норкой",description:"Посещай Норку 30 дней подряд",benefit:"+200 🍓 к балансу за месячную серию.",story:"Тридцать дней — целая история дружбы! Норка торжественно достаёт корону и объявляет тебя легендой своего уютного мира."},
+{id:"level_5",icon:"🏆",title:"Пятый уровень",description:"Достигни 5 уровня",benefit:"+25 🍓 к балансу за достижение пятого уровня.",story:"Ты уже освоился в мире Норки, собрал немало опыта и поднялся на новую ступень. За такой рост полагается заслуженный ягодный приз."},
+{id:"level_10",icon:"👑",title:"Десятый уровень",description:"Достигни 10 уровня",benefit:"+75 🍓 к балансу за достижение десятого уровня.",story:"Десятый уровень покорён! Норка открывает сундук почёта и вручает тебе корону мастера. Теперь ты один из самых опытных жителей этого мира."}
 ];
-function renderProgress(){
- const p=S.progress||{},level=Number(p.level)||1,xp=Number(p.xp)||0;
- $("progressLevel").textContent=level;$("progressXp").textContent=fmt(xp)+" XP";
- $("progressNext").textContent=p.nextLevelXp>p.currentLevelXp?fmt(p.nextLevelXp-xp)+" XP":"максимум";
- $("progressStreak").textContent=fmt(p.streak||0);$("progressFill").style.width=(Number(p.levelProgress)||0)+"%";$("progressPercent").textContent=(Number(p.levelProgress)||0)+"%";
- $("collectionXp").textContent=fmt(xp)+" XP";$("collectionBestStreak").textContent=fmt(p.bestStreak||0)+" дней";$("collectionLevel").textContent=level;
- const unlocked=new Set(p.achievements||[]);$("achievementCount").textContent=unlocked.size+" из "+ACHIEVEMENTS.length;$("collectionLockedCount").textContent=Math.max(0,ACHIEVEMENTS.length-unlocked.size);
- const achievementImages={
+const ACHIEVEMENT_IMAGES={
   first_visit:"Image/%D0%9F%D0%B5%D1%80%D0%B2%D0%BE%D0%B5%20%D0%B7%D0%BD%D0%B0%D0%BA%D0%BE%D0%BC%D1%81%D1%82%D0%B2%D0%BE%20.JPG",
   first_daily:"Image/%D0%95%D0%B6%D0%B5%D0%B4%D0%BD%D0%B5%D0%B2%D0%BD%D1%8B%D0%B8%CC%86%20%D0%BF%D0%BE%D1%81%D0%B5%D1%82%D0%B8%D1%82%D0%B5%D0%BB%D1%8C%20.JPG",
   first_task:"Image/%D0%9F%D0%B5%D1%80%D0%B2%D0%B0%D1%8F%20%D0%BF%D0%BE%D0%B1%D0%B5%D0%B4%D0%B0%20.JPG",
@@ -213,8 +231,37 @@ function renderProgress(){
   streak_30:"Image/%D0%9B%D0%B5%D0%B3%D0%B5%D0%BD%D0%B4%D0%B0%20%D0%BD%D0%BE%D1%80%D0%BA%D0%B8.JPG",
   level_5:"Image/%D0%AF%D0%B3%D0%BE%D0%B4%D0%BD%D1%8B%D0%B8%CC%86%20%D1%81%D1%87%D0%B5%D1%82.JPG",
   level_10:"Image/%D0%9F%D0%B5%D1%80%D0%B2%D0%B0%D1%8F%20%D0%BF%D0%BE%D0%BA%D1%83%D0%BF%D0%BA%D0%B0.JPG"
- };
- $("achievementList").innerHTML=ACHIEVEMENTS.map(a=>{const done=unlocked.has(a.id),src=achievementImages[a.id];return '<article class="card achievement-card '+(done?"unlocked":"locked")+'" '+(src?'style="--achievement-image:url('+src+')"':'')+'><div class="achievement-copy"><h3>'+esc(a.title)+'</h3><p>'+esc(a.description)+'</p></div><span class="achievement-state">'+(done?"ОТКРЫТО":"ЗАКРЫТО")+'</span></article>';}).join("");
+ 
+};
+
+function openAchievement(id){
+ const a=ACHIEVEMENTS.find(item=>item.id===id);if(!a)return;
+ const unlocked=new Set((S.progress&&S.progress.achievements)||[]),done=unlocked.has(id);
+ const modal=$("achievementModal"),art=$("achievementModalArt"),src=ACHIEVEMENT_IMAGES[id];
+ $("achievementModalTitle").textContent=a.title;
+ $("achievementModalDescription").textContent=a.description;
+ $("achievementModalBenefit").textContent=a.benefit;
+ $("achievementModalStory").textContent=a.story;
+ $("achievementModalStatus").textContent=done?"ДОСТИЖЕНИЕ ОТКРЫТО":"ЕЩЁ ВПЕРЕДИ";
+ art.style.backgroundImage=src?'linear-gradient(0deg,#171b2c22,#171b2c22),url("'+src+'")':"none";
+ modal.hidden=false;document.body.style.overflow="hidden";
+ $("achievementModalClose").focus();
+}
+function closeAchievement(){const modal=$("achievementModal");if(!modal||modal.hidden)return;modal.hidden=true;document.body.style.overflow="";}
+$("achievementModalClose").onclick=closeAchievement;
+document.querySelectorAll("[data-achievement-close]").forEach(el=>el.onclick=closeAchievement);
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeAchievement();});
+
+function renderProgress(){
+ const p=S.progress||{},level=Number(p.level)||1,xp=Number(p.xp)||0;
+ $("progressLevel").textContent=level;$("progressXp").textContent=fmt(xp)+" XP";
+ $("progressNext").textContent=p.nextLevelXp>p.currentLevelXp?fmt(p.nextLevelXp-xp)+" XP":"максимум";
+ $("progressStreak").textContent=fmt(p.streak||0);$("progressFill").style.width=(Number(p.levelProgress)||0)+"%";$("progressPercent").textContent=(Number(p.levelProgress)||0)+"%";
+ $("collectionXp").textContent=fmt(xp)+" XP";$("collectionBestStreak").textContent=fmt(p.bestStreak||0)+" дней";$("collectionLevel").textContent=level;
+ const unlocked=new Set(p.achievements||[]);$("achievementCount").textContent=unlocked.size+" из "+ACHIEVEMENTS.length;$("collectionLockedCount").textContent=Math.max(0,ACHIEVEMENTS.length-unlocked.size);
+
+ $("achievementList").innerHTML=ACHIEVEMENTS.map(a=>{const done=unlocked.has(a.id),src=ACHIEVEMENT_IMAGES[a.id];return '<button type="button" class="card achievement-card '+(done?"unlocked":"locked")+'" data-achievement="'+esc(a.id)+'" aria-label="Подробнее: '+esc(a.title)+'" '+(src?'style="--achievement-image:url('+src+')"':'')+'><span class="achievement-copy"><h3>'+esc(a.title)+'</h3><p>'+esc(a.description)+'</p></span><span class="achievement-state">'+(done?"ОТКРЫТО":"ЗАКРЫТО")+'</span></button>';}).join("");
+ document.querySelectorAll("[data-achievement]").forEach(b=>b.onclick=()=>openAchievement(b.dataset.achievement));
 }
 function render(){const w=S.wallet;if($("homeName"))$("homeName").textContent=(S.profile.name||"друг").split(" ")[0]+"!";$("gardenBerryCount").textContent=fmt(w.berries);$("prizeActiveCount").textContent=S.giveaways.length;$("prizeMyCount").textContent=S.giveaways.filter(g=>g.joined).length;$("rateLabel").textContent=fmt(S.rate)+" 🍓 = 1 🪙";["berries","exchangeBerry","walletBerry","profileBerry"].forEach(id=>$(id).textContent=fmt(w.berries)+(id==="exchangeBerry"?" 🍓":""));["coins","walletCoin","profileCoin"].forEach(id=>$(id).textContent=fmt(w.coins));$("userName").textContent=S.profile.name||"Участник Норки";$("userId").textContent="MAX ID: "+S.id;$("profileBtn").textContent="👤 "+(S.profile.name||"Профиль");const avatar=$("userAvatar");avatar.onerror=()=>{avatar.hidden=true;};if(S.profile.avatar){avatar.src=S.profile.avatar;avatar.hidden=false;}else{avatar.removeAttribute("src");avatar.hidden=true;}renderGiveaways();renderTasks();renderDaily();renderHistory();renderProgress();preview();}
 function giveawayCard(g){const cap=Number(g.capacity)||0,sold=Number(g.entries)||0,left=cap?Math.max(0,cap-sold):null,pct=cap?Math.min(100,Math.round(sold/cap*100)):0;return '<article class="card"><div class="cardtop"><div><h3>'+esc(g.title)+'</h3><p>'+esc(g.description||"Подробности розыгрыша")+'</p></div><span class="tag">'+(g.joined?"ТЫ УЧАСТВУЕШЬ":"АКТИВЕН")+'</span></div><div class="prize">🎁 '+esc(g.prize)+'</div><div class="giveaway-view-meta"><div><strong>'+(cap?fmt(cap):"—")+'</strong><small>ВСЕГО МЕСТ</small></div><div><strong>'+fmt(sold)+'</strong><small>УЖЕ КУПИЛИ</small></div><div><strong>'+(left===null?"∞":fmt(left))+'</strong><small>ОСТАЛОСЬ</small></div></div>'+(cap?'<div class="giveaway-capacity"><div class="giveaway-capacity-top"><span>Заполнено</span><b>'+pct+'%</b></div><div class="giveaway-capacity-track"><i style="width:'+pct+'%"></i></div></div>':'')+'<div class="meta"><span>Цена входа: <b>'+fmt(g.cost)+' 🪙</b></span><span>'+"До заполнения всех мест"+'</span></div><button class="primary" data-enter="'+esc(g.id)+'" '+(g.joined||left===0?"disabled":"")+'>'+(g.joined?"Ты уже участвуешь":left===0?"Все места заняты":"Купить место · "+fmt(g.cost)+" 🪙")+'</button></article>';}
