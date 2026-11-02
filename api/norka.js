@@ -90,7 +90,7 @@ async function readProgress(id){
  const level=Math.max(1,Number(p.level)||1),current=Number(thresholds[level-1])||0,next=Number(thresholds[level])||current;
  return {...p,level,currentLevelXp:current,nextLevelXp:next,levelProgress:next>current?Math.max(0,Math.min(100,Math.round((Number(p.xp)-current)/(next-current)*100))):100,achievements:Array.isArray(achievements)?achievements:[],thresholds};
 }
-async function giveaways(){const items=await list("norka:giveaways");await Promise.all(items.map(async item=>{item.entries=Number(await redis(["HGET","norka:giveaway-counts",item.id]))||0;}));return items;}
+async function giveaways(){const items=await list("norka:giveaways");await Promise.all(items.map(async item=>{const count=Number(await redis(["SCARD","norka:entries:"+item.id]))||0;item.entries=count;await redis(["HSET","norka:giveaway-counts",item.id,String(count)]);}));return items;}
 async function completeGiveaway(giveawayId,winnerId,drawnAt){
  const script=[
   "local n=redis.call('LLEN',KEYS[1]);",
