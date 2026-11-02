@@ -26,14 +26,22 @@ async function health() {
     });
   }
 
-  const r = await fetch(pair.url.replace(/\/$/, ""), {
-    method: "POST",
-    headers: {
-      Authorization: "Bearer " + pair.token,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(["PING"])
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  let r;
+  try {
+    r = await fetch(pair.url.replace(/\/$/, ""), {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + pair.token,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(["PING"]),
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timer);
+  }
   const data = await r.json();
   if (!r.ok || data.error) {
     return response(502, JSON.stringify({ ok: false, error: "REDIS_UNAVAILABLE" }), {
@@ -112,8 +120,10 @@ exports.handler = async function (event) {
     }
   };
 
+  const routeStarted = Date.now();
   try {
     await handler(req, res);
+    console.info("NORKA route completed", JSON.stringify({ route, statusCode, durationMs: Date.now() - routeStarted }));
     if (!ended) {
       return response(500, JSON.stringify({ ok: false, error: "HANDLER_DID_NOT_FINISH" }), {
         "Content-Type": "application/json; charset=utf-8"
@@ -121,7 +131,7 @@ exports.handler = async function (event) {
     }
     return response(statusCode, responseBody, responseHeaders);
   } catch (error) {
-    console.error("NORKA API route failed:", route, error && error.message);
+    console.error("NORKA API route failed:", JSON.stringify({ route, durationMs: Date.now() - routeStarted, error: error && error.message }));
     return response(500, JSON.stringify({ ok: false, error: "INTERNAL_SERVER_ERROR" }), {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store"
