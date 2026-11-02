@@ -14,15 +14,19 @@ function response(statusCode, body, headers = {}) {
 }
 
 async function health() {
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
-  if (!url || !token) {
+  const kvUrl = process.env.KV_REST_API_URL;
+  const kvToken = process.env.KV_REST_API_TOKEN;
+  const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
+  const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const pair = kvUrl && kvToken ? { url: kvUrl, token: kvToken } :
+    upstashUrl && upstashToken ? { url: upstashUrl, token: upstashToken } : null;
+  if (!pair) {
     return response(503, JSON.stringify({ ok: false, error: "REDIS_NOT_CONFIGURED" }), {
       "Content-Type": "application/json; charset=utf-8"
     });
   }
 
-  const r = await fetch(url.replace(/\/$/, ""), {
+  const r = await fetch(pair.url.replace(/\/$/, ""), {
     method: "POST",
     headers: {
       Authorization: "Bearer " + token,
