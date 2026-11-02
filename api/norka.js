@@ -279,17 +279,18 @@ module.exports=async function handler(req,res){
    const ledgerItem=JSON.stringify({type:"daily",title:"Ежедневная награда",berries:reward,at:now});
    const script=[
     "local raw=redis.call('GET',KEYS[1]); if not raw then return redis.error_reply('USER_NOT_FOUND') end;",
-    "if redis.call('GET',KEYS[4]) then return redis.error_reply('DAILY_ALREADY') end;",
-    "local user=cjson.decode(raw); if user.lastDaily==ARGV[1] then return redis.error_reply('DAILY_ALREADY') end;",
-    "local current=tonumber(redis.call('HGET',KEYS[2],'berries') or '0');",
+    "local user=cjson.decode(raw); local current=tonumber(redis.call('HGET',KEYS[2],'berries') or '0'); local coins=tonumber(redis.call('HGET',KEYS[2],'coins') or '0');",
+    "if redis.call('GET',KEYS[4]) or user.lastDaily==ARGV[1] then return {0,current,coins} end;",
     "redis.call('HINCRBY',KEYS[2],'berries',tonumber(ARGV[2]));",
     "user.lastDaily=ARGV[1]; redis.call('SET',KEYS[1],cjson.encode(user));",
     "redis.call('SET',KEYS[4],'1','EX','172800');",
     "redis.call('LPUSH',KEYS[3],ARGV[3]); redis.call('LTRIM',KEYS[3],'0','99');",
-    "return {current+tonumber(ARGV[2]),tonumber(redis.call('HGET',KEYS[2],'coins') or '0')}"
+    "return {1,current+tonumber(ARGV[2]),coins}"
    ].join(" ");
    const result=await redis(["EVAL",script,"4",userKey(id),"norka:wallet:"+id,"norka:ledger:"+id,"norka:daily:"+id+":"+day,day,String(reward),ledgerItem]);
-   await grantProgress(id,"daily:"+day,"daily",day);const wallet=await readWallet(id);return json(res,200,{ok:true,wallet,reward,progress:await readProgress(id)});
+   const already=Number(result[0])!==1;
+   if(!already)grantProgress(id,"daily:"+day,"daily",day).catch(error=>console.error("NORKA daily progress failed:",error&&error.message||"unknown"));
+   return json(res,200,{ok:true,already,wallet:{berries:Number(result[1])||0,coins:Number(result[2])||0},reward:already?0:reward});
   }
   if(action==="check_subscription"){
    const taskId=clean(body.taskId||"channel",50),t=(await tasks()).find(x=>x.id===taskId&&x.active&&x.type==="subscription");
