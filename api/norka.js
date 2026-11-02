@@ -178,17 +178,14 @@ module.exports=async function handler(req,res){
      await redis(["EVAL",restoreScript,"1","norka:giveaways",giveawayId]);
      return json(res,409,{ok:false,error:"В розыгрыше пока нет участников"});
     }
-    const winnerId=String(entrants[randomInt(entrants.length)]),drawnAt=new Date().toISOString();
-    const finishScript=[
-     "local n=redis.call('LLEN',KEYS[1]);",
-     "for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[1],i); if raw then local item=cjson.decode(raw);",
-     "if tostring(item.id)==ARGV[1] then if item.status~='drawing' then return redis.error_reply('DRAW_ALREADY') end;",
-     "item.status='completed'; item.winnerId=ARGV[2]; item.drawnAt=ARGV[3]; redis.call('LSET',KEYS[1],i,cjson.encode(item)); return 1 end end end;",
-     "return redis.error_reply('NOT_FOUND')"
-    ].join(" ");
-    await redis(["EVAL",finishScript,"1","norka:giveaways",giveawayId,winnerId,drawnAt]);
-    const item=(await giveaways()).find(x=>x.id===giveawayId);await notifyGiveawayResult(item||{id:giveawayId},entrants,winnerId); 
-    return json(res,200,{ok:true,winnerId,title:item?.title||"",prize:item?.prize||"",entries:entrants.length});
+    const selectedWinner=String(entrants[randomInt(entrants.length)]),drawnAt=new Date().toISOString();
+    const completed=await completeGiveaway(giveawayId,selectedWinner,drawnAt);
+    if(!completed.completed)return json(res,409,{ok:false,error:"Не удалось завершить розыгрыш. Обнови список и попробуй ещё раз."});
+    const winnerId=completed.winnerId||selectedWinner;
+    const item=(await giveaways()).find(x=>x.id===giveawayId);
+    await ensureGiveawayReward(item||{id:giveawayId},winnerId);
+    await notifyGiveawayResult(item||{id:giveawayId},entrants,winnerId);
+    return json(res,200,{ok:true,winnerId,title:item?.title||"",prize:item?.prize||"",entries:entrants.length,backendVersion:NORKA_BACKEND_VERSION});
    }
    if(action==="admin_delete_giveaway"){const giveawayId=clean(body.giveawayId,60);if(!giveawayId)return json(res,400,{ok:false,error:"Не указан розыгрыш"});const script="local n=redis.call('LLEN',KEYS[1]); local removed=0; for i=n-1,0,-1 do local raw=redis.call('LINDEX',KEYS[1],i); if raw then local ok,item=pcall(cjson.decode,raw); if ok and tostring(item.id)==ARGV[1] then removed=removed+redis.call('LREM',KEYS[1],1,raw) end end end; local participants=redis.call('SCARD',KEYS[2]); if removed>0 then redis.call('DEL',KEYS[2]); redis.call('HDEL',KEYS[3],ARGV[1]); end; return {removed,participants}";const result=await redis(["EVAL",script,"3","norka:giveaways","norka:entries:"+giveawayId,"norka:giveaway-counts",giveawayId]);const removed=Array.isArray(result)?Number(result[0]):Number(result);if(!removed)return json(res,404,{ok:false,error:"Розыгрыш не найден в текущей базе Redis. Проверь подключение Яндекс-функции к той же базе, что использует приложение.",backendVersion:NORKA_BACKEND_VERSION});return json(res,200,{ok:true,deleted:removed,participantsRemoved:Array.isArray(result)?Number(result[1])||0:0,backendVersion:NORKA_BACKEND_VERSION});}
     if(action==="admin_create_giveaway"){const cost=Number(body.cost),capacity=Number(body.capacity);if(!clean(body.title,100)||!clean(body.prize,120))return json(res,400,{ok:false,error:"Заполните название и приз"});if(!Number.isInteger(cost)||cost<1||cost>100000)return json(res,400,{ok:false,error:"Стоимость участия должна быть от 1 до 100000 монет"});if(!Number.isInteger(capacity)||capacity<1||capacity>1000000)return json(res,400,{ok:false,error:"Укажите количество мест от 1 до 1000000"});const item={id:"g"+Date.now()+"_"+randomInt(100000,999999),title:clean(body.title,100),description:clean(body.description,500),prize:clean(body.prize,120),cost,capacity,status:"active",createdAt:new Date().toISOString(),entries:0};await redis(["LPUSH","norka:giveaways",JSON.stringify(item)]);try{await notifyAllUsers("giveaway-start:"+item.id,"🎁 В Норке начался новый розыгрыш!\nПриз: "+item.prize+"\nУчастие: "+item.cost+" монет. Открой приложение, чтобы узнать подробности.");}catch(error){console.error("NORKA giveaway announcement failed:",error&&error.message||"unknown");}return json(res,200,{ok:true,item});}
@@ -243,7 +240,7 @@ module.exports=async function handler(req,res){
    }});
   }
   await ensureUser(id,profile);
-  if(action==="bootstrap"){const day=new Date().toISOString().slice(0,10);await grantProgress(id,"visit:"+day,"visit",day);const u=await get(userKey(id));if(u?.lastDaily)await grantProgress(id,"daily:"+u.lastDaily,"daily",u.lastDaily);const w=await readWallet(id);const history=await list("norka:ledger:"+id);const ts=(await tasks()).filter(t=>t.active);const gs=(await giveaways()).filter(g=>g.status==="active");await Promise.all(gs.map(async g=>{g.joined=Number(await redis(["SISMEMBER","norka:entries:"+g.id,id]))===1;}));const claims=await get("norka:claims:"+id)||{};const rate=Number(await redis(["GET","norka:exchange-rate"]))||100;const progress=await readProgress(id);return json(res,200,{ok:true,user:u,wallet:w,tasks:ts,giveaways:gs,history,claims,rate,progress});}
+  if(action==="bootstrap"){await processGiveawayLifecycle();const day=new Date().toISOString().slice(0,10);await grantProgress(id,"visit:"+day,"visit",day);const u=await get(userKey(id));if(u?.lastDaily)await grantProgress(id,"daily:"+u.lastDaily,"daily",u.lastDaily);const w=await readWallet(id);const history=await list("norka:ledger:"+id);const ts=(await tasks()).filter(t=>t.active);const gs=(await giveaways()).filter(g=>g.status==="active");await Promise.all(gs.map(async g=>{g.joined=Number(await redis(["SISMEMBER","norka:entries:"+g.id,id]))===1;}));const claims=await get("norka:claims:"+id)||{};const rate=Number(await redis(["GET","norka:exchange-rate"]))||100;const progress=await readProgress(id);const rewards=await readUserRewards(id);return json(res,200,{ok:true,user:u,wallet:w,tasks:ts,giveaways:gs,history,claims,rate,progress,rewards,backendVersion:NORKA_BACKEND_VERSION});}
   if(action==="daily_claim"){
    const day=new Date().toISOString().slice(0,10),t=(await tasks()).find(x=>x.type==="daily"&&x.active);
    const reward=t?Math.max(0,Math.floor(Number(t.reward)||0)):10,now=new Date().toISOString();
