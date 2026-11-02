@@ -378,7 +378,7 @@ module.exports=async function handler(req,res){
     "if c<cost then return redis.error_reply('INSUFFICIENT') end;",
     "redis.call('HSET',KEYS[2],'coins',c-cost); redis.call('SADD',KEYS[1],ARGV[1]);",
     "local soldNow=redis.call('HINCRBY',KEYS[3],ARGV[3],1);",
-    "redis.call('LPUSH',KEYS[4],ARGV[6]); redis.call('LTRIM',KEYS[4],'0','99');",
+    "redis.call('LPUSH',KEYS[4],ARGV[4]); redis.call('LTRIM',KEYS[4],'0','99');",
     "if cap>0 and soldNow>=cap then for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[5],i); if raw then local item=cjson.decode(raw); if tostring(item.id)==ARGV[3] and item.status=='active' then item.status='drawing'; redis.call('LSET',KEYS[5],i,cjson.encode(item)); break end end end end;",
     "return {c-cost,tonumber(redis.call('HGET',KEYS[2],'berries') or '0'),(cap>0 and soldNow>=cap) and 1 or 0}"
    ].join(" ");
