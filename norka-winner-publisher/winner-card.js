@@ -118,7 +118,7 @@ function loadBundledTemplate() {
   const encoded = partNames.map(name => {
     const file = path.join(__dirname, name);
     if (!fs.existsSync(file)) throw new Error("WINNER_TEMPLATE_PART_MISSING: " + name);
-    return fs.readFileSync(file, "utf8").replace(/\\s/g, "");
+    return fs.readFileSync(file, "utf8").replace(/\s/g, "");
   }).join("");
   return Buffer.from(encoded, "base64");
 }
