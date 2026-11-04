@@ -50,6 +50,9 @@ function paymentUrl(orderId, price) {
   const u = new URL("https://yoomoney.ru/quickpay/confirm.xml");
   u.searchParams.set("receiver", receiver);
   u.searchParams.set("quickpay-form", "button");
+  u.searchParams.set("targets", "Покупка монет");
+  u.searchParams.set("formcomment", "Покупка монет");
+  u.searchParams.set("short-dest", "Покупка монет");
   u.searchParams.set("sum", Number(price).toFixed(2));
   u.searchParams.set("label", orderId);
   u.searchParams.set("paymentType", "AC");
