@@ -61,6 +61,52 @@ async function progressConfig(){
 async function notifyUser(id,eventId,message){try{const key="norka:notify:sent:"+id+":"+eventId;if(await redis(["GET",key]))return;const token=process.env.MAX_BOT_TOKEN;if(!token)return;const sent=await requestMax({token,method:"POST",apiPath:"/messages?user_id="+encodeURIComponent(String(id)),body:{text:message}});if(sent.ok)await redis(["SET",key,"1","EX","2592000"]);else console.error("NORKA notification rejected:",sent.status);}catch(error){console.error("NORKA notification failed:",error&&error.message||"unknown");}}
 async function notifyAllUsers(eventId,message){const keys=await redis(["KEYS","norka:user:*"]);const ids=(Array.isArray(keys)?keys:[]).filter(key=>/^norka:user:[^:]+$/.test(key)).map(key=>key.slice(11)).slice(0,100);for(let i=0;i<ids.length;i+=10)await Promise.all(ids.slice(i,i+10).map(id=>notifyUser(id,eventId,message)));return ids.length;}
 async function notifyGiveawayResult(item,entrants,winnerId){const title=clean(item?.title,100)||"Норка";for(const userId of Array.isArray(entrants)?entrants:[]){if(String(userId)===String(winnerId)){await notifyUser(userId,"giveaway-winner-gift:"+item.id,"🏆 Поздравляем! Ты победил в розыгрыше «"+title+"»!\n🎁 Твой приз: "+(clean(item?.prize,120)||"уточни у организатора")+"\nОткрой личный кабинет → «Мои подарки» и нажми «Забрать». Кнопка получения пока работает как заглушка.");}else{await notifyUser(userId,"giveaway-end:"+item.id,"⏰ Розыгрыш «"+title+"» завершён. Спасибо за участие! Победитель уже определён. Результаты доступны в приложении.");}}}
+
+async function readNumberedEntries(giveawayId){
+ const raw=await redis(["HGETALL","norka:number-entries:"+giveawayId]),out=[];
+ if(Array.isArray(raw))for(let i=0;i+1<raw.length;i+=2){const number=Number(raw[i]),userId=String(raw[i+1]||"");if(Number.isInteger(number)&&number>0&&userId)out.push({number,userId});}
+ return out;
+}
+async function ensureNumberedPrizeReward(item,winner){
+ if(!item||!winner||!winner.userId)return false;
+ const prize=winner.prize||{},gift={id:"giveaway_"+String(item.id)+"_place_"+String(winner.place),type:"giveaway_prize",giveawayId:String(item.id),title:clean(item.title,100)||"Подарок от Норки",prize:clean(prize.title,120)||"Приз розыгрыша",description:clean(prize.description,500),imageUrl:clean(prize.imageUrl,500),winningNumber:Number(winner.number),place:Number(winner.place),status:"available",claimed:false,createdAt:item.drawnAt||new Date().toISOString()};
+ const key="norka:giveaway:number-reward:"+String(item.id)+":"+String(winner.place);
+ const script="if redis.call('GET',KEYS[2]) then return 0 end; redis.call('LPUSH',KEYS[1],ARGV[1]); redis.call('LTRIM',KEYS[1],'0','49'); redis.call('SET',KEYS[2],ARGV[1]); return 1";
+ return Number(await redis(["EVAL",script,"2","norka:rewards:"+String(winner.userId),key,JSON.stringify(gift)]))===1;
+}
+async function notifyNumberedGiveawayResult(item,entries,winners){
+ const notified=new Set();
+ for(const winner of winners||[]){
+  await notifyUser(winner.userId,"number-giveaway-winner:"+item.id+":"+winner.place,"🏆 Поздравляем! Ты выиграл в розыгрыше «"+clean(item.title,100)+"»!\n🎟️ Твой номер: "+String(winner.number).padStart(2,"0")+"\n🎁 Твой приз: "+clean(winner.prize?.title,120)+"\nОткрой Норку → «Мои подарки», чтобы увидеть награду.");
+  notified.add(String(winner.userId));
+ }
+ const allUsers=[...new Set((entries||[]).map(e=>String(e.userId)))];
+ for(const uid of allUsers)if(!notified.has(uid))await notifyUser(uid,"number-giveaway-end:"+item.id,"⏰ Розыгрыш «"+clean(item.title,100)+"» завершён. Спасибо за участие! Победители уже определены. Результаты доступны в Норке.");
+}
+async function drawNumberedGiveaway(giveawayId){
+ const items=await list("norka:giveaways"),item=items.find(x=>String(x.id)===String(giveawayId));
+ if(!item||item.type!=="numbers")return {completed:false};
+ if(item.status==="completed")return {completed:true,item};
+ if(item.status!=="drawing")return {completed:false};
+ const entries=await readNumberedEntries(giveawayId);
+ if(entries.length!==Number(item.capacity))return {completed:false};
+ const pool=entries.slice(),winners=[];
+ for(let i=0;i<item.prizes.length&&pool.length;i++){
+  const index=randomInt(pool.length),entry=pool.splice(index,1)[0];
+  winners.push({place:i+1,number:entry.number,userId:entry.userId,prize:item.prizes[i]});
+ }
+ if(winners.length!==item.prizes.length)return {completed:false};
+ const drawnAt=new Date().toISOString(),encoded=JSON.stringify(winners);
+ const script="local n=redis.call('LLEN',KEYS[1]); for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[1],i); if raw then local g=cjson.decode(raw); if tostring(g.id)==ARGV[1] then if g.status=='completed' then return 0 end; if g.status~='drawing' then return -1 end; g.status='completed'; g.winners=cjson.decode(ARGV[2]); g.drawnAt=ARGV[3]; redis.call('LSET',KEYS[1],i,cjson.encode(g)); return 1 end end end; return -1";
+ const saved=Number(await redis(["EVAL",script,"1","norka:giveaways",String(giveawayId),encoded,drawnAt]));
+ if(saved===0){const fresh=(await list("norka:giveaways")).find(x=>String(x.id)===String(giveawayId));return {completed:true,item:fresh};}
+ if(saved!==1)return {completed:false};
+ const completed={...item,status:"completed",winners,drawnAt};
+ for(const winner of winners)await ensureNumberedPrizeReward(completed,winner);
+ await notifyNumberedGiveawayResult(completed,entries,winners);
+ return {completed:true,item:completed,winners};
+}
+
 async function grantProgress(id,eventId,kind,day,sendNotification=true){
  const config=await progressConfig(),xp=Math.max(0,Math.floor(Number(config.xp[kind])||0));
  const thresholds=config.thresholds.map(x=>Math.max(0,Math.floor(Number(x)||0)));
@@ -91,7 +137,7 @@ async function readProgress(id){
  const level=Math.max(1,Number(p.level)||1),current=Number(thresholds[level-1])||0,next=Number(thresholds[level])||current;
  return {...p,level,currentLevelXp:current,nextLevelXp:next,levelProgress:next>current?Math.max(0,Math.min(100,Math.round((Number(p.xp)-current)/(next-current)*100))):100,achievements:Array.isArray(achievements)?achievements:[],thresholds};
 }
-async function giveaways(){const items=await list("norka:giveaways");await Promise.all(items.map(async item=>{const count=Number(await redis(["SCARD","norka:entries:"+item.id]))||0;item.entries=count;}));return items;}
+async function giveaways(){const items=await list("norka:giveaways");await Promise.all(items.map(async item=>{const count=Number(await redis([item.type==="numbers"?"HLEN":"SCARD",item.type==="numbers"?"norka:number-entries:"+item.id:"norka:entries:"+item.id]))||0;item.entries=count;}));return items;}
 async function completeGiveaway(giveawayId,winnerId,drawnAt){
  const script=[
   "local n=redis.call('LLEN',KEYS[1]);",
