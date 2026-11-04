@@ -263,7 +263,7 @@ module.exports=async function handler(req,res){
  if(!Number.isInteger(cost)||cost<1||cost>100000)return json(res,400,{ok:false,error:"Стоимость номера должна быть от 1 до 100000 монет"});
  if(!Number.isInteger(capacity)||capacity<1||capacity>500)return json(res,400,{ok:false,error:"Количество номеров должно быть от 1 до 500"});
  if(rawPrizes.length<1||rawPrizes.length>25||rawPrizes.length>capacity)return json(res,400,{ok:false,error:"Количество призов должно быть от 1 до 25 и не превышать количество номеров"});
- const prizes=rawPrizes.map((p,i)=>({place:i+1,title:clean(p.title,120),description:clean(p.description,500),imageUrl:clean(p.imageUrl,500)}));
+ const prizes=rawPrizes.map((p,i)=>({place:i+1,title:clean(p&&p.title,120),description:clean(p&&p.description,500),imageUrl:clean(p&&p.imageUrl,500)}));
  if(prizes.some(p=>!p.title))return json(res,400,{ok:false,error:"Укажите название каждого приза"});
  if(prizes.some(p=>p.imageUrl&&!/^https:\/\//i.test(p.imageUrl)))return json(res,400,{ok:false,error:"Ссылка на изображение должна начинаться с https://"});
  const item={id:"n"+Date.now()+"_"+randomInt(100000,999999),type:"numbers",title:clean(body.title,100),description:clean(body.description,500),cost,capacity,prizes,status:"active",createdAt:new Date().toISOString(),entries:0};
