@@ -1,6 +1,6 @@
 const { createHmac, timingSafeEqual, randomInt } = require("crypto");
 const { requestMax } = require("../lib/max-api");
-const NORKA_BACKEND_VERSION="norka-admin-overview-fast-2026-11-04-v6";
+const NORKA_BACKEND_VERSION="norka-giveaway-capacity-exact-2026-11-04-v7";
 
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function cfg(){const kvUrl=process.env.KV_REST_API_URL,kvToken=process.env.KV_REST_API_TOKEN,upstashUrl=process.env.UPSTASH_REDIS_REST_URL,upstashToken=process.env.UPSTASH_REDIS_REST_TOKEN;if(kvUrl&&kvToken)return {url:kvUrl.replace(/\/$/,""),token:kvToken,source:"KV"};if(upstashUrl&&upstashToken)return {url:upstashUrl.replace(/\/$/,""),token:upstashToken,source:"UPSTASH"};if(kvUrl||kvToken||upstashUrl||upstashToken)throw new Error("Redis configuration is incomplete: URL and token must belong to the same provider");return null;}
@@ -111,7 +111,7 @@ async function ensureGiveawayReward(item,winnerId){
  return Number(await redis(["EVAL",script,"2","norka:rewards:"+String(winnerId),"norka:giveaway:reward:"+String(item.id),JSON.stringify(gift)]))===1;
 }
 async function markFullGiveawayDrawing(item){
- const script="local n=redis.call('LLEN',KEYS[1]); for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[1],i); if raw then local g=cjson.decode(raw); if tostring(g.id)==ARGV[1] then local cap=tonumber(g.capacity) or 0; local sold=redis.call('SCARD',KEYS[2]); if g.status=='active' and cap>0 and sold>=cap then g.status='drawing'; redis.call('LSET',KEYS[1],i,cjson.encode(g)); return 1 end; return 0 end end end; return 0";
+ const script="local n=redis.call('LLEN',KEYS[1]); for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[1],i); if raw then local g=cjson.decode(raw); if tostring(g.id)==ARGV[1] then local cap=tonumber(g.capacity) or 0; local sold=redis.call('SCARD',KEYS[2]); if g.status=='active' and cap>0 and sold==cap then g.status='drawing'; redis.call('LSET',KEYS[1],i,cjson.encode(g)); return 1 end; return 0 end end end; return 0";
  return Number(await redis(["EVAL",script,"2","norka:giveaways","norka:entries:"+item.id,String(item.id)]))===1;
 }
 async function processGiveawayLifecycle(){
@@ -119,7 +119,7 @@ async function processGiveawayLifecycle(){
  for(let item of items){
   if(item.status==="active"&&Number(item.capacity)>0){
    const entrants=await redis(["SMEMBERS","norka:entries:"+item.id]);
-   if(Array.isArray(entrants)&&entrants.length>=Number(item.capacity))item.status=await markFullGiveawayDrawing(item)?"drawing":item.status;
+   if(Array.isArray(entrants)&&entrants.length===Number(item.capacity))item.status=await markFullGiveawayDrawing(item)?"drawing":item.status;
   }
   if(item.status==="drawing"){
    const entrants=await redis(["SMEMBERS","norka:entries:"+item.id]);
@@ -375,14 +375,14 @@ module.exports=async function handler(req,res){
     "if not found then return redis.error_reply('NOT_FOUND') end;",
     "if redis.call('SISMEMBER',KEYS[1],ARGV[1])==1 then return redis.error_reply('ALREADY') end;",
     "local cap=0; for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[5],i); if raw then local item=cjson.decode(raw); if tostring(item.id)==ARGV[3] then cap=tonumber(item.capacity) or 0; break end end end;",
-    "local sold=tonumber(redis.call('HGET',KEYS[3],ARGV[3]) or '0'); if cap>0 and sold>=cap then return redis.error_reply('SOLD_OUT') end;",
+    "local sold=redis.call('SCARD',KEYS[1]); if cap>0 and sold>=cap then return redis.error_reply('SOLD_OUT') end;",
     "local c=tonumber(redis.call('HGET',KEYS[2],'coins') or '0'); local cost=tonumber(ARGV[2]);",
     "if c<cost then return redis.error_reply('INSUFFICIENT') end;",
     "redis.call('HSET',KEYS[2],'coins',c-cost); redis.call('SADD',KEYS[1],ARGV[1]);",
-    "local soldNow=redis.call('HINCRBY',KEYS[3],ARGV[3],1);",
+    "local soldNow=redis.call('SCARD',KEYS[1]); redis.call('HSET',KEYS[3],ARGV[3],soldNow);",
     "redis.call('LPUSH',KEYS[4],ARGV[4]); redis.call('LTRIM',KEYS[4],'0','99');",
-    "if cap>0 and soldNow>=cap then for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[5],i); if raw then local item=cjson.decode(raw); if tostring(item.id)==ARGV[3] and item.status=='active' then item.status='drawing'; redis.call('LSET',KEYS[5],i,cjson.encode(item)); break end end end end;",
-    "return {c-cost,tonumber(redis.call('HGET',KEYS[2],'berries') or '0'),(cap>0 and soldNow>=cap) and 1 or 0}"
+    "if cap>0 and soldNow==cap then for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[5],i); if raw then local item=cjson.decode(raw); if tostring(item.id)==ARGV[3] and item.status=='active' then item.status='drawing'; redis.call('LSET',KEYS[5],i,cjson.encode(item)); break end end end end;",
+    "return {c-cost,tonumber(redis.call('HGET',KEYS[2],'berries') or '0'),(cap>0 and soldNow==cap) and 1 or 0}"
    ].join(" ");
    const result=await redis(["EVAL",script,"5","norka:entries:"+giveawayId,"norka:wallet:"+id,"norka:giveaway-counts","norka:ledger:"+id,"norka:giveaways",id,String(cost),giveawayId,ledgerItem]);
    let winnerId=null;
