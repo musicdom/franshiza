@@ -169,7 +169,7 @@ async function processGiveawayLifecycle(){
    const entrants=await redis(["SMEMBERS","norka:entries:"+item.id]);
    if(Array.isArray(entrants)&&entrants.length===Number(item.capacity))item.status=await markFullGiveawayDrawing(item)?"drawing":item.status;
   }
-  if(item.status==="drawing"){
+  if(item.type!=="numbers"&&item.status==="drawing"){
    const entrants=await redis(["SMEMBERS","norka:entries:"+item.id]);
    if(Array.isArray(entrants)&&entrants.length){
     const selected=String(entrants[randomInt(entrants.length)]);
@@ -186,11 +186,16 @@ async function processGiveawayLifecycle(){
    const entrants=await redis(["SMEMBERS","norka:entries:"+item.id]);
    await notifyGiveawayResult(item,entrants,item.winnerId);
   }
+  if(item.type==="numbers"&&item.status==="completed"&&Array.isArray(item.winners)){
+   const entries=await readNumberedEntries(item.id);
+   for(const winner of item.winners)await ensureNumberedPrizeReward(item,winner);
+   await notifyNumberedGiveawayResult(item,entries,item.winners);
+  }
  }
 }
 async function readUserRewards(id){
  const items=await list("norka:giveaways");
- for(const item of items)if(item.status==="completed"&&String(item.winnerId)===String(id))await ensureGiveawayReward(item,id);
+ for(const item of items){if(item.status==="completed"&&String(item.winnerId)===String(id))await ensureGiveawayReward(item,id);if(item.type==="numbers"&&item.status==="completed"&&Array.isArray(item.winners))for(const winner of item.winners)if(String(winner.userId)===String(id))await ensureNumberedPrizeReward(item,winner);}
  return list("norka:rewards:"+id);
 }
 module.exports=async function handler(req,res){
@@ -446,7 +451,7 @@ module.exports=async function handler(req,res){
     "return {coins-total,berries,soldNow,(soldNow==cap) and 1 or 0}"
    ].join(" ");
    const result=await redis(["EVAL",script,"5","norka:number-entries:"+giveawayId,"norka:wallet:"+id,"norka:ledger:"+id,"norka:giveaway-counts","norka:giveaways",JSON.stringify(numbers),giveawayId,String(g.cost),id,ledgerItem]);
-   let draw=null;if(Number(result[3])===1)draw=await drawNumberedGiveaway(giveawayId);
+   let draw=null;if(Number(result[3])===1){try{draw=await drawNumberedGiveaway(giveawayId);}catch(error){console.error("NORKA numbered giveaway draw deferred:",error&&error.message||"unknown");}}
    let progress=null;try{await grantProgress(id,"numbered-giveaway:"+giveawayId,"giveaway",new Date().toISOString().slice(0,10));progress=await readProgress(id);}catch(error){console.error("NORKA numbered giveaway progress failed:",error&&error.message||"unknown");}
    return json(res,200,{ok:true,wallet:{coins:Number(result[0])||0,berries:Number(result[1])||0},entries:Number(result[2])||0,giveawayCompleted:Boolean(draw&&draw.completed),winners:draw?.winners||[],progress});
   }
