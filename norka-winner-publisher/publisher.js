@@ -129,7 +129,7 @@ async function readProfile(redisCommand, userId) {
 async function reserveChannelSlot(redisCommand) {
   const script = "local now=tonumber(ARGV[1]); local nextAt=tonumber(redis.call('GET',KEYS[1]) or '0'); local scheduled=math.max(now,nextAt); redis.call('SET',KEYS[1],scheduled+tonumber(ARGV[2]),'PX',60000); return scheduled-now";
   const wait = Number(await redisCommand(["EVAL", script, "1", "norka:channel:publish:next_ms", String(Date.now()), String(PUBLISH_GAP_MS)])) || 0;
-  if (wait > 0) await sleep(Math.min(wait, 5000));
+  if (wait > 0) await sleep(wait);
 }
 
 async function publishNumberedGiveawayWinners({ item, redisCommand, token = process.env.MAX_BOT_TOKEN, templatePath }) {
