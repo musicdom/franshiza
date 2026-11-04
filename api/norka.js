@@ -337,7 +337,7 @@ module.exports=async function handler(req,res){
     try{claims=await stage("claims",async()=>await get("norka:claims:"+id)||{});}catch(error){console.error("NORKA bootstrap claims:",error&&error.message||"unknown");}
     try{rate=await stage("rate",async()=>Number(await redis(["GET","norka:exchange-rate"]))||100);}catch(error){console.error("NORKA bootstrap rate:",error&&error.message||"unknown");}
     try{progress=await stage("progress",async()=>{const day=new Date().toISOString().slice(0,10);await grantProgress(id,"visit:"+day,"visit",day,false);if(u?.lastDaily)await grantProgress(id,"daily:"+u.lastDaily,"daily",u.lastDaily,false);return readProgress(id);});}catch(error){console.error("NORKA bootstrap progress:",error&&error.message||"unknown");}
-    try{rewards=await stage("rewards",()=>list("norka:rewards:"+id));}catch(error){console.error("NORKA bootstrap rewards:",error&&error.message||"unknown");}
+    try{rewards=await stage("rewards",()=>readUserRewards(id));}catch(error){console.error("NORKA bootstrap rewards:",error&&error.message||"unknown");}
     timings.total=Date.now()-started;console.info("NORKA bootstrap complete",JSON.stringify(timings));
     return json(res,200,{ok:true,user:u,wallet:w,tasks:ts,giveaways:gs,history,claims,rate,progress,rewards,backendVersion:NORKA_BACKEND_VERSION,diagnostics:timings});
    }
