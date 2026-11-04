@@ -18,7 +18,7 @@
 
 - publisher.js — загрузка картинки в MAX, публикация, Redis-lock и idempotency.
 - winner-card.js — рендер общей карточки на основе исходного шаблона.
-- winner-template.png..png — исходный PNG-шаблон без переименования.
+- winner-template.part01.b64 … winner-template.part04.b64 — четыре части исходного PNG-шаблона. Модуль собирает их автоматически, поэтому отдельный бинарный файл при переносе не нужен.
 - package.json — зависимость sharp.
 
 ## Подключение
