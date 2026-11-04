@@ -211,6 +211,7 @@ body.splash-open{overflow:hidden}
 .prize-format-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0}
 .prize-format-switch button{border:1px solid #ffffff24;border-radius:14px;padding:12px 8px;background:#182b36;color:#b9c8ce;font-weight:800}
 .prize-format-switch button.active{background:linear-gradient(120deg,#6bdbbd,#a4e8c4);color:#10332e;border-color:#9bf0d0}
+.giveaway-feed[hidden]{display:none!important}
 .numbered-card{position:relative;overflow:hidden;border:1px solid #75d9c34a;background:linear-gradient(145deg,#1d3540,#182733 70%,#29223b)}
 .numbered-card .numbered-symbol{font-size:28px;float:right;margin-left:10px}
 .numbered-card .numbered-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
@@ -345,8 +346,8 @@ function openNumberedGiveaway(id){
  $("numberModalPrice").textContent=fmt(activeNumberGiveaway.cost)+" монет / номер";renderNumberGrid();$("numberGiveawayModal").hidden=false;document.body.style.overflow="hidden";
 }
 function renderNumberGrid(){
- if(!activeNumberGiveaway)return;const g=activeNumberGiveaway,owners=g.numberEntries||{},sold=Number(g.entries)||0,cap=Number(g.capacity)||0;
- $("numberModalProgress").textContent="Продано "+fmt(sold)+" из "+fmt(cap);$("numberModalGrid").innerHTML=Array.from({length:cap},(_,i)=>{const n=i+1,taken=Boolean(owners[String(n)]),selected=selectedNumberIds.includes(n);return '<button type="button" class="number-cell '+(taken?"taken":selected?"selected":"")+'" data-number="'+n+'" '+(taken?"disabled":"")+'>'+String(n).padStart(2,"0")+'</button>';}).join("");
+ if(!activeNumberGiveaway)return;const g=activeNumberGiveaway,taken=new Set(g.soldNumbers||[]),sold=Number(g.entries)||0,cap=Number(g.capacity)||0;
+ $("numberModalProgress").textContent="Продано "+fmt(sold)+" из "+fmt(cap);$("numberModalGrid").innerHTML=Array.from({length:cap},(_,i)=>{const n=i+1,isTaken=taken.has(n),selected=selectedNumberIds.includes(n);return '<button type="button" class="number-cell '+(isTaken?"taken":selected?"selected":"")+'" data-number="'+n+'" '+(isTaken?"disabled":"")+'>'+String(n).padStart(2,"0")+'</button>';}).join("");
  $("numberSelectedCount").textContent=selectedNumberIds.length;$("numberSelectedTotal").textContent=fmt(selectedNumberIds.length*Number(g.cost))+" монет";
  const btn=$("numberModalBuy");btn.disabled=!selectedNumberIds.length;btn.textContent=selectedNumberIds.length?"Купить "+selectedNumberIds.length+" · "+fmt(selectedNumberIds.length*Number(g.cost))+" монет":"Выбери номера";
  $("numberModalNote").textContent=g.userNumbers&&g.userNumbers.length?"У тебя уже есть номера: "+g.userNumbers.map(n=>String(n).padStart(2,"0")).join(", ")+". Можно выбрать дополнительные.":"Свободные номера доступны для покупки. Занятые уже закреплены за участниками.";
