@@ -1,0 +1,22 @@
+name: Norka Redis audit tests
+
+on:
+  push:
+    branches:
+      - "norka/redis-readonly-audit"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  read-only-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check audit syntax
+        run: node --check scripts/norka-redis-audit.js
+      - name: Run mocked Redis audit tests
+        run: node --test tests/norka-redis-audit.test.js
