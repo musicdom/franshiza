@@ -163,7 +163,9 @@ async function markFullGiveawayDrawing(item){
 async function processGiveawayLifecycle(){
  const items=await list("norka:giveaways");
  for(let item of items){
-  if(item.status==="active"&&Number(item.capacity)>0){
+  if(item.type==="numbers"&&item.status==="active"&&Number(item.capacity)>0){const sold=Number(await redis(["HLEN","norka:number-entries:"+item.id]))||0;if(sold===Number(item.capacity)){const freeze="local n=redis.call('LLEN',KEYS[1]);for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[1],i);if raw then local g=cjson.decode(raw);if tostring(g.id)==ARGV[1] and g.status=='active' then g.status='drawing';redis.call('LSET',KEYS[1],i,cjson.encode(g));return 1 end end end;return 0";await redis(["EVAL",freeze,"1","norka:giveaways",String(item.id)]);item.status="drawing";}}
+  if(item.type==="numbers"&&item.status==="drawing"){await drawNumberedGiveaway(item.id);const fresh=(await list("norka:giveaways")).find(x=>String(x.id)===String(item.id));if(fresh)item=fresh;}
+  if(item.type!=="numbers"&&item.status==="active"&&Number(item.capacity)>0){
    const entrants=await redis(["SMEMBERS","norka:entries:"+item.id]);
    if(Array.isArray(entrants)&&entrants.length===Number(item.capacity))item.status=await markFullGiveawayDrawing(item)?"drawing":item.status;
   }
@@ -311,7 +313,7 @@ module.exports=async function handler(req,res){
     try{ts=(await stage("tasks",()=>tasks())).filter(t=>t.active);}catch(error){console.error("NORKA bootstrap tasks:",error&&error.message||"unknown");}
     try{
      const items=(await stage("giveaways_list",()=>list("norka:giveaways"))).filter(g=>g.status==="active");
-     gs=await stage("giveaways_details",()=>Promise.all(items.map(async g=>{const count=await redis(["SCARD","norka:entries:"+g.id]);let joined=0;try{joined=await redis(["SISMEMBER","norka:entries:"+g.id,id]);}catch(error){console.error("NORKA bootstrap giveaway membership:",error&&error.message||"unknown");}return {...g,entries:Number(count)||0,joined:Number(joined)===1};})));
+     gs=await stage("giveaways_details",()=>Promise.all(items.map(async g=>{if(g.type==="numbers"){const entries=await readNumberedEntries(g.id),numberEntries={};for(const entry of entries)numberEntries[String(entry.number)]=entry.userId;return {...g,entries:entries.length,numberEntries,userNumbers:entries.filter(x=>String(x.userId)===String(id)).map(x=>x.number),joined:entries.some(x=>String(x.userId)===String(id))};}const count=await redis(["SCARD","norka:entries:"+g.id]);let joined=0;try{joined=await redis(["SISMEMBER","norka:entries:"+g.id,id]);}catch(error){console.error("NORKA bootstrap giveaway membership:",error&&error.message||"unknown");}return {...g,entries:Number(count)||0,joined:Number(joined)===1};})));
     }catch(error){console.error("NORKA bootstrap giveaways:",error&&error.message||"unknown");gs=[];}
     try{claims=await stage("claims",async()=>await get("norka:claims:"+id)||{});}catch(error){console.error("NORKA bootstrap claims:",error&&error.message||"unknown");}
     try{rate=await stage("rate",async()=>Number(await redis(["GET","norka:exchange-rate"]))||100);}catch(error){console.error("NORKA bootstrap rate:",error&&error.message||"unknown");}
