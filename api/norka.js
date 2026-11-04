@@ -423,6 +423,34 @@ module.exports=async function handler(req,res){
    }
    return json(res,200,{ok:true,wallet:{berries:Number(result[0])||0,coins:Number(result[1])||0},coins,duplicate:Number(result[2])===0,progress});
   }
+
+  if(action==="buy_numbered_entries"){
+   const giveawayId=clean(body.giveawayId,60),rawNumbers=Array.isArray(body.numbers)?body.numbers:[],numbers=[...new Set(rawNumbers.map(Number))];
+   if(!giveawayId||!numbers.length||numbers.length>500||numbers.some(n=>!Number.isInteger(n)||n<1))return json(res,400,{ok:false,error:"Выбери корректные номера"});
+   const gs=await giveaways(),g=gs.find(x=>x.id===giveawayId&&x.type==="numbers"&&x.status==="active");
+   if(!g)return json(res,404,{ok:false,error:"Розыгрыш по номерам не найден или уже завершён"});
+   if(numbers.some(n=>n>Number(g.capacity)))return json(res,400,{ok:false,error:"Один из номеров выходит за пределы розыгрыша"});
+   const total=Number(g.cost)*numbers.length;if(!Number.isSafeInteger(total)||total<1)return json(res,409,{ok:false,error:"Некорректная стоимость покупки"});
+   const now=new Date().toISOString(),ledgerItem=JSON.stringify({type:"numbered_giveaway_entry",title:"Номера: "+g.title+" ("+numbers.join(", ")+")",coins:-total,at:now});
+   const script=[
+    "local n=redis.call('LLEN',KEYS[5]);local found=false;local cap=0;local unit=tonumber(ARGV[3]);",
+    "for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[5],i);if raw then local item=cjson.decode(raw);if tostring(item.id)==ARGV[2] then found=true;if item.status~='active' or item.type~='numbers' then return redis.error_reply('CLOSED') end;cap=tonumber(item.capacity) or 0;break end end end;",
+    "if not found then return redis.error_reply('NOT_FOUND') end;",
+    "local chosen=cjson.decode(ARGV[1]);if #chosen==0 then return redis.error_reply('NO_NUMBERS') end;",
+    "for _,v in ipairs(chosen) do local num=tostring(v);if tonumber(v)<1 or tonumber(v)>cap or tonumber(v)~=math.floor(tonumber(v)) then return redis.error_reply('BAD_NUMBER') end;if redis.call('HEXISTS',KEYS[1],num)==1 then return redis.error_reply('NUMBER_TAKEN') end end;",
+    "local sold=redis.call('HLEN',KEYS[1]);if sold+#chosen>cap then return redis.error_reply('SOLD_OUT') end;",
+    "local coins=tonumber(redis.call('HGET',KEYS[2],'coins') or '0');local berries=tonumber(redis.call('HGET',KEYS[2],'berries') or '0');local total=unit*#chosen;if coins<total then return redis.error_reply('INSUFFICIENT') end;",
+    "redis.call('HSET',KEYS[2],'coins',coins-total);for _,v in ipairs(chosen) do redis.call('HSET',KEYS[1],tostring(v),ARGV[4]) end;",
+    "local soldNow=redis.call('HLEN',KEYS[1]);redis.call('LPUSH',KEYS[3],ARGV[5]);redis.call('LTRIM',KEYS[3],'0','99');",
+    "if soldNow==cap then for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[5],i);if raw then local item=cjson.decode(raw);if tostring(item.id)==ARGV[2] and item.status=='active' then item.status='drawing';redis.call('LSET',KEYS[5],i,cjson.encode(item));break end end end end;",
+    "return {coins-total,berries,soldNow,(soldNow==cap) and 1 or 0}"
+   ].join(" ");
+   const result=await redis(["EVAL",script,"5","norka:number-entries:"+giveawayId,"norka:wallet:"+id,"norka:ledger:"+id,"norka:giveaway-counts","norka:giveaways",JSON.stringify(numbers),giveawayId,String(g.cost),id,ledgerItem]);
+   let draw=null;if(Number(result[3])===1)draw=await drawNumberedGiveaway(giveawayId);
+   let progress=null;try{await grantProgress(id,"numbered-giveaway:"+giveawayId,"giveaway",new Date().toISOString().slice(0,10));progress=await readProgress(id);}catch(error){console.error("NORKA numbered giveaway progress failed:",error&&error.message||"unknown");}
+   return json(res,200,{ok:true,wallet:{coins:Number(result[0])||0,berries:Number(result[1])||0},entries:Number(result[2])||0,giveawayCompleted:Boolean(draw&&draw.completed),winners:draw?.winners||[],progress});
+  }
+
   if(action==="enter_giveaway"){
    const giveawayId=clean(body.giveawayId,60),gs=await giveaways(),g=gs.find(x=>x.id===giveawayId&&x.status==="active");
    if(!g)return json(res,404,{ok:false,error:"Розыгрыш не найден"});
@@ -468,5 +496,5 @@ module.exports=async function handler(req,res){
    return json(res,200,{ok:true,wallet:{coins:Number(result[0])||0,berries:Number(result[1])||0},giveawayCompleted:Boolean(winnerId),winnerId,progress});
   }
   return json(res,400,{ok:false,error:"Неизвестное действие"});
- }catch(e){const msg=String(e&&e.message||"Ошибка сервера");if(msg.includes("INSUFFICIENT"))return json(res,409,{ok:false,error:"Недостаточно средств на балансе"});if(msg.includes("DAILY_ALREADY"))return json(res,409,{ok:false,error:"Ежедневная награда уже получена"});if(msg.includes("SUBSCRIPTION_ALREADY"))return json(res,409,{ok:false,error:"Награда за подписку уже получена"});if(msg.includes("TASK_ALREADY"))return json(res,409,{ok:false,error:"Заявка уже отправлена или задание подтверждено"});if(msg.includes("DRAW_ALREADY"))return json(res,409,{ok:false,error:"Победитель уже определяется или розыгрыш завершён"});if(msg.includes("CLOSED"))return json(res,409,{ok:false,error:"Розыгрыш уже завершён"});if(msg.includes("ALREADY"))return json(res,409,{ok:false,error:"Ты уже участвуешь в этом розыгрыше"});if(msg.includes("SOLD_OUT"))return json(res,409,{ok:false,error:"Все места в этом розыгрыше уже заняты"});console.error("NORKA API:",msg);return json(res,500,{ok:false,error:"Внутренняя ошибка сервера Норки.",code:"NORKA_INTERNAL_ERROR",backendVersion:NORKA_BACKEND_VERSION});}
+ }catch(e){const msg=String(e&&e.message||"Ошибка сервера");if(msg.includes("INSUFFICIENT"))return json(res,409,{ok:false,error:"Недостаточно средств на балансе"});if(msg.includes("DAILY_ALREADY"))return json(res,409,{ok:false,error:"Ежедневная награда уже получена"});if(msg.includes("SUBSCRIPTION_ALREADY"))return json(res,409,{ok:false,error:"Награда за подписку уже получена"});if(msg.includes("TASK_ALREADY"))return json(res,409,{ok:false,error:"Заявка уже отправлена или задание подтверждено"});if(msg.includes("DRAW_ALREADY"))return json(res,409,{ok:false,error:"Победитель уже определяется или розыгрыш завершён"});if(msg.includes("CLOSED"))return json(res,409,{ok:false,error:"Розыгрыш уже завершён"});if(msg.includes("ALREADY"))return json(res,409,{ok:false,error:"Ты уже участвуешь в этом розыгрыше"});if(msg.includes("SOLD_OUT"))return json(res,409,{ok:false,error:"Все места в этом розыгрыше уже заняты"});if(msg.includes("NUMBER_TAKEN"))return json(res,409,{ok:false,error:"Один или несколько номеров уже купили. Обнови сетку и выбери свободные номера."});if(msg.includes("BAD_NUMBER"))return json(res,400,{ok:false,error:"Выбран некорректный номер"});if(msg.includes("NO_NUMBERS"))return json(res,400,{ok:false,error:"Выбери хотя бы один номер"});console.error("NORKA API:",msg);return json(res,500,{ok:false,error:"Внутренняя ошибка сервера Норки.",code:"NORKA_INTERNAL_ERROR",backendVersion:NORKA_BACKEND_VERSION});}
 };
