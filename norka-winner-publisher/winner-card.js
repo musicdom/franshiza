@@ -108,10 +108,25 @@ function makeOverlay(item, winners, avatarBuffers) {
   return Buffer.from(parts.join(""));
 }
 
+function loadBundledTemplate() {
+  const partNames = [
+    "winner-template.part01.b64",
+    "winner-template.part02.b64",
+    "winner-template.part03.b64",
+    "winner-template.part04.b64"
+  ];
+  const encoded = partNames.map(name => {
+    const file = path.join(__dirname, name);
+    if (!fs.existsSync(file)) throw new Error("WINNER_TEMPLATE_PART_MISSING: " + name);
+    return fs.readFileSync(file, "utf8").replace(/\\s/g, "");
+  }).join("");
+  return Buffer.from(encoded, "base64");
+}
+
 async function renderWinnerCard({ item, winners, templatePath }) {
   const normalized = normalizeWinners(winners);
-  const resolvedTemplate = templatePath || path.join(__dirname, "winner-template.png..png");
-  if (!fs.existsSync(resolvedTemplate)) throw new Error("WINNER_TEMPLATE_NOT_FOUND");
+  const defaultTemplate = path.join(__dirname, "winner-template.png..png");
+  const templateInput = templatePath || (fs.existsSync(defaultTemplate) ? defaultTemplate : loadBundledTemplate());
   const avatarBuffers = await Promise.all(normalized.map(w => fetchAvatar(w.avatar)));
   const overlay = makeOverlay(item || {}, normalized, avatarBuffers);
   const composites = [{ input: overlay, top: 0, left: 0 }];
@@ -124,7 +139,7 @@ async function renderWinnerCard({ item, winners, templatePath }) {
     const top = Math.round(firstY + index * rowHeight + (rowHeight - avatarSize) / 2);
     composites.push({ input: buffer, left: 91 - Math.floor(avatarSize / 2), top });
   });
-  return sharp(resolvedTemplate).resize(WIDTH, HEIGHT, { fit: "cover" })
+  return sharp(templateInput).resize(WIDTH, HEIGHT, { fit: "cover" })
     .composite(composites).png({ compressionLevel: 9, adaptiveFiltering: true }).toBuffer();
 }
 
