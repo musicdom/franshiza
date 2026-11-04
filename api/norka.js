@@ -1,6 +1,6 @@
 const { createHmac, timingSafeEqual, randomInt } = require("crypto");
 const { requestMax } = require("../lib/max-api");
-const NORKA_BACKEND_VERSION="norka-giveaway-capacity-exact-2026-11-04-v7";
+const NORKA_BACKEND_VERSION="norka-numbered-giveaways-2026-11-04-v8";
 
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function cfg(){const kvUrl=process.env.KV_REST_API_URL,kvToken=process.env.KV_REST_API_TOKEN,upstashUrl=process.env.UPSTASH_REDIS_REST_URL,upstashToken=process.env.UPSTASH_REDIS_REST_TOKEN;if(kvUrl&&kvToken)return {url:kvUrl.replace(/\/$/,""),token:kvToken,source:"KV"};if(upstashUrl&&upstashToken)return {url:upstashUrl.replace(/\/$/,""),token:upstashToken,source:"UPSTASH"};if(kvUrl||kvToken||upstashUrl||upstashToken)throw new Error("Redis configuration is incomplete: URL and token must belong to the same provider");return null;}
@@ -61,6 +61,52 @@ async function progressConfig(){
 async function notifyUser(id,eventId,message){try{const key="norka:notify:sent:"+id+":"+eventId;if(await redis(["GET",key]))return;const token=process.env.MAX_BOT_TOKEN;if(!token)return;const sent=await requestMax({token,method:"POST",apiPath:"/messages?user_id="+encodeURIComponent(String(id)),body:{text:message}});if(sent.ok)await redis(["SET",key,"1","EX","2592000"]);else console.error("NORKA notification rejected:",sent.status);}catch(error){console.error("NORKA notification failed:",error&&error.message||"unknown");}}
 async function notifyAllUsers(eventId,message){const keys=await redis(["KEYS","norka:user:*"]);const ids=(Array.isArray(keys)?keys:[]).filter(key=>/^norka:user:[^:]+$/.test(key)).map(key=>key.slice(11)).slice(0,100);for(let i=0;i<ids.length;i+=10)await Promise.all(ids.slice(i,i+10).map(id=>notifyUser(id,eventId,message)));return ids.length;}
 async function notifyGiveawayResult(item,entrants,winnerId){const title=clean(item?.title,100)||"Норка";for(const userId of Array.isArray(entrants)?entrants:[]){if(String(userId)===String(winnerId)){await notifyUser(userId,"giveaway-winner-gift:"+item.id,"🏆 Поздравляем! Ты победил в розыгрыше «"+title+"»!\n🎁 Твой приз: "+(clean(item?.prize,120)||"уточни у организатора")+"\nОткрой личный кабинет → «Мои подарки» и нажми «Забрать». Кнопка получения пока работает как заглушка.");}else{await notifyUser(userId,"giveaway-end:"+item.id,"⏰ Розыгрыш «"+title+"» завершён. Спасибо за участие! Победитель уже определён. Результаты доступны в приложении.");}}}
+
+async function readNumberedEntries(giveawayId){
+ const raw=await redis(["HGETALL","norka:number-entries:"+giveawayId]),out=[];
+ if(Array.isArray(raw))for(let i=0;i+1<raw.length;i+=2){const number=Number(raw[i]),userId=String(raw[i+1]||"");if(Number.isInteger(number)&&number>0&&userId)out.push({number,userId});}
+ return out;
+}
+async function ensureNumberedPrizeReward(item,winner){
+ if(!item||!winner||!winner.userId)return false;
+ const prize=winner.prize||{},gift={id:"giveaway_"+String(item.id)+"_place_"+String(winner.place),type:"giveaway_prize",giveawayId:String(item.id),title:clean(item.title,100)||"Подарок от Норки",prize:clean(prize.title,120)||"Приз розыгрыша",description:clean(prize.description,500),imageUrl:clean(prize.imageUrl,500),winningNumber:Number(winner.number),place:Number(winner.place),status:"available",claimed:false,createdAt:item.drawnAt||new Date().toISOString()};
+ const key="norka:giveaway:number-reward:"+String(item.id)+":"+String(winner.place);
+ const script="if redis.call('GET',KEYS[2]) then return 0 end; redis.call('LPUSH',KEYS[1],ARGV[1]); redis.call('LTRIM',KEYS[1],'0','49'); redis.call('SET',KEYS[2],ARGV[1]); return 1";
+ return Number(await redis(["EVAL",script,"2","norka:rewards:"+String(winner.userId),key,JSON.stringify(gift)]))===1;
+}
+async function notifyNumberedGiveawayResult(item,entries,winners){
+ const notified=new Set();
+ for(const winner of winners||[]){
+  await notifyUser(winner.userId,"number-giveaway-winner:"+item.id+":"+winner.place,"🏆 Поздравляем! Ты выиграл в розыгрыше «"+clean(item.title,100)+"»!\n🎟️ Твой номер: "+String(winner.number).padStart(2,"0")+"\n🎁 Твой приз: "+clean(winner.prize?.title,120)+"\nОткрой Норку → «Мои подарки», чтобы увидеть награду.");
+  notified.add(String(winner.userId));
+ }
+ const allUsers=[...new Set((entries||[]).map(e=>String(e.userId)))];
+ for(const uid of allUsers)if(!notified.has(uid))await notifyUser(uid,"number-giveaway-end:"+item.id,"⏰ Розыгрыш «"+clean(item.title,100)+"» завершён. Спасибо за участие! Победители уже определены. Результаты доступны в Норке.");
+}
+async function drawNumberedGiveaway(giveawayId){
+ const items=await list("norka:giveaways"),item=items.find(x=>String(x.id)===String(giveawayId));
+ if(!item||item.type!=="numbers")return {completed:false};
+ if(item.status==="completed")return {completed:true,item};
+ if(item.status!=="drawing")return {completed:false};
+ const entries=await readNumberedEntries(giveawayId);
+ if(entries.length!==Number(item.capacity))return {completed:false};
+ const pool=entries.slice(),winners=[];
+ for(let i=0;i<item.prizes.length&&pool.length;i++){
+  const index=randomInt(pool.length),entry=pool.splice(index,1)[0];
+  winners.push({place:i+1,number:entry.number,userId:entry.userId,prize:item.prizes[i]});
+ }
+ if(winners.length!==item.prizes.length)return {completed:false};
+ const drawnAt=new Date().toISOString(),encoded=JSON.stringify(winners);
+ const script="local n=redis.call('LLEN',KEYS[1]); for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[1],i); if raw then local g=cjson.decode(raw); if tostring(g.id)==ARGV[1] then if g.status=='completed' then return 0 end; if g.status~='drawing' then return -1 end; g.status='completed'; g.winners=cjson.decode(ARGV[2]); g.drawnAt=ARGV[3]; redis.call('LSET',KEYS[1],i,cjson.encode(g)); return 1 end end end; return -1";
+ const saved=Number(await redis(["EVAL",script,"1","norka:giveaways",String(giveawayId),encoded,drawnAt]));
+ if(saved===0){const fresh=(await list("norka:giveaways")).find(x=>String(x.id)===String(giveawayId));return {completed:true,item:fresh};}
+ if(saved!==1)return {completed:false};
+ const completed={...item,status:"completed",winners,drawnAt};
+ for(const winner of winners)await ensureNumberedPrizeReward(completed,winner);
+ await notifyNumberedGiveawayResult(completed,entries,winners);
+ return {completed:true,item:completed,winners};
+}
+
 async function grantProgress(id,eventId,kind,day,sendNotification=true){
  const config=await progressConfig(),xp=Math.max(0,Math.floor(Number(config.xp[kind])||0));
  const thresholds=config.thresholds.map(x=>Math.max(0,Math.floor(Number(x)||0)));
@@ -91,7 +137,7 @@ async function readProgress(id){
  const level=Math.max(1,Number(p.level)||1),current=Number(thresholds[level-1])||0,next=Number(thresholds[level])||current;
  return {...p,level,currentLevelXp:current,nextLevelXp:next,levelProgress:next>current?Math.max(0,Math.min(100,Math.round((Number(p.xp)-current)/(next-current)*100))):100,achievements:Array.isArray(achievements)?achievements:[],thresholds};
 }
-async function giveaways(){const items=await list("norka:giveaways");await Promise.all(items.map(async item=>{const count=Number(await redis(["SCARD","norka:entries:"+item.id]))||0;item.entries=count;}));return items;}
+async function giveaways(){const items=await list("norka:giveaways");await Promise.all(items.map(async item=>{const count=Number(await redis([item.type==="numbers"?"HLEN":"SCARD",item.type==="numbers"?"norka:number-entries:"+item.id:"norka:entries:"+item.id]))||0;item.entries=count;}));return items;}
 async function completeGiveaway(giveawayId,winnerId,drawnAt){
  const script=[
   "local n=redis.call('LLEN',KEYS[1]);",
@@ -117,11 +163,13 @@ async function markFullGiveawayDrawing(item){
 async function processGiveawayLifecycle(){
  const items=await list("norka:giveaways");
  for(let item of items){
-  if(item.status==="active"&&Number(item.capacity)>0){
+  if(item.type==="numbers"&&item.status==="active"&&Number(item.capacity)>0){const sold=Number(await redis(["HLEN","norka:number-entries:"+item.id]))||0;if(sold===Number(item.capacity)){const freeze="local n=redis.call('LLEN',KEYS[1]);for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[1],i);if raw then local g=cjson.decode(raw);if tostring(g.id)==ARGV[1] and g.status=='active' then g.status='drawing';redis.call('LSET',KEYS[1],i,cjson.encode(g));return 1 end end end;return 0";await redis(["EVAL",freeze,"1","norka:giveaways",String(item.id)]);item.status="drawing";}}
+  if(item.type==="numbers"&&item.status==="drawing"){await drawNumberedGiveaway(item.id);const fresh=(await list("norka:giveaways")).find(x=>String(x.id)===String(item.id));if(fresh)item=fresh;}
+  if(item.type!=="numbers"&&item.status==="active"&&Number(item.capacity)>0){
    const entrants=await redis(["SMEMBERS","norka:entries:"+item.id]);
    if(Array.isArray(entrants)&&entrants.length===Number(item.capacity))item.status=await markFullGiveawayDrawing(item)?"drawing":item.status;
   }
-  if(item.status==="drawing"){
+  if(item.type!=="numbers"&&item.status==="drawing"){
    const entrants=await redis(["SMEMBERS","norka:entries:"+item.id]);
    if(Array.isArray(entrants)&&entrants.length){
     const selected=String(entrants[randomInt(entrants.length)]);
@@ -138,11 +186,16 @@ async function processGiveawayLifecycle(){
    const entrants=await redis(["SMEMBERS","norka:entries:"+item.id]);
    await notifyGiveawayResult(item,entrants,item.winnerId);
   }
+  if(item.type==="numbers"&&item.status==="completed"&&Array.isArray(item.winners)){
+   const entries=await readNumberedEntries(item.id);
+   for(const winner of item.winners)await ensureNumberedPrizeReward(item,winner);
+   await notifyNumberedGiveawayResult(item,entries,item.winners);
+  }
  }
 }
 async function readUserRewards(id){
  const items=await list("norka:giveaways");
- for(const item of items)if(item.status==="completed"&&String(item.winnerId)===String(id))await ensureGiveawayReward(item,id);
+ for(const item of items){if(item.status==="completed"&&String(item.winnerId)===String(id))await ensureGiveawayReward(item,id);if(item.type==="numbers"&&item.status==="completed"&&Array.isArray(item.winners))for(const winner of item.winners)if(String(winner.userId)===String(id))await ensureNumberedPrizeReward(item,winner);}
  return list("norka:rewards:"+id);
 }
 module.exports=async function handler(req,res){
@@ -203,8 +256,22 @@ module.exports=async function handler(req,res){
     await notifyGiveawayResult(item||{id:giveawayId},entrants,winnerId);
     return json(res,200,{ok:true,winnerId,title:item?.title||"",prize:item?.prize||"",entries:entrants.length,backendVersion:NORKA_BACKEND_VERSION});
    }
-   if(action==="admin_delete_giveaway"){const giveawayId=clean(body.giveawayId,60);if(!giveawayId)return json(res,400,{ok:false,error:"Не указан розыгрыш"});const script="local n=redis.call('LLEN',KEYS[1]); local keep={}; local removed=0; for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[1],i); if raw then local ok,item=pcall(cjson.decode,raw); if ok and tostring(item.id)==ARGV[1] then removed=removed+1 else table.insert(keep,raw) end end end; local participants=redis.call('SCARD',KEYS[2]); if removed>0 then redis.call('DEL',KEYS[1]); for i=#keep,1,-1 do redis.call('LPUSH',KEYS[1],keep[i]); end; redis.call('DEL',KEYS[2]); redis.call('HDEL',KEYS[3],ARGV[1]); end; return {removed,participants}";const result=await redis(["EVAL",script,"3","norka:giveaways","norka:entries:"+giveawayId,"norka:giveaway-counts",giveawayId]);const removed=Array.isArray(result)?Number(result[0]):Number(result);if(!removed)return json(res,404,{ok:false,error:"Розыгрыш не найден в текущей базе Redis. Проверь подключение Яндекс-функции к той же базе, что использует приложение.",backendVersion:NORKA_BACKEND_VERSION});return json(res,200,{ok:true,deleted:removed,participantsRemoved:Array.isArray(result)?Number(result[1])||0:0,backendVersion:NORKA_BACKEND_VERSION});}
-    if(action==="admin_create_giveaway"){const cost=Number(body.cost),capacity=Number(body.capacity);if(!clean(body.title,100)||!clean(body.prize,120))return json(res,400,{ok:false,error:"Заполните название и приз"});if(!Number.isInteger(cost)||cost<1||cost>100000)return json(res,400,{ok:false,error:"Стоимость участия должна быть от 1 до 100000 монет"});if(!Number.isInteger(capacity)||capacity<1||capacity>1000000)return json(res,400,{ok:false,error:"Укажите количество мест от 1 до 1000000"});const item={id:"g"+Date.now()+"_"+randomInt(100000,999999),title:clean(body.title,100),description:clean(body.description,500),prize:clean(body.prize,120),cost,capacity,status:"active",createdAt:new Date().toISOString(),entries:0};await redis(["LPUSH","norka:giveaways",JSON.stringify(item)]);try{await notifyAllUsers("giveaway-start:"+item.id,"🎁 В Норке начался новый розыгрыш!\nПриз: "+item.prize+"\nУчастие: "+item.cost+" монет. Открой приложение, чтобы узнать подробности.");}catch(error){console.error("NORKA giveaway announcement failed:",error&&error.message||"unknown");}return json(res,200,{ok:true,item});}
+   if(action==="admin_delete_giveaway"){const giveawayId=clean(body.giveawayId,60);if(!giveawayId)return json(res,400,{ok:false,error:"Не указан розыгрыш"});const script="local n=redis.call('LLEN',KEYS[1]); local keep={}; local removed=0; for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[1],i); if raw then local ok,item=pcall(cjson.decode,raw); if ok and tostring(item.id)==ARGV[1] then removed=removed+1 else table.insert(keep,raw) end end end; local participants=redis.call('SCARD',KEYS[2]); if removed>0 then redis.call('DEL',KEYS[1]); for i=#keep,1,-1 do redis.call('LPUSH',KEYS[1],keep[i]); end; redis.call('DEL',KEYS[2],KEYS[4]); redis.call('HDEL',KEYS[3],ARGV[1]); end; return {removed,participants}";const result=await redis(["EVAL",script,"4","norka:giveaways","norka:entries:"+giveawayId,"norka:giveaway-counts","norka:number-entries:"+giveawayId,giveawayId]);const removed=Array.isArray(result)?Number(result[0]):Number(result);if(!removed)return json(res,404,{ok:false,error:"Розыгрыш не найден в текущей базе Redis. Проверь подключение Яндекс-функции к той же базе, что использует приложение.",backendVersion:NORKA_BACKEND_VERSION});return json(res,200,{ok:true,deleted:removed,participantsRemoved:Array.isArray(result)?Number(result[1])||0:0,backendVersion:NORKA_BACKEND_VERSION});}
+    if(action==="admin_create_numbered_giveaway"){
+ const cost=Number(body.cost),capacity=Number(body.capacity),rawPrizes=Array.isArray(body.prizes)?body.prizes:[];
+ if(!clean(body.title,100))return json(res,400,{ok:false,error:"Укажите название розыгрыша"});
+ if(!Number.isInteger(cost)||cost<1||cost>100000)return json(res,400,{ok:false,error:"Стоимость номера должна быть от 1 до 100000 монет"});
+ if(!Number.isInteger(capacity)||capacity<1||capacity>500)return json(res,400,{ok:false,error:"Количество номеров должно быть от 1 до 500"});
+ if(rawPrizes.length<1||rawPrizes.length>25||rawPrizes.length>capacity)return json(res,400,{ok:false,error:"Количество призов должно быть от 1 до 25 и не превышать количество номеров"});
+ const prizes=rawPrizes.map((p,i)=>({place:i+1,title:clean(p&&p.title,120),description:clean(p&&p.description,500),imageUrl:clean(p&&p.imageUrl,500)}));
+ if(prizes.some(p=>!p.title))return json(res,400,{ok:false,error:"Укажите название каждого приза"});
+ if(prizes.some(p=>p.imageUrl&&!/^https:\/\//i.test(p.imageUrl)))return json(res,400,{ok:false,error:"Ссылка на изображение должна начинаться с https://"});
+ const item={id:"n"+Date.now()+"_"+randomInt(100000,999999),type:"numbers",title:clean(body.title,100),description:clean(body.description,500),cost,capacity,prizes,status:"active",createdAt:new Date().toISOString(),entries:0};
+ await redis(["LPUSH","norka:giveaways",JSON.stringify(item)]);
+ try{await notifyAllUsers("number-giveaway-start:"+item.id,"🎟️ В Норке начался розыгрыш по номерам!\n"+item.title+"\nНомеров: "+capacity+" · цена: "+cost+" монет. Призов: "+prizes.length+". Открой Норку и выбери свои номера!");}catch(error){console.error("NORKA numbered giveaway announcement failed:",error&&error.message||"unknown");}
+ return json(res,200,{ok:true,item});
+}
+   if(action==="admin_create_giveaway"){const cost=Number(body.cost),capacity=Number(body.capacity);if(!clean(body.title,100)||!clean(body.prize,120))return json(res,400,{ok:false,error:"Заполните название и приз"});if(!Number.isInteger(cost)||cost<1||cost>100000)return json(res,400,{ok:false,error:"Стоимость участия должна быть от 1 до 100000 монет"});if(!Number.isInteger(capacity)||capacity<1||capacity>1000000)return json(res,400,{ok:false,error:"Укажите количество мест от 1 до 1000000"});const item={id:"g"+Date.now()+"_"+randomInt(100000,999999),title:clean(body.title,100),description:clean(body.description,500),prize:clean(body.prize,120),cost,capacity,status:"active",createdAt:new Date().toISOString(),entries:0};await redis(["LPUSH","norka:giveaways",JSON.stringify(item)]);try{await notifyAllUsers("giveaway-start:"+item.id,"🎁 В Норке начался новый розыгрыш!\nПриз: "+item.prize+"\nУчастие: "+item.cost+" монет. Открой приложение, чтобы узнать подробности.");}catch(error){console.error("NORKA giveaway announcement failed:",error&&error.message||"unknown");}return json(res,200,{ok:true,item});}
    if(action==="admin_save_tasks"){if(!Array.isArray(body.tasks)||body.tasks.length>30)return json(res,400,{ok:false,error:"Некорректный список заданий"});const seen=new Set(),safe=[];for(const t of body.tasks){const id=clean(t.id,40),title=clean(t.title,100),reward=Number(t.reward);if(!id||!title||seen.has(id)||!Number.isInteger(reward)||reward<0||reward>10000)return json(res,400,{ok:false,error:"Проверьте названия и награды заданий (0–10000 ягод)"});seen.add(id);safe.push({id,title,description:clean(t.description,250),reward,type:["daily","subscription","activity"].includes(t.type)?t.type:"activity",url:clean(t.url,500),channelId:clean(String(t.channelId||""),40),active:Boolean(t.active)});}if(!safe.some(t=>t.id==="daily"))safe.unshift(DEFAULT_TASKS[0]);await set("norka:tasks",safe);return json(res,200,{ok:true,tasks:await tasks()});}
     if(action==="admin_create_task"){const title=clean(body.title,100),description=clean(body.description,250),url=clean(body.url,500),reward=Number(body.reward),type=body.type==="subscription"?"subscription":"activity";if(!title)return json(res,400,{ok:false,error:"Укажите название задания"});if(!Number.isInteger(reward)||reward<0||reward>10000)return json(res,400,{ok:false,error:"Награда должна быть от 0 до 10000 ягод"});const current=await tasks();if(current.length>=30)return json(res,409,{ok:false,error:"Достигнут лимит в 30 заданий"});let channelId="";if(type==="subscription"){if(!url)return json(res,400,{ok:false,error:"Для задания на подписку укажи публичную ссылку на канал MAX"});if(!process.env.MAX_BOT_TOKEN)return json(res,503,{ok:false,error:"Не настроен MAX_BOT_TOKEN"});let link="";try{const parsed=new URL(url);if(!["max.ru","www.max.ru","max.com","www.max.com"].includes(parsed.hostname.toLowerCase()))throw new Error("domain");const parts=parsed.pathname.split("/").filter(Boolean);if(parts.length!==1||parts[0].toLowerCase()==="join")throw new Error("private");link=decodeURIComponent(parts[0]).replace(/^@/,"");if(!/^[a-zA-Z][\\w-]{1,63}$/.test(link))throw new Error("format");}catch(error){return json(res,400,{ok:false,error:"Вставь публичную ссылку канала вида https://max.ru/channel_name. Пригласительные ссылки /join/ не подходят для автоматического поиска канала."});}const found=await requestMax({token:process.env.MAX_BOT_TOKEN,apiPath:"/chats/"+encodeURIComponent(link)});if(!found.ok)return json(res,422,{ok:false,error:"MAX не смог найти канал по этой ссылке. Проверь публичную ссылку и доступность канала."});channelId=String(found.data?.chat_id||found.data?.chatId||"");if(!channelId)return json(res,422,{ok:false,error:"MAX вернул данные канала без chat_id. Задание не создано."});}else if(url&&!/^https:\/\//i.test(url))return json(res,400,{ok:false,error:"Ссылка задания должна начинаться с https://"});const item={id:"task_"+Date.now()+"_"+randomInt(1000,9999),title,description:description||(type==="subscription"?"Подпишись на канал и вернись проверить подписку":"Выполни задание и отправь заявку на проверку"),reward,type,url,channelId,active:true,createdAt:new Date().toISOString()};const next=current.filter(t=>t.id!=="daily");next.push(item);await set("norka:tasks",[DEFAULT_TASKS[0],...next]);return json(res,200,{ok:true,item,tasks:await tasks()});}
     if(action==="admin_delete_task"){const taskId=clean(body.taskId,50);if(!taskId||taskId==="daily")return json(res,400,{ok:false,error:"Ежедневное системное задание нельзя удалить"});const current=await tasks(),item=current.find(t=>t.id===taskId);if(!item)return json(res,404,{ok:false,error:"Задание не найдено"});await set("norka:tasks",current.filter(t=>t.id!==taskId));const cleanup="local n=redis.call('LLEN',KEYS[1]); local removed=0; for i=n-1,0,-1 do local raw=redis.call('LINDEX',KEYS[1],i); if raw then local ok,p=pcall(cjson.decode,raw); if ok and tostring(p.taskId)==ARGV[1] then removed=removed+redis.call('LREM',KEYS[1],0,raw) end end end; return removed";await redis(["EVAL",cleanup,"1","norka:pending",taskId]);return json(res,200,{ok:true,tasks:await tasks()});}
@@ -265,12 +332,12 @@ module.exports=async function handler(req,res){
     try{ts=(await stage("tasks",()=>tasks())).filter(t=>t.active);}catch(error){console.error("NORKA bootstrap tasks:",error&&error.message||"unknown");}
     try{
      const items=(await stage("giveaways_list",()=>list("norka:giveaways"))).filter(g=>g.status==="active");
-     gs=await stage("giveaways_details",()=>Promise.all(items.map(async g=>{const count=await redis(["SCARD","norka:entries:"+g.id]);let joined=0;try{joined=await redis(["SISMEMBER","norka:entries:"+g.id,id]);}catch(error){console.error("NORKA bootstrap giveaway membership:",error&&error.message||"unknown");}return {...g,entries:Number(count)||0,joined:Number(joined)===1};})));
+     gs=await stage("giveaways_details",()=>Promise.all(items.map(async g=>{if(g.type==="numbers"){const entries=await readNumberedEntries(g.id),userNumbers=entries.filter(x=>String(x.userId)===String(id)).map(x=>x.number);return {...g,entries:entries.length,soldNumbers:entries.map(x=>x.number),userNumbers,joined:userNumbers.length>0};}const count=await redis(["SCARD","norka:entries:"+g.id]);let joined=0;try{joined=await redis(["SISMEMBER","norka:entries:"+g.id,id]);}catch(error){console.error("NORKA bootstrap giveaway membership:",error&&error.message||"unknown");}return {...g,entries:Number(count)||0,joined:Number(joined)===1};})));
     }catch(error){console.error("NORKA bootstrap giveaways:",error&&error.message||"unknown");gs=[];}
     try{claims=await stage("claims",async()=>await get("norka:claims:"+id)||{});}catch(error){console.error("NORKA bootstrap claims:",error&&error.message||"unknown");}
     try{rate=await stage("rate",async()=>Number(await redis(["GET","norka:exchange-rate"]))||100);}catch(error){console.error("NORKA bootstrap rate:",error&&error.message||"unknown");}
     try{progress=await stage("progress",async()=>{const day=new Date().toISOString().slice(0,10);await grantProgress(id,"visit:"+day,"visit",day,false);if(u?.lastDaily)await grantProgress(id,"daily:"+u.lastDaily,"daily",u.lastDaily,false);return readProgress(id);});}catch(error){console.error("NORKA bootstrap progress:",error&&error.message||"unknown");}
-    try{rewards=await stage("rewards",()=>list("norka:rewards:"+id));}catch(error){console.error("NORKA bootstrap rewards:",error&&error.message||"unknown");}
+    try{rewards=await stage("rewards",()=>readUserRewards(id));}catch(error){console.error("NORKA bootstrap rewards:",error&&error.message||"unknown");}
     timings.total=Date.now()-started;console.info("NORKA bootstrap complete",JSON.stringify(timings));
     return json(res,200,{ok:true,user:u,wallet:w,tasks:ts,giveaways:gs,history,claims,rate,progress,rewards,backendVersion:NORKA_BACKEND_VERSION,diagnostics:timings});
    }
@@ -361,6 +428,34 @@ module.exports=async function handler(req,res){
    }
    return json(res,200,{ok:true,wallet:{berries:Number(result[0])||0,coins:Number(result[1])||0},coins,duplicate:Number(result[2])===0,progress});
   }
+
+  if(action==="buy_numbered_entries"){
+   const giveawayId=clean(body.giveawayId,60),rawNumbers=Array.isArray(body.numbers)?body.numbers:[],numbers=[...new Set(rawNumbers.map(Number))];
+   if(!giveawayId||!numbers.length||numbers.length>500||numbers.some(n=>!Number.isInteger(n)||n<1))return json(res,400,{ok:false,error:"Выбери корректные номера"});
+   const gs=await giveaways(),g=gs.find(x=>x.id===giveawayId&&x.type==="numbers"&&x.status==="active");
+   if(!g)return json(res,404,{ok:false,error:"Розыгрыш по номерам не найден или уже завершён"});
+   if(numbers.some(n=>n>Number(g.capacity)))return json(res,400,{ok:false,error:"Один из номеров выходит за пределы розыгрыша"});
+   const total=Number(g.cost)*numbers.length;if(!Number.isSafeInteger(total)||total<1)return json(res,409,{ok:false,error:"Некорректная стоимость покупки"});
+   const now=new Date().toISOString(),ledgerItem=JSON.stringify({type:"numbered_giveaway_entry",title:"Номера: "+g.title+" ("+numbers.join(", ")+")",coins:-total,at:now});
+   const script=[
+    "local n=redis.call('LLEN',KEYS[5]);local found=false;local cap=0;local unit=tonumber(ARGV[3]);",
+    "for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[5],i);if raw then local item=cjson.decode(raw);if tostring(item.id)==ARGV[2] then found=true;if item.status~='active' or item.type~='numbers' then return redis.error_reply('CLOSED') end;cap=tonumber(item.capacity) or 0;break end end end;",
+    "if not found then return redis.error_reply('NOT_FOUND') end;",
+    "local chosen=cjson.decode(ARGV[1]);if #chosen==0 then return redis.error_reply('NO_NUMBERS') end;",
+    "for _,v in ipairs(chosen) do local num=tostring(v);if tonumber(v)<1 or tonumber(v)>cap or tonumber(v)~=math.floor(tonumber(v)) then return redis.error_reply('BAD_NUMBER') end;if redis.call('HEXISTS',KEYS[1],num)==1 then return redis.error_reply('NUMBER_TAKEN') end end;",
+    "local sold=redis.call('HLEN',KEYS[1]);if sold+#chosen>cap then return redis.error_reply('SOLD_OUT') end;",
+    "local coins=tonumber(redis.call('HGET',KEYS[2],'coins') or '0');local berries=tonumber(redis.call('HGET',KEYS[2],'berries') or '0');local total=unit*#chosen;if coins<total then return redis.error_reply('INSUFFICIENT') end;",
+    "redis.call('HSET',KEYS[2],'coins',coins-total);for _,v in ipairs(chosen) do redis.call('HSET',KEYS[1],tostring(v),ARGV[4]) end;",
+    "local soldNow=redis.call('HLEN',KEYS[1]);redis.call('LPUSH',KEYS[3],ARGV[5]);redis.call('LTRIM',KEYS[3],'0','99');",
+    "if soldNow==cap then for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[5],i);if raw then local item=cjson.decode(raw);if tostring(item.id)==ARGV[2] and item.status=='active' then item.status='drawing';redis.call('LSET',KEYS[5],i,cjson.encode(item));break end end end end;",
+    "return {coins-total,berries,soldNow,(soldNow==cap) and 1 or 0}"
+   ].join(" ");
+   const result=await redis(["EVAL",script,"5","norka:number-entries:"+giveawayId,"norka:wallet:"+id,"norka:ledger:"+id,"norka:giveaway-counts","norka:giveaways",JSON.stringify(numbers),giveawayId,String(g.cost),id,ledgerItem]);
+   let draw=null;if(Number(result[3])===1){try{draw=await drawNumberedGiveaway(giveawayId);}catch(error){console.error("NORKA numbered giveaway draw deferred:",error&&error.message||"unknown");}}
+   let progress=null;try{await grantProgress(id,"numbered-giveaway:"+giveawayId,"giveaway",new Date().toISOString().slice(0,10));progress=await readProgress(id);}catch(error){console.error("NORKA numbered giveaway progress failed:",error&&error.message||"unknown");}
+   return json(res,200,{ok:true,wallet:{coins:Number(result[0])||0,berries:Number(result[1])||0},entries:Number(result[2])||0,giveawayCompleted:Boolean(draw&&draw.completed),winners:draw?.winners||[],progress});
+  }
+
   if(action==="enter_giveaway"){
    const giveawayId=clean(body.giveawayId,60),gs=await giveaways(),g=gs.find(x=>x.id===giveawayId&&x.status==="active");
    if(!g)return json(res,404,{ok:false,error:"Розыгрыш не найден"});
@@ -406,5 +501,5 @@ module.exports=async function handler(req,res){
    return json(res,200,{ok:true,wallet:{coins:Number(result[0])||0,berries:Number(result[1])||0},giveawayCompleted:Boolean(winnerId),winnerId,progress});
   }
   return json(res,400,{ok:false,error:"Неизвестное действие"});
- }catch(e){const msg=String(e&&e.message||"Ошибка сервера");if(msg.includes("INSUFFICIENT"))return json(res,409,{ok:false,error:"Недостаточно средств на балансе"});if(msg.includes("DAILY_ALREADY"))return json(res,409,{ok:false,error:"Ежедневная награда уже получена"});if(msg.includes("SUBSCRIPTION_ALREADY"))return json(res,409,{ok:false,error:"Награда за подписку уже получена"});if(msg.includes("TASK_ALREADY"))return json(res,409,{ok:false,error:"Заявка уже отправлена или задание подтверждено"});if(msg.includes("DRAW_ALREADY"))return json(res,409,{ok:false,error:"Победитель уже определяется или розыгрыш завершён"});if(msg.includes("CLOSED"))return json(res,409,{ok:false,error:"Розыгрыш уже завершён"});if(msg.includes("ALREADY"))return json(res,409,{ok:false,error:"Ты уже участвуешь в этом розыгрыше"});if(msg.includes("SOLD_OUT"))return json(res,409,{ok:false,error:"Все места в этом розыгрыше уже заняты"});console.error("NORKA API:",msg);return json(res,500,{ok:false,error:"Внутренняя ошибка сервера Норки.",code:"NORKA_INTERNAL_ERROR",backendVersion:NORKA_BACKEND_VERSION});}
+ }catch(e){const msg=String(e&&e.message||"Ошибка сервера");if(msg.includes("INSUFFICIENT"))return json(res,409,{ok:false,error:"Недостаточно средств на балансе"});if(msg.includes("DAILY_ALREADY"))return json(res,409,{ok:false,error:"Ежедневная награда уже получена"});if(msg.includes("SUBSCRIPTION_ALREADY"))return json(res,409,{ok:false,error:"Награда за подписку уже получена"});if(msg.includes("TASK_ALREADY"))return json(res,409,{ok:false,error:"Заявка уже отправлена или задание подтверждено"});if(msg.includes("DRAW_ALREADY"))return json(res,409,{ok:false,error:"Победитель уже определяется или розыгрыш завершён"});if(msg.includes("CLOSED"))return json(res,409,{ok:false,error:"Розыгрыш уже завершён"});if(msg.includes("ALREADY"))return json(res,409,{ok:false,error:"Ты уже участвуешь в этом розыгрыше"});if(msg.includes("SOLD_OUT"))return json(res,409,{ok:false,error:"Все места в этом розыгрыше уже заняты"});if(msg.includes("NUMBER_TAKEN"))return json(res,409,{ok:false,error:"Один или несколько номеров уже купили. Обнови сетку и выбери свободные номера."});if(msg.includes("BAD_NUMBER"))return json(res,400,{ok:false,error:"Выбран некорректный номер"});if(msg.includes("NO_NUMBERS"))return json(res,400,{ok:false,error:"Выбери хотя бы один номер"});console.error("NORKA API:",msg);return json(res,500,{ok:false,error:"Внутренняя ошибка сервера Норки.",code:"NORKA_INTERNAL_ERROR",backendVersion:NORKA_BACKEND_VERSION});}
 };
