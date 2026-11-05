@@ -83,6 +83,14 @@ async function notifyNumberedGiveawayResult(item,entries,winners){
  const allUsers=[...new Set((entries||[]).map(e=>String(e.userId)))];
  for(const uid of allUsers)if(!notified.has(uid))await notifyUser(uid,"number-giveaway-end:"+item.id,"⏰ Розыгрыш «"+clean(item.title,100)+"» завершён. Спасибо за участие! Победители уже определены. Результаты доступны в Норке.");
 }
+async function publishNumberedGiveawayResult(item){
+ try{
+  const {publishNumberedGiveaway}=require("../lib/winner-publisher");
+  await publishNumberedGiveaway(item,item.winners,async userId=>ensureUser(String(userId)),redis);
+ }catch(error){
+  console.error("NORKA winner channel publication failed:",error&&error.message||"unknown");
+ }
+}
 async function drawNumberedGiveaway(giveawayId){
  const items=await list("norka:giveaways"),item=items.find(x=>String(x.id)===String(giveawayId));
  if(!item||item.type!=="numbers")return {completed:false};
@@ -104,6 +112,7 @@ async function drawNumberedGiveaway(giveawayId){
  const completed={...item,status:"completed",winners,drawnAt};
  for(const winner of winners)await ensureNumberedPrizeReward(completed,winner);
  await notifyNumberedGiveawayResult(completed,entries,winners);
+ await publishNumberedGiveawayResult(completed);
  return {completed:true,item:completed,winners};
 }
 
@@ -190,6 +199,7 @@ async function processGiveawayLifecycle(){
    const entries=await readNumberedEntries(item.id);
    for(const winner of item.winners)await ensureNumberedPrizeReward(item,winner);
    await notifyNumberedGiveawayResult(item,entries,item.winners);
+   await publishNumberedGiveawayResult(item);
   }
  }
 }
