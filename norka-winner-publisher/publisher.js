@@ -80,7 +80,18 @@ function multipartImage(buffer, filename = "norka-winners.png") {
 }
 
 async function uploadImage(token, imageBuffer) {
-  const slot = await maxJson(token, "/uploads?type=image");
+  // MAX requires POST to create an image-upload slot (not GET).
+  const slotResponse = await request({
+    url: "https://" + MAX_API_HOST + "/uploads?type=image",
+    method: "POST",
+    headers: { Authorization: token },
+    body: null
+  });
+  if (!slotResponse.ok) {
+    const detail = slotResponse.data?.message || slotResponse.data?.description || slotResponse.raw.slice(0, 500);
+    throw new Error("MAX_UPLOAD_SLOT_" + slotResponse.status + ": " + detail);
+  }
+  const slot = slotResponse.data;
   if (!slot?.url) throw new Error("MAX_UPLOAD_URL_MISSING");
   const multipart = multipartImage(imageBuffer);
   const uploaded = await request({
@@ -89,7 +100,10 @@ async function uploadImage(token, imageBuffer) {
     body: multipart.body, timeout: 30000
   });
   if (!uploaded.ok) throw new Error("MAX_IMAGE_UPLOAD_" + uploaded.status + ": " + uploaded.raw.slice(0, 400));
-  let tokenValue = slot.token || uploaded.data?.token || uploaded.data?.retval;
+  // MAX returns the image attachment token inside photos.photoIds.token.
+  let tokenValue = uploaded.data?.photos?.photoIds?.token ||
+    uploaded.data?.photos?.photoIds?.[0]?.token ||
+    uploaded.data?.token || slot.token || uploaded.data?.retval;
   if (!tokenValue) {
     try {
       const params = new URL(slot.url).searchParams;
