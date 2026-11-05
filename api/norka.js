@@ -243,6 +243,11 @@ module.exports=async function handler(req,res){
     }catch(error){
      diagnostics.publisherLoadError=String(error&&error.message||error).slice(0,1000);
     }
+    try{
+     diagnostics.sharpPath=require.resolve("sharp");
+    }catch(error){
+     diagnostics.sharpPath="not_found";
+    }
     for(const [label,moduleName] of [
      ["sharpPackage","sharp"],
      ["sharpLinuxBinary","@img/sharp-linux-x64"],
