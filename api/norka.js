@@ -231,6 +231,18 @@ module.exports=async function handler(req,res){
     return json(res,200,{ok:true,giveawayId,publication:marker||"not_sent",lastError:error||null,imageError:imageError||null});
    }
    if(action==="admin_set_channel_id"){const channelId=clean(String(body.channelId||""),40);if(!/^-?\d{1,30}$/.test(channelId))return json(res,400,{ok:false,error:"Укажите числовой ID канала MAX"});await redis(["SET","norka:channel:chat_id",channelId]);return json(res,200,{ok:true,channelId});}
+   if(action==="admin_test_channel_message"){
+    const token=process.env.MAX_BOT_TOKEN;
+    const channelId=await redis(["GET","norka:channel:chat_id"]);
+    if(!token)return json(res,503,{ok:false,error:"Не настроен MAX_BOT_TOKEN"});
+    if(!channelId)return json(res,400,{ok:false,error:"В Redis не сохранён ID канала"});
+    try{
+     const message="🔎 Тест связи с каналом от Норки · "+new Date().toLocaleString("ru-RU");
+     const result=await requestMax({token,method:"POST",apiPath:"/messages?chat_id="+encodeURIComponent(String(channelId)),body:{text:message}});
+     if(!result.ok)return json(res,502,{ok:false,error:"MAX отклонил тестовую публикацию",httpStatus:result.status,details:result.data||result.raw||null,channelId:String(channelId)});
+     return json(res,200,{ok:true,message:"Тестовое сообщение отправлено в канал",channelId:String(channelId),messageId:result.data?.message?.body?.mid||result.data?.message?.mid||null});
+    }catch(error){return json(res,502,{ok:false,error:"Ошибка запроса к MAX: "+String(error&&error.message||error).slice(0,500),channelId:String(channelId)});}
+   }
     if(action==="admin_setup_channel_tracking"){
     const token=process.env.MAX_BOT_TOKEN,secret=process.env.MAX_WEBHOOK_SECRET;
     if(!token||!secret)return json(res,503,{ok:false,error:"Не настроены MAX_BOT_TOKEN или MAX_WEBHOOK_SECRET"});
