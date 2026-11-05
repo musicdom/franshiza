@@ -227,8 +227,8 @@ module.exports=async function handler(req,res){
    if(action==="admin_channel_publication_status"){
     const giveawayId=clean(body.giveawayId,60);
     if(!giveawayId)return json(res,400,{ok:false,error:"Не указан ID розыгрыша"});
-    const [marker,error]=await Promise.all([redis(["GET","norka:giveaway:channel-published:"+giveawayId]),redis(["GET","norka:giveaway:channel-error:"+giveawayId])]);
-    return json(res,200,{ok:true,giveawayId,publication:marker||"not_sent",lastError:error||null});
+    const [marker,error,imageError]=await Promise.all([redis(["GET","norka:giveaway:channel-published:"+giveawayId]),redis(["GET","norka:giveaway:channel-error:"+giveawayId]),redis(["GET","norka:giveaway:channel-image-error:"+giveawayId])]);
+    return json(res,200,{ok:true,giveawayId,publication:marker||"not_sent",lastError:error||null,imageError:imageError||null});
    }
    if(action==="admin_set_channel_id"){const channelId=clean(String(body.channelId||""),40);if(!/^-?\d{1,30}$/.test(channelId))return json(res,400,{ok:false,error:"Укажите числовой ID канала MAX"});await redis(["SET","norka:channel:chat_id",channelId]);return json(res,200,{ok:true,channelId});}
     if(action==="admin_setup_channel_tracking"){
