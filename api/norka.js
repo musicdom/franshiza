@@ -225,7 +225,15 @@ module.exports=async function handler(req,res){
    if(!(await admin(req)))return json(res,401,{ok:false,error:"Неверный пароль админ-панели. Проверь NORKA_ADMIN_PASSWORD."});
    if(action==="admin_auth")return json(res,200,{ok:true,authenticated:true});
    if(action==="admin_winner_publisher_diagnostics"){
-    const diagnostics={backendVersion:NORKA_BACKEND_VERSION,nodeVersion:process.version,workingDirectory:process.cwd()};
+    const diagnostics={
+     backendVersion:NORKA_BACKEND_VERSION,
+     nodeVersion:process.version,
+     nodePlatform:process.platform,
+     nodeArch:process.arch,
+     workingDirectory:process.cwd(),
+     npmConfigOptional:process.env.npm_config_optional||null,
+     nodeEnv:process.env.NODE_ENV||null
+    };
     try{
      const publisherPath=require.resolve("../lib/winner-publisher");
      const publisher=require("../lib/winner-publisher");
@@ -235,11 +243,35 @@ module.exports=async function handler(req,res){
     }catch(error){
      diagnostics.publisherLoadError=String(error&&error.message||error).slice(0,1000);
     }
+    for(const [label,moduleName] of [
+     ["sharpPackage","sharp"],
+     ["sharpLinuxBinary","@img/sharp-linux-x64"],
+     ["sharpLinuxLibvips","@img/sharp-libvips-linux-x64"]
+    ]){
+     try{
+      diagnostics[label+"Path"]=require.resolve(moduleName);
+      try{
+       const packagePath=require.resolve(moduleName+"/package.json");
+       diagnostics[label+"Version"]=require(packagePath).version||null;
+      }catch(_){}
+      try{
+       require(moduleName);
+       diagnostics[label+"Load"]="ok";
+      }catch(error){
+       diagnostics[label+"Load"]="error";
+       diagnostics[label+"Error"]=String(error&&error.message||error).slice(0,1000);
+      }
+     }catch(error){
+      diagnostics[label+"Path"]="not_found";
+      diagnostics[label+"Load"]="not_available";
+      diagnostics[label+"Error"]=String(error&&error.message||error).slice(0,1000);
+     }
+    }
     try{
-     diagnostics.sharpPath=require.resolve("sharp");
      const sharp=require("sharp");
      diagnostics.sharpLoad="ok";
      diagnostics.sharpVersion=sharp.versions&&sharp.versions.sharp||null;
+     diagnostics.sharpVipsVersion=sharp.versions&&sharp.versions.vips||null;
     }catch(error){
      diagnostics.sharpLoad="error";
      diagnostics.sharpError=String(error&&error.message||error).slice(0,1500);
