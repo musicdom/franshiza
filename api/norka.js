@@ -224,33 +224,6 @@ module.exports=async function handler(req,res){
    if(!process.env.NORKA_ADMIN_PASSWORD)return json(res,503,{ok:false,error:"Не задан пароль админ-панели. Добавь NORKA_ADMIN_PASSWORD в переменные окружения backend и перезапусти функцию."});
    if(!(await admin(req)))return json(res,401,{ok:false,error:"Неверный пароль админ-панели. Проверь NORKA_ADMIN_PASSWORD."});
    if(action==="admin_auth")return json(res,200,{ok:true,authenticated:true});
-   if(action==="admin_publish_numbered_result"){
-    const giveawayId=clean(body.giveawayId,60);
-    if(!giveawayId)return json(res,400,{ok:false,error:"Не указан ID розыгрыша"});
-    const item=(await list("norka:giveaways")).find(x=>String(x.id)===giveawayId);
-    if(!item)return json(res,404,{ok:false,error:"Розыгрыш не найден"});
-    if(item.type!=="numbers"||item.status!=="completed"||!Array.isArray(item.winners)||!item.winners.length)return json(res,409,{ok:false,error:"Можно публиковать только завершённый розыгрыш по номерам с уже определёнными победителями"});
-    const marker="norka:giveaway:channel-published:"+giveawayId;
-    const state=await redis(["GET",marker]);
-    if(state==="sent")return json(res,200,{ok:true,published:true,alreadyPublished:true,giveawayId});
-    if(state==="sending")return json(res,409,{ok:false,busy:true,error:"Публикация уже выполняется. Повтори запрос через 15 минут, если сообщение так и не появится."});
-    try{
-     const {publishNumberedGiveaway}=require("../lib/winner-publisher");
-     const published=await publishNumberedGiveaway(item,item.winners,async userId=>ensureUser(String(userId)),redis);
-     if(!published){
-      const current=await redis(["GET",marker]);
-      if(current==="sent")return json(res,200,{ok:true,published:true,alreadyPublished:true,giveawayId});
-      return json(res,409,{ok:false,busy:current==="sending",error:current==="sending"?"Публикация уже выполняется.":"Публикатор не отправил сообщение.",marker:current||null});
-     }
-     await redis(["DEL","norka:giveaway:channel-error:"+giveawayId]);
-     return json(res,200,{ok:true,published:true,giveawayId,message:"Итоги отправлены в канал MAX."});
-    }catch(error){
-     const message=String(error&&error.message||error||"unknown").slice(0,1000);
-     try{await redis(["SET","norka:giveaway:channel-error:"+giveawayId,message]);}catch(saveError){}
-     console.error("NORKA admin channel publication failed:",message);
-     return json(res,502,{ok:false,published:false,giveawayId,error:message,marker:await redis(["GET",marker]).catch(()=>null)});
-    }
-   }
    if(action==="admin_channel_publication_status"){
     const giveawayId=clean(body.giveawayId,60);
     if(!giveawayId)return json(res,400,{ok:false,error:"Не указан ID розыгрыша"});
