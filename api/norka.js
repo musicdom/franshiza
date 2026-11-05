@@ -1,6 +1,6 @@
 const { createHmac, timingSafeEqual, randomInt } = require("crypto");
 const { requestMax, sendMaxMessage } = require("../lib/max-api");
-const NORKA_BACKEND_VERSION="norka-numbered-giveaways-2026-11-05-v12-admin-publication-diagnostics";
+const NORKA_BACKEND_VERSION="norka-numbered-giveaways-2026-11-05-v13-text-fallback-and-retry";
 
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function cfg(){const kvUrl=process.env.KV_REST_API_URL,kvToken=process.env.KV_REST_API_TOKEN,upstashUrl=process.env.UPSTASH_REDIS_REST_URL,upstashToken=process.env.UPSTASH_REDIS_REST_TOKEN;if(kvUrl&&kvToken)return {url:kvUrl.replace(/\/$/,""),token:kvToken,source:"KV"};if(upstashUrl&&upstashToken)return {url:upstashUrl.replace(/\/$/,""),token:upstashToken,source:"UPSTASH"};if(kvUrl||kvToken||upstashUrl||upstashToken)throw new Error("Redis configuration is incomplete: URL and token must belong to the same provider");return null;}
@@ -231,6 +231,15 @@ module.exports=async function handler(req,res){
     const giveawayId=String(item.id);
     const [marker,error,imageError]=await Promise.all([redis(["GET","norka:giveaway:channel-published:"+giveawayId]),redis(["GET","norka:giveaway:channel-error:"+giveawayId]),redis(["GET","norka:giveaway:channel-image-error:"+giveawayId])]);
     return json(res,200,{ok:true,found:true,backendVersion:NORKA_BACKEND_VERSION,giveaway:{id:giveawayId,title:String(item.title||"Без названия"),status:item.status,drawnAt:item.drawnAt||null,winners:item.winners.map(w=>({place:w.place,number:w.number,userId:String(w.userId||""),prize:String(w.prize||"")}))},publication:marker||"not_sent",lastError:error||null,imageError:imageError||null});
+   }
+   if(action==="admin_retry_latest_giveaway_publication"){
+    const items=await list("norka:giveaways");
+    const item=items.filter(x=>x&&x.type==="numbers"&&x.status==="completed"&&Array.isArray(x.winners)&&x.winners.length).sort((a,b)=>String(b.drawnAt||b.createdAt||"").localeCompare(String(a.drawnAt||a.createdAt||"")))[0];
+    if(!item)return json(res,404,{ok:false,error:"Не найден завершённый розыгрыш по номерам с победителями."});
+    const giveawayId=String(item.id);
+    await publishNumberedGiveawayResult(item);
+    const [marker,error,imageError]=await Promise.all([redis(["GET","norka:giveaway:channel-published:"+giveawayId]),redis(["GET","norka:giveaway:channel-error:"+giveawayId]),redis(["GET","norka:giveaway:channel-image-error:"+giveawayId])]);
+    return json(res,200,{ok:true,giveawayId,title:item.title||"Без названия",publication:marker||"not_sent",lastError:error||null,imageError:imageError||null,backendVersion:NORKA_BACKEND_VERSION});
    }
    if(action==="admin_channel_publication_status"){
     const giveawayId=clean(body.giveawayId,60);
