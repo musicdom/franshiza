@@ -1,6 +1,6 @@
 const { createHmac, timingSafeEqual, randomInt } = require("crypto");
 const { requestMax } = require("../lib/max-api");
-const NORKA_BACKEND_VERSION="norka-numbered-giveaways-2026-11-05-v9-admin-load";
+const NORKA_BACKEND_VERSION="norka-numbered-giveaways-2026-11-05-v10-channel-publish-retry";
 
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function cfg(){const kvUrl=process.env.KV_REST_API_URL,kvToken=process.env.KV_REST_API_TOKEN,upstashUrl=process.env.UPSTASH_REDIS_REST_URL,upstashToken=process.env.UPSTASH_REDIS_REST_TOKEN;if(kvUrl&&kvToken)return {url:kvUrl.replace(/\/$/,""),token:kvToken,source:"KV"};if(upstashUrl&&upstashToken)return {url:upstashUrl.replace(/\/$/,""),token:upstashToken,source:"UPSTASH"};if(kvUrl||kvToken||upstashUrl||upstashToken)throw new Error("Redis configuration is incomplete: URL and token must belong to the same provider");return null;}
@@ -86,9 +86,14 @@ async function notifyNumberedGiveawayResult(item,entries,winners){
 async function publishNumberedGiveawayResult(item){
  try{
   const {publishNumberedGiveaway}=require("../lib/winner-publisher");
-  await publishNumberedGiveaway(item,item.winners,async userId=>ensureUser(String(userId)),redis);
+  const published=await publishNumberedGiveaway(item,item.winners,async userId=>ensureUser(String(userId)),redis);
+  if(published)await redis(["DEL","norka:giveaway:channel-error:"+String(item.id)]);
+  return published;
  }catch(error){
-  console.error("NORKA winner channel publication failed:",error&&error.message||"unknown");
+  const message=String(error&&error.message||error||"unknown").slice(0,1000);
+  console.error("NORKA winner channel publication failed:",message);
+  try{await redis(["SET","norka:giveaway:channel-error:"+String(item.id),message]);}catch(saveError){console.error("NORKA publication error save failed:",saveError&&saveError.message||"unknown");}
+  return false;
  }
 }
 async function drawNumberedGiveaway(giveawayId){
@@ -219,6 +224,39 @@ module.exports=async function handler(req,res){
    if(!process.env.NORKA_ADMIN_PASSWORD)return json(res,503,{ok:false,error:"Не задан пароль админ-панели. Добавь NORKA_ADMIN_PASSWORD в переменные окружения backend и перезапусти функцию."});
    if(!(await admin(req)))return json(res,401,{ok:false,error:"Неверный пароль админ-панели. Проверь NORKA_ADMIN_PASSWORD."});
    if(action==="admin_auth")return json(res,200,{ok:true,authenticated:true});
+   if(action==="admin_publish_numbered_result"){
+    const giveawayId=clean(body.giveawayId,60);
+    if(!giveawayId)return json(res,400,{ok:false,error:"Не указан ID розыгрыша"});
+    const item=(await list("norka:giveaways")).find(x=>String(x.id)===giveawayId);
+    if(!item)return json(res,404,{ok:false,error:"Розыгрыш не найден"});
+    if(item.type!=="numbers"||item.status!=="completed"||!Array.isArray(item.winners)||!item.winners.length)return json(res,409,{ok:false,error:"Можно публиковать только завершённый розыгрыш по номерам с уже определёнными победителями"});
+    const marker="norka:giveaway:channel-published:"+giveawayId;
+    const state=await redis(["GET",marker]);
+    if(state==="sent")return json(res,200,{ok:true,published:true,alreadyPublished:true,giveawayId});
+    if(state==="sending")return json(res,409,{ok:false,busy:true,error:"Публикация уже выполняется. Повтори запрос через 15 минут, если сообщение так и не появится."});
+    try{
+     const {publishNumberedGiveaway}=require("../lib/winner-publisher");
+     const published=await publishNumberedGiveaway(item,item.winners,async userId=>ensureUser(String(userId)),redis);
+     if(!published){
+      const current=await redis(["GET",marker]);
+      if(current==="sent")return json(res,200,{ok:true,published:true,alreadyPublished:true,giveawayId});
+      return json(res,409,{ok:false,busy:current==="sending",error:current==="sending"?"Публикация уже выполняется.":"Публикатор не отправил сообщение.",marker:current||null});
+     }
+     await redis(["DEL","norka:giveaway:channel-error:"+giveawayId]);
+     return json(res,200,{ok:true,published:true,giveawayId,message:"Итоги отправлены в канал MAX."});
+    }catch(error){
+     const message=String(error&&error.message||error||"unknown").slice(0,1000);
+     try{await redis(["SET","norka:giveaway:channel-error:"+giveawayId,message]);}catch(saveError){}
+     console.error("NORKA admin channel publication failed:",message);
+     return json(res,502,{ok:false,published:false,giveawayId,error:message,marker:await redis(["GET",marker]).catch(()=>null)});
+    }
+   }
+   if(action==="admin_channel_publication_status"){
+    const giveawayId=clean(body.giveawayId,60);
+    if(!giveawayId)return json(res,400,{ok:false,error:"Не указан ID розыгрыша"});
+    const [marker,error]=await Promise.all([redis(["GET","norka:giveaway:channel-published:"+giveawayId]),redis(["GET","norka:giveaway:channel-error:"+giveawayId])]);
+    return json(res,200,{ok:true,giveawayId,publication:marker||"not_sent",lastError:error||null});
+   }
    if(action==="admin_set_channel_id"){const channelId=clean(String(body.channelId||""),40);if(!/^-?\d{1,30}$/.test(channelId))return json(res,400,{ok:false,error:"Укажите числовой ID канала MAX"});await redis(["SET","norka:channel:chat_id",channelId]);return json(res,200,{ok:true,channelId});}
     if(action==="admin_setup_channel_tracking"){
     const token=process.env.MAX_BOT_TOKEN,secret=process.env.MAX_WEBHOOK_SECRET;
