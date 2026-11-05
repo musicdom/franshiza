@@ -224,6 +224,28 @@ module.exports=async function handler(req,res){
    if(!process.env.NORKA_ADMIN_PASSWORD)return json(res,503,{ok:false,error:"Не задан пароль админ-панели. Добавь NORKA_ADMIN_PASSWORD в переменные окружения backend и перезапусти функцию."});
    if(!(await admin(req)))return json(res,401,{ok:false,error:"Неверный пароль админ-панели. Проверь NORKA_ADMIN_PASSWORD."});
    if(action==="admin_auth")return json(res,200,{ok:true,authenticated:true});
+   if(action==="admin_winner_publisher_diagnostics"){
+    const diagnostics={backendVersion:NORKA_BACKEND_VERSION,nodeVersion:process.version,workingDirectory:process.cwd()};
+    try{
+     const publisherPath=require.resolve("../lib/winner-publisher");
+     const publisher=require("../lib/winner-publisher");
+     diagnostics.publisherPath=publisherPath;
+     diagnostics.publisherBuild=publisher.WINNER_PUBLISHER_BUILD||"missing_build_marker";
+     diagnostics.publisherExport=typeof publisher.publishNumberedGiveaway;
+    }catch(error){
+     diagnostics.publisherLoadError=String(error&&error.message||error).slice(0,1000);
+    }
+    try{
+     diagnostics.sharpPath=require.resolve("sharp");
+     const sharp=require("sharp");
+     diagnostics.sharpLoad="ok";
+     diagnostics.sharpVersion=sharp.versions&&sharp.versions.sharp||null;
+    }catch(error){
+     diagnostics.sharpLoad="error";
+     diagnostics.sharpError=String(error&&error.message||error).slice(0,1500);
+    }
+    return json(res,200,{ok:true,...diagnostics});
+   }
    if(action==="admin_latest_channel_publication_status"){
     const items=await list("norka:giveaways");
     const item=items.filter(x=>x&&x.type==="numbers"&&x.status==="completed"&&Array.isArray(x.winners)&&x.winners.length).sort((a,b)=>String(b.drawnAt||b.createdAt||"").localeCompare(String(a.drawnAt||a.createdAt||"")))[0];
