@@ -1,9 +1,9 @@
-const { requestMax } = require("../lib/max-api");
+const { sendMaxMessage } = require("../lib/max-api");
 function redisConfig(){const url=process.env.KV_REST_API_URL||process.env.UPSTASH_REDIS_REST_URL;const token=process.env.KV_REST_API_TOKEN||process.env.UPSTASH_REDIS_REST_TOKEN;return url&&token?{url:url.replace(/\/$/, ""),token}:null;}
 async function redis(parts){const c=redisConfig();if(!c)throw new Error("Redis is not configured");const r=await fetch(c.url,{method:"POST",headers:{Authorization:"Bearer "+c.token,"Content-Type":"application/json"},body:JSON.stringify(parts)});if(!r.ok)throw new Error("Redis HTTP "+r.status);const d=await r.json();if(d.error)throw new Error(d.error);return d.result;}
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function clean(v,n=200){return typeof v==="string"?v.trim().slice(0,n):"";}
-async function send(chatId,text,attachments=[]){const token=process.env.MAX_BOT_TOKEN;if(!token)throw new Error("MAX_BOT_TOKEN is not configured");const r=await requestMax({token,method:"POST",apiPath:"/messages?chat_id="+encodeURIComponent(String(chatId)),body:{text,...(attachments.length?{attachments}:{})}});if(!r.ok)throw new Error("MAX message failed: "+r.status);}
+async function send(chatId,text,attachments=[]){const token=process.env.MAX_BOT_TOKEN;const r=await sendMaxMessage({token,chatId,text,attachments});if(!r.ok)throw new Error("MAX message failed: "+r.status+" "+String(r.raw||"").slice(0,800));}
 module.exports=async function handler(req,res){
  if(req.method!=="POST"){res.setHeader("Allow","POST");return json(res,405,{ok:false,error:"Method not allowed"});}
  const secret=process.env.MAX_WEBHOOK_SECRET;if(!secret)return json(res,503,{ok:false,error:"Webhook secret is not configured"});
