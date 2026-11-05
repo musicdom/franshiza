@@ -1,6 +1,7 @@
 const { createHmac, timingSafeEqual, randomInt } = require("crypto");
 const { requestMax } = require("../lib/max-api");
-const NORKA_BACKEND_VERSION="norka-numbered-giveaways-2026-11-05-v9-admin-load";
+const { publishNumberedGiveaway } = require("../lib/winner-publisher");
+const NORKA_BACKEND_VERSION="norka-numbered-giveaways-2026-11-05-v10-winner-channel";
 
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function cfg(){const kvUrl=process.env.KV_REST_API_URL,kvToken=process.env.KV_REST_API_TOKEN,upstashUrl=process.env.UPSTASH_REDIS_REST_URL,upstashToken=process.env.UPSTASH_REDIS_REST_TOKEN;if(kvUrl&&kvToken)return {url:kvUrl.replace(/\/$/,""),token:kvToken,source:"KV"};if(upstashUrl&&upstashToken)return {url:upstashUrl.replace(/\/$/,""),token:upstashToken,source:"UPSTASH"};if(kvUrl||kvToken||upstashUrl||upstashToken)throw new Error("Redis configuration is incomplete: URL and token must belong to the same provider");return null;}
@@ -86,7 +87,7 @@ async function notifyNumberedGiveawayResult(item,entries,winners){
 async function drawNumberedGiveaway(giveawayId){
  const items=await list("norka:giveaways"),item=items.find(x=>String(x.id)===String(giveawayId));
  if(!item||item.type!=="numbers")return {completed:false};
- if(item.status==="completed")return {completed:true,item};
+ if(item.status==="completed"){try{await publishNumberedGiveaway(item,item.winners||[],async id=>get(userKey(id)),redis);}catch(error){console.error("NORKA winner channel publish deferred:",error&&error.message||"unknown");}return {completed:true,item};}
  if(item.status!=="drawing")return {completed:false};
  const entries=await readNumberedEntries(giveawayId);
  if(entries.length!==Number(item.capacity))return {completed:false};
@@ -104,6 +105,7 @@ async function drawNumberedGiveaway(giveawayId){
  const completed={...item,status:"completed",winners,drawnAt};
  for(const winner of winners)await ensureNumberedPrizeReward(completed,winner);
  await notifyNumberedGiveawayResult(completed,entries,winners);
+ try{await publishNumberedGiveaway(completed,winners,async id=>get(userKey(id)),redis);}catch(error){console.error("NORKA winner channel publish deferred:",error&&error.message||"unknown");}
  return {completed:true,item:completed,winners};
 }
 
@@ -190,6 +192,7 @@ async function processGiveawayLifecycle(){
    const entries=await readNumberedEntries(item.id);
    for(const winner of item.winners)await ensureNumberedPrizeReward(item,winner);
    await notifyNumberedGiveawayResult(item,entries,item.winners);
+   try{await publishNumberedGiveaway(item,item.winners,async id=>get(userKey(id)),redis);}catch(error){console.error("NORKA winner channel publish deferred:",error&&error.message||"unknown");}
   }
  }
 }
