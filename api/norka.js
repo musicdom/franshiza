@@ -1,6 +1,6 @@
 const { createHmac, timingSafeEqual, randomInt } = require("crypto");
 const { requestMax } = require("../lib/max-api");
-const NORKA_BACKEND_VERSION="norka-numbered-giveaways-2026-11-05-v10-channel-publish-retry";
+const NORKA_BACKEND_VERSION="norka-numbered-giveaways-2026-11-05-v11-live-number-status";
 
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function cfg(){const kvUrl=process.env.KV_REST_API_URL,kvToken=process.env.KV_REST_API_TOKEN,upstashUrl=process.env.UPSTASH_REDIS_REST_URL,upstashToken=process.env.UPSTASH_REDIS_REST_TOKEN;if(kvUrl&&kvToken)return {url:kvUrl.replace(/\/$/,""),token:kvToken,source:"KV"};if(upstashUrl&&upstashToken)return {url:upstashUrl.replace(/\/$/,""),token:upstashToken,source:"UPSTASH"};if(kvUrl||kvToken||upstashUrl||upstashToken)throw new Error("Redis configuration is incomplete: URL and token must belong to the same provider");return null;}
@@ -363,6 +363,15 @@ module.exports=async function handler(req,res){
     return json(res,200,{ok:true,user:u,wallet:w,tasks:ts,giveaways:gs,history,claims,rate,progress,rewards,backendVersion:NORKA_BACKEND_VERSION,diagnostics:timings});
    }
   await ensureUser(id,profile);
+  if(action==="numbered_giveaway_state"){
+   const giveawayId=clean(body.giveawayId,60);
+   if(!giveawayId)return json(res,400,{ok:false,error:"Не указан розыгрыш"});
+   const items=await list("norka:giveaways"),item=items.find(x=>String(x.id)===giveawayId&&x.type==="numbers");
+   if(!item)return json(res,404,{ok:false,error:"Розыгрыш не найден"});
+   const entries=await readNumberedEntries(giveawayId);
+   const userNumbers=entries.filter(x=>String(x.userId)===String(id)).map(x=>x.number);
+   return json(res,200,{ok:true,giveawayId,status:item.status,entries:entries.length,capacity:Number(item.capacity)||0,soldNumbers:entries.map(x=>x.number),userNumbers});
+  }
   if(action==="daily_claim"){
    const day=new Date().toISOString().slice(0,10),t=(await tasks()).find(x=>x.type==="daily"&&x.active);
    const reward=t?Math.max(0,Math.floor(Number(t.reward)||0)):10,now=new Date().toISOString();
