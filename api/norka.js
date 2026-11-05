@@ -258,18 +258,14 @@ module.exports=async function handler(req,res){
       try{
        const packagePath=require.resolve(moduleName+"/package.json");
        diagnostics[label+"Version"]=require(packagePath).version||null;
-      }catch(_){}
-      try{
-       require(moduleName);
-       diagnostics[label+"Load"]="ok";
       }catch(error){
-       diagnostics[label+"Load"]="error";
-       diagnostics[label+"Error"]=String(error&&error.message||error).slice(0,1000);
+       diagnostics[label+"PackageMetadataError"]=String(error&&error.message||error).slice(0,500);
       }
+      diagnostics[label+"Present"]=true;
      }catch(error){
       diagnostics[label+"Path"]="not_found";
-      diagnostics[label+"Load"]="not_available";
-      diagnostics[label+"Error"]=String(error&&error.message||error).slice(0,1000);
+      diagnostics[label+"Present"]=false;
+      diagnostics[label+"ResolveError"]=String(error&&error.message||error).slice(0,500);
      }
     }
     try{
@@ -277,9 +273,14 @@ module.exports=async function handler(req,res){
      diagnostics.sharpLoad="ok";
      diagnostics.sharpVersion=sharp.versions&&sharp.versions.sharp||null;
      diagnostics.sharpVipsVersion=sharp.versions&&sharp.versions.vips||null;
+     const testSvg=Buffer.from('<svg width="2" height="2" xmlns="http://www.w3.org/2000/svg"><rect width="2" height="2" fill="#000"/></svg>');
+     const testPng=await sharp(testSvg).png().toBuffer();
+     diagnostics.sharpImageTest="ok";
+     diagnostics.sharpImageBytes=testPng.length;
     }catch(error){
      diagnostics.sharpLoad="error";
      diagnostics.sharpError=String(error&&error.message||error).slice(0,1500);
+     diagnostics.sharpImageTest="failed";
     }
     return json(res,200,{ok:true,...diagnostics});
    }
