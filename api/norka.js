@@ -1,6 +1,6 @@
 const { createHmac, timingSafeEqual, randomInt } = require("crypto");
-const { requestMax, sendMaxMessage } = require("../lib/max-api");
-const NORKA_BACKEND_VERSION="norka-numbered-giveaways-2026-11-06-v17-real-card-diagnostics";
+const { requestMax, sendMaxMessage, uploadMaxImage } = require("../lib/max-api");
+const NORKA_BACKEND_VERSION="norka-numbered-giveaways-2026-11-06-v18-image-channel-test";
 
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function cfg(){const kvUrl=process.env.KV_REST_API_URL,kvToken=process.env.KV_REST_API_TOKEN,upstashUrl=process.env.UPSTASH_REDIS_REST_URL,upstashToken=process.env.UPSTASH_REDIS_REST_TOKEN;if(kvUrl&&kvToken)return {url:kvUrl.replace(/\/$/,""),token:kvToken,source:"KV"};if(upstashUrl&&upstashToken)return {url:upstashUrl.replace(/\/$/,""),token:upstashToken,source:"UPSTASH"};if(kvUrl||kvToken||upstashUrl||upstashToken)throw new Error("Redis configuration is incomplete: URL and token must belong to the same provider");return null;}
@@ -327,6 +327,39 @@ module.exports=async function handler(req,res){
     return json(res,200,{ok:true,giveawayId,publication:marker||"not_sent",lastError:error||null,imageError:imageError||null});
    }
    if(action==="admin_set_channel_id"){const channelId=clean(String(body.channelId||""),40);if(!/^-?\d{1,30}$/.test(channelId))return json(res,400,{ok:false,error:"Укажите числовой ID канала MAX"});await redis(["SET","norka:channel:chat_id",channelId]);return json(res,200,{ok:true,channelId});}
+   if(action==="admin_test_channel_image"){
+    const token=process.env.MAX_BOT_TOKEN;
+    const channelId=await redis(["GET","norka:channel:chat_id"]);
+    if(!token)return json(res,503,{ok:false,error:"Не настроен MAX_BOT_TOKEN"});
+    if(!channelId)return json(res,400,{ok:false,error:"В Redis не сохранён ID канала"});
+    let stage="проверка канала";
+    try{
+     const channelInfo=await requestMax({token,method:"GET",apiPath:"/chats/"+encodeURIComponent(String(channelId))});
+     if(!channelInfo.ok)return json(res,502,{ok:false,error:"Не удалось получить сведения о канале",stage,httpStatus:channelInfo.status,details:channelInfo.data||channelInfo.raw||null,channelId:String(channelId)});
+     const chatType=channelInfo.data?.chat_type||channelInfo.data?.type||null;
+     if(chatType && chatType!=="channel")return json(res,409,{ok:false,error:"Сохранённый ID принадлежит не каналу",chatType,channelId:String(channelId)});
+     stage="генерация PNG";
+     const {createWinnerCard}=require("../lib/winner-card");
+     const item={title:"ТЕСТ ОТПРАВКИ КАРТОЧКИ НОРКИ",drawnAt:new Date().toISOString()};
+     const winners=[{number:"TEST-07",name:"Тестовый победитель",prize:"Тестовая проверка PNG"}];
+     const image=await createWinnerCard(item,winners);
+     const imageBytes=image.length;
+     stage="загрузка PNG";
+     const imageToken=await uploadMaxImage({token,image});
+     const message="🧪 ТЕСТ КАРТОЧКИ НОРКИ\n\nЭто проверочная публикация от бота Норки. Реальный розыгрыш и его результаты не затрагиваются.";
+     const attachments=[{type:"image",payload:{token:imageToken}}];
+     stage="отправка PNG в канал";
+     let sent=await sendMaxMessage({token,chatId:channelId,text:message,attachments});
+     if(!sent.ok && String(sent.raw||"").includes("attachment.not.ready")){
+      await new Promise(resolve=>setTimeout(resolve,2500));
+      sent=await sendMaxMessage({token,chatId:channelId,text:message,attachments});
+     }
+     if(!sent.ok)return json(res,502,{ok:false,error:"Бот загрузил карточку, но MAX не принял публикацию PNG",stage,httpStatus:sent.status,details:sent.data||sent.raw||null,channelId:String(channelId),imageBytes});
+     return json(res,200,{ok:true,message:"Бот Норки отправил тестовую PNG-карточку в канал",channelId:String(channelId),chatType,imageBytes,format:"png",width:864,height:1154,messageId:sent.data?.message?.body?.mid||sent.data?.message?.mid||null});
+    }catch(error){
+     return json(res,502,{ok:false,error:"Ошибка на этапе «"+stage+"»: "+String(error&&error.message||error).slice(0,1200),stage,channelId:String(channelId)});
+    }
+   }
    if(action==="admin_test_channel_message"){
     const token=process.env.MAX_BOT_TOKEN;
     const channelId=await redis(["GET","norka:channel:chat_id"]);
