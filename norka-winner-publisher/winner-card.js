@@ -9,6 +9,8 @@ const HEIGHT = 1152;
 const MAX_WINNERS = 25;
 const MAX_AVATAR_BYTES = 3 * 1024 * 1024;
 
+// Карточка использует исходный PNG как фон. Поверх него добавляется только
+// компактная полупрозрачная таблица слева; правая часть с маскотом не закрывается.
 function escapeXml(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -53,8 +55,8 @@ async function fetchAvatar(url) {
     if (!data.length || data.length > MAX_AVATAR_BYTES) return null;
     const meta = await sharp(data, { failOn: "none" }).metadata();
     if (!meta.width || !meta.height || meta.width > 4096 || meta.height > 4096) return null;
-    const size = 30;
-    const circle = Buffer.from('<svg width="30" height="30" xmlns="http://www.w3.org/2000/svg"><circle cx="15" cy="15" r="15" fill="#321d43"/></svg>');
+    const size = 36;
+    const circle = Buffer.from('<svg width="36" height="36" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="18" r="18" fill="#321d43"/></svg>');
     return await sharp(data).rotate().resize(size, size, { fit: "cover", position: "centre" })
       .composite([{ input: circle, blend: "dest-in" }]).png().toBuffer();
   } catch {
@@ -65,47 +67,55 @@ async function fetchAvatar(url) {
 }
 
 function makeOverlay(item, winners, avatarBuffers) {
-  const panelX = 38, panelY = 164, panelW = 660, panelH = 936;
-  const rowTop = 344, rowBottom = 1060, rowArea = rowBottom - rowTop;
-  const rowHeight = Math.min(42, rowArea / winners.length);
-  const avatarSize = Math.max(19, Math.min(28, Math.floor(rowHeight - 4)));
-  const nameSize = winners.length > 18 ? 13 : winners.length > 12 ? 14 : 16;
-  const metaSize = winners.length > 18 ? 12 : 14;
+  const panelX = 34;
+  const panelW = 548; // оставляем правую часть изображения свободной для Норки
+  const top = 390;
+  const headerH = 76;
+  const bottomMargin = 26;
+  const availableRowsH = HEIGHT - top - headerH - bottomMargin;
+  const rowH = Math.min(43, availableRowsH / winners.length);
+  const panelH = headerH + rowH * winners.length + 18;
+  const avatarSize = Math.max(17, Math.min(34, Math.floor(rowH - 5)));
+  const compact = winners.length > 15;
+  const nameSize = compact ? 10.5 : winners.length > 8 ? 12 : 14;
+  const metaSize = compact ? 10 : winners.length > 8 ? 11 : 13;
+  const prizeSize = compact ? 9.5 : winners.length > 8 ? 10.5 : 12;
+  const rowTop = top + headerH;
+  const title = String(item?.title || "Розыгрыш").trim().slice(0, 48);
   const parts = [];
 
   parts.push('<svg xmlns="http://www.w3.org/2000/svg" width="' + WIDTH + '" height="' + HEIGHT + '" viewBox="0 0 ' + WIDTH + ' ' + HEIGHT + '">');
-  parts.push('<defs><linearGradient id="panel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#21162f" stop-opacity=".97"/><stop offset="1" stop-color="#401d3d" stop-opacity=".96"/></linearGradient><filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="5"/></filter></defs>');
-  parts.push('<rect x="26" y="26" width="876" height="104" rx="24" fill="#21162f" fill-opacity=".94" stroke="#e9c68e" stroke-width="3"/>');
-  parts.push('<text x="464" y="91" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" font-size="42" font-weight="700" fill="#fff7ed" letter-spacing="1">ПОБЕДИТЕЛИ РОЗЫГРЫША</text>');
-  parts.push('<rect x="' + panelX + '" y="' + panelY + '" width="' + panelW + '" height="' + panelH + '" rx="30" fill="#000" opacity=".35" filter="url(#shadow)"/>');
-  parts.push('<rect x="' + panelX + '" y="' + panelY + '" width="' + panelW + '" height="' + panelH + '" rx="30" fill="url(#panel)" stroke="#e8c18a" stroke-width="3"/>');
-  parts.push('<text x="' + (panelX + 28) + '" y="218" font-family="DejaVu Sans, Arial, sans-serif" font-size="25" font-weight="700" fill="#ffe6bd">' + escapeXml(String(item.title || "Розыгрыш").slice(0, 48)) + '</text>');
-  parts.push('<text x="' + (panelX + 28) + '" y="253" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#e7d4e8">Итоги розыгрыша • ' + winners.length + ' ' + (winners.length === 1 ? "победитель" : winners.length < 5 ? "победителя" : "победителей") + '</text>');
-  parts.push('<path d="M58 278 H678" stroke="#d9ad79" stroke-opacity=".7" stroke-width="2"/>');
-  parts.push('<text x="120" y="318" font-family="DejaVu Sans, Arial, sans-serif" font-size="13" font-weight="700" fill="#d9c1dc">ПОБЕДИТЕЛЬ</text>');
-  parts.push('<text x="386" y="318" font-family="DejaVu Sans, Arial, sans-serif" font-size="13" font-weight="700" fill="#d9c1dc">БИЛЕТ</text>');
-  parts.push('<text x="482" y="318" font-family="DejaVu Sans, Arial, sans-serif" font-size="13" font-weight="700" fill="#d9c1dc">ПРИЗ</text>');
+  parts.push('<defs><linearGradient id="softPanel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#21162f" stop-opacity=".78"/><stop offset="1" stop-color="#401d3d" stop-opacity=".72"/></linearGradient><filter id="softShadow" x="-15%" y="-15%" width="130%" height="130%"><feGaussianBlur stdDeviation="4"/></filter></defs>');
+  parts.push('<rect x="' + (panelX + 3) + '" y="' + (top + 4) + '" width="' + panelW + '" height="' + panelH + '" rx="22" fill="#130d1b" opacity=".22" filter="url(#softShadow)"/>');
+  parts.push('<rect x="' + panelX + '" y="' + top + '" width="' + panelW + '" height="' + panelH + '" rx="22" fill="url(#softPanel)" stroke="#e8c18a" stroke-opacity=".82" stroke-width="1.6"/>');
+  parts.push('<text x="' + (panelX + 20) + '" y="' + (top + 29) + '" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" fill="#fff2d9">' + escapeXml(title) + '</text>');
+  parts.push('<text x="' + (panelX + 20) + '" y="' + (top + 53) + '" font-family="DejaVu Sans, Arial, sans-serif" font-size="12" fill="#f0d9c5">Победителей: ' + winners.length + '</text>');
+  parts.push('<text x="' + (panelX + 82) + '" y="' + (rowTop - 8) + '" font-family="DejaVu Sans, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#e8d3bd">ИМЯ</text>');
+  parts.push('<text x="' + (panelX + 325) + '" y="' + (rowTop - 8) + '" font-family="DejaVu Sans, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#e8d3bd">БИЛЕТ</text>');
+  parts.push('<text x="' + (panelX + 398) + '" y="' + (rowTop - 8) + '" font-family="DejaVu Sans, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#e8d3bd">ПРИЗ</text>');
 
-  const usedHeight = winners.length * rowHeight;
-  const firstY = rowTop + Math.max(0, (rowArea - usedHeight) / 2);
   winners.forEach((winner, index) => {
-    const y = firstY + index * rowHeight;
-    const avatarY = y + (rowHeight - avatarSize) / 2;
-    const centerY = y + rowHeight / 2 + Math.max(4, nameSize * .34);
-    if (index % 2 === 0) parts.push('<rect x="54" y="' + (y + 1) + '" width="628" height="' + Math.max(1, rowHeight - 2) + '" rx="8" fill="#fff" fill-opacity=".055"/>');
-    parts.push('<circle cx="91" cy="' + (avatarY + avatarSize / 2) + '" r="' + (avatarSize / 2 + 1) + '" fill="#e7c28d"/>');
-    if (!avatarBuffers[index]) {
-      parts.push('<circle cx="91" cy="' + (avatarY + avatarSize / 2) + '" r="' + (avatarSize / 2) + '" fill="#6c4a82"/>');
-      parts.push('<text x="91" y="' + (avatarY + avatarSize * .68) + '" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" font-size="' + Math.max(10, avatarSize * .42) + '" font-weight="700" fill="#fff">' + escapeXml(initials(winner.name)) + '</text>');
+    const y = rowTop + index * rowH;
+    const avatarY = y + (rowH - avatarSize) / 2;
+    const cy = y + rowH / 2 + Math.max(3.5, nameSize * 0.34);
+    const avatarX = panelX + 43;
+    if (index % 2 === 0) {
+      parts.push('<rect x="' + (panelX + 12) + '" y="' + (y + 1) + '" width="' + (panelW - 24) + '" height="' + Math.max(1, rowH - 2) + '" rx="7" fill="#fff" fill-opacity=".07"/>');
     }
-    parts.push('<text x="120" y="' + centerY + '" font-family="DejaVu Sans, Arial, sans-serif" font-size="' + nameSize + '" font-weight="600" fill="#fff" textLength="246" lengthAdjust="spacingAndGlyphs">' + escapeXml(winner.name) + '</text>');
-    parts.push('<text x="386" y="' + centerY + '" font-family="DejaVu Sans, Arial, sans-serif" font-size="' + metaSize + '" fill="#ffe2b7">№ ' + escapeXml(String(winner.number).padStart(2, "0")) + '</text>');
-    parts.push('<text x="482" y="' + centerY + '" font-family="DejaVu Sans, Arial, sans-serif" font-size="' + metaSize + '" font-weight="600" fill="#fff4e8" textLength="188" lengthAdjust="spacingAndGlyphs">' + escapeXml(winner.prize) + '</text>');
-    if (index < winners.length - 1) parts.push('<path d="M120 ' + (y + rowHeight) + ' H680" stroke="#d9ad79" stroke-opacity=".2" stroke-width="1"/>');
+    parts.push('<circle cx="' + avatarX + '" cy="' + (avatarY + avatarSize / 2) + '" r="' + (avatarSize / 2 + 1) + '" fill="#e7c28d" fill-opacity=".95"/>');
+    if (!avatarBuffers[index]) {
+      parts.push('<circle cx="' + avatarX + '" cy="' + (avatarY + avatarSize / 2) + '" r="' + (avatarSize / 2) + '" fill="#765487"/>');
+      parts.push('<text x="' + avatarX + '" y="' + (avatarY + avatarSize * .68) + '" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" font-size="' + Math.max(8, avatarSize * .42) + '" font-weight="700" fill="#fff">' + escapeXml(initials(winner.name)) + '</text>');
+    }
+    parts.push('<text x="' + (panelX + 82) + '" y="' + cy + '" font-family="DejaVu Sans, Arial, sans-serif" font-size="' + nameSize + '" font-weight="600" fill="#fffaf2" textLength="225" lengthAdjust="spacingAndGlyphs">' + escapeXml(winner.name) + '</text>');
+    parts.push('<text x="' + (panelX + 325) + '" y="' + cy + '" font-family="DejaVu Sans, Arial, sans-serif" font-size="' + metaSize + '" fill="#ffe2b7">№ ' + escapeXml(String(winner.number).padStart(2, "0")) + '</text>');
+    parts.push('<text x="' + (panelX + 398) + '" y="' + cy + '" font-family="DejaVu Sans, Arial, sans-serif" font-size="' + prizeSize + '" font-weight="600" fill="#fff4e8" textLength="130" lengthAdjust="spacingAndGlyphs">' + escapeXml(winner.prize) + '</text>');
+    if (index < winners.length - 1) {
+      parts.push('<path d="M' + (panelX + 80) + ' ' + (y + rowH) + ' H' + (panelX + panelW - 12) + '" stroke="#e8c18a" stroke-opacity=".22" stroke-width="1"/>');
+    }
   });
-  parts.push('<text x="464" y="1130" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" font-size="27" font-weight="700" fill="#fff7ed" stroke="#25172f" stroke-width="1" paint-order="stroke">Поздравляем победителей!</text>');
   parts.push('</svg>');
-  return Buffer.from(parts.join(""));
+  return { svg: Buffer.from(parts.join("")), panelX, rowTop, rowH, avatarSize, avatarCenterX: panelX + 43 };
 }
 
 function loadBundledTemplate() {
@@ -128,19 +138,22 @@ async function renderWinnerCard({ item, winners, templatePath }) {
   const defaultTemplate = path.join(__dirname, "winner-template.png..png");
   const templateInput = templatePath || (fs.existsSync(defaultTemplate) ? defaultTemplate : loadBundledTemplate());
   const avatarBuffers = await Promise.all(normalized.map(w => fetchAvatar(w.avatar)));
-  const overlay = makeOverlay(item || {}, normalized, avatarBuffers);
-  const composites = [{ input: overlay, top: 0, left: 0 }];
+  const layout = makeOverlay(item || {}, normalized, avatarBuffers);
+  const composites = [{ input: layout.svg, top: 0, left: 0 }];
   avatarBuffers.forEach((buffer, index) => {
     if (!buffer) return;
-    const rowArea = 716;
-    const rowHeight = Math.min(42, rowArea / normalized.length);
-    const avatarSize = Math.max(19, Math.min(28, Math.floor(rowHeight - 4)));
-    const firstY = 344 + Math.max(0, (rowArea - normalized.length * rowHeight) / 2);
-    const top = Math.round(firstY + index * rowHeight + (rowHeight - avatarSize) / 2);
-    composites.push({ input: buffer, left: 91 - Math.floor(avatarSize / 2), top });
+    const top = Math.round(layout.rowTop + index * layout.rowH + (layout.rowH - layout.avatarSize) / 2);
+    composites.push({
+      input: buffer,
+      left: Math.round(layout.avatarCenterX - layout.avatarSize / 2),
+      top
+    });
   });
-  return sharp(templateInput).resize(WIDTH, HEIGHT, { fit: "cover" })
-    .composite(composites).png({ compressionLevel: 9, adaptiveFiltering: true }).toBuffer();
+  return sharp(templateInput)
+    .resize(WIDTH, HEIGHT, { fit: "fill" })
+    .composite(composites)
+    .png({ compressionLevel: 9, adaptiveFiltering: true })
+    .toBuffer();
 }
 
 module.exports = { renderWinnerCard, normalizeWinners };
