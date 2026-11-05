@@ -1,0 +1,7 @@
+{
+  "name": "norka-backend",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {"node": ">=22"},
+  "dependencies": {"sharp": "^0.34.5"}
+}
