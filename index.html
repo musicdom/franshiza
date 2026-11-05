@@ -260,7 +260,7 @@ body.splash-open{overflow:hidden}
 <script>
 const API="https://franshiza.vercel.app/api", YANDEX_FUNCTION="https://functions.yandexcloud.net/d4erur78tndi5tkkafn0", $=id=>document.getElementById(id);
 let S={id:"",initData:"",profile:{},wallet:{berries:0,coins:0},tasks:[],giveaways:[],history:[],rewards:[],claims:{},progress:{xp:0,level:1,streak:0,bestStreak:0,achievements:[]},admin:"",rate:100,user:{},channelOpened:false};
-let activeNumberGiveaway=null,selectedNumberIds=[],prizeFormat="places";
+let activeNumberGiveaway=null,selectedNumberIds=[],prizeFormat="places",numberStatePoll=null,numberStatePollBusy=false;
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function fmt(n){return new Intl.NumberFormat("ru-RU").format(Number(n)||0);}function coinMark(){return '<i class="coin-mark" aria-hidden="true"></i>';}function coinValue(n){return fmt(n)+" "+coinMark();}
 let noticeTimer=null;function msg(s){$("notice").textContent=s;$("notice").classList.add("show");if(noticeTimer)clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>$("notice").classList.remove("show"),3000);}
@@ -344,16 +344,42 @@ function openNumberedGiveaway(id){
  activeNumberGiveaway=S.giveaways.find(g=>String(g.id)===String(id)&&g.type==="numbers");if(!activeNumberGiveaway)return;
  selectedNumberIds=[];$("numberModalTitle").textContent=activeNumberGiveaway.title;$("numberModalDescription").textContent=activeNumberGiveaway.description||"Выбери один или несколько свободных номеров. Оплата спишется монетами после подтверждения.";
  $("numberModalPrice").textContent=fmt(activeNumberGiveaway.cost)+" монет / номер";renderNumberGrid();$("numberGiveawayModal").hidden=false;document.body.style.overflow="hidden";
+ startNumberStatePolling();
 }
+function startNumberStatePolling(){
+ stopNumberStatePolling();
+ const refresh=async()=>{
+  if(numberStatePollBusy||!activeNumberGiveaway||$("numberGiveawayModal").hidden)return;
+  numberStatePollBusy=true;
+  try{
+   const state=await call("numbered_giveaway_state",{giveawayId:activeNumberGiveaway.id});
+   if(!activeNumberGiveaway||String(activeNumberGiveaway.id)!==String(state.giveawayId))return;
+   const previous=new Set(activeNumberGiveaway.soldNumbers||[]),taken=new Set(state.soldNumbers||[]);
+   const newlyTaken=[...taken].filter(n=>!previous.has(n));
+   activeNumberGiveaway={...activeNumberGiveaway,status:state.status,entries:state.entries,soldNumbers:state.soldNumbers,userNumbers:state.userNumbers};
+   const card=S.giveaways.find(g=>String(g.id)===String(state.giveawayId));
+   if(card)Object.assign(card,{status:state.status,entries:state.entries,soldNumbers:state.soldNumbers,userNumbers:state.userNumbers});
+   const before=selectedNumberIds.length;
+   selectedNumberIds=selectedNumberIds.filter(n=>!taken.has(n));
+   renderNumberGrid();
+   if(newlyTaken.length&&before!==selectedNumberIds.length)msg("Кто-то уже купил выбранный номер. Список обновлён.");
+   else if(newlyTaken.length)msg("Номера других участников обновлены.");
+  }catch(error){console.warn("NORKA live number status:",error&&error.message||error);}
+  finally{numberStatePollBusy=false;}
+ };
+ refresh();
+ numberStatePoll=setInterval(refresh,2500);
+}
+function stopNumberStatePolling(){if(numberStatePoll){clearInterval(numberStatePoll);numberStatePoll=null;}numberStatePollBusy=false;}
 function renderNumberGrid(){
  if(!activeNumberGiveaway)return;const g=activeNumberGiveaway,taken=new Set(g.soldNumbers||[]),sold=Number(g.entries)||0,cap=Number(g.capacity)||0;
  $("numberModalProgress").textContent="Продано "+fmt(sold)+" из "+fmt(cap);$("numberModalGrid").innerHTML=Array.from({length:cap},(_,i)=>{const n=i+1,isTaken=taken.has(n),selected=selectedNumberIds.includes(n);return '<button type="button" class="number-cell '+(isTaken?"taken":selected?"selected":"")+'" data-number="'+n+'" '+(isTaken?"disabled":"")+'>'+String(n).padStart(2,"0")+'</button>';}).join("");
  $("numberSelectedCount").textContent=selectedNumberIds.length;$("numberSelectedTotal").textContent=fmt(selectedNumberIds.length*Number(g.cost))+" монет";
- const btn=$("numberModalBuy");btn.disabled=!selectedNumberIds.length;btn.textContent=selectedNumberIds.length?"Купить "+selectedNumberIds.length+" · "+fmt(selectedNumberIds.length*Number(g.cost))+" монет":"Выбери номера";
+ const btn=$("numberModalBuy");btn.disabled=g.status!=="active"||!selectedNumberIds.length;btn.textContent=g.status!=="active"?"Розыгрыш завершён":selectedNumberIds.length?"Купить "+selectedNumberIds.length+" · "+fmt(selectedNumberIds.length*Number(g.cost))+" монет":"Выбери номера";
  $("numberModalNote").textContent=g.userNumbers&&g.userNumbers.length?"У тебя уже есть номера: "+g.userNumbers.map(n=>String(n).padStart(2,"0")).join(", ")+". Можно выбрать дополнительные.":"Свободные номера доступны для покупки. Занятые уже закреплены за участниками.";
  $("numberModalGrid").querySelectorAll("[data-number]").forEach(b=>b.onclick=()=>{const n=Number(b.dataset.number);selectedNumberIds=selectedNumberIds.includes(n)?selectedNumberIds.filter(x=>x!==n):[...selectedNumberIds,n];renderNumberGrid();});
 }
-function closeNumberModal(){$("numberGiveawayModal").hidden=true;document.body.style.overflow="";activeNumberGiveaway=null;selectedNumberIds=[];}
+function closeNumberModal(){stopNumberStatePolling();$("numberGiveawayModal").hidden=true;document.body.style.overflow="";activeNumberGiveaway=null;selectedNumberIds=[];}
 $("numberModalClose").onclick=closeNumberModal;
 $("numberGiveawayModal").addEventListener("click",e=>{if(e.target===$("numberGiveawayModal"))closeNumberModal();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("numberGiveawayModal").hidden)closeNumberModal();});
