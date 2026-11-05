@@ -1,6 +1,6 @@
 const { createHmac, timingSafeEqual, randomInt } = require("crypto");
 const { requestMax } = require("../lib/max-api");
-const NORKA_BACKEND_VERSION="norka-numbered-giveaways-2026-11-04-v8";
+const NORKA_BACKEND_VERSION="norka-numbered-giveaways-2026-11-05-v9-admin-load";
 
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function cfg(){const kvUrl=process.env.KV_REST_API_URL,kvToken=process.env.KV_REST_API_TOKEN,upstashUrl=process.env.UPSTASH_REDIS_REST_URL,upstashToken=process.env.UPSTASH_REDIS_REST_TOKEN;if(kvUrl&&kvToken)return {url:kvUrl.replace(/\/$/,""),token:kvToken,source:"KV"};if(upstashUrl&&upstashToken)return {url:upstashUrl.replace(/\/$/,""),token:upstashToken,source:"UPSTASH"};if(kvUrl||kvToken||upstashUrl||upstashToken)throw new Error("Redis configuration is incomplete: URL and token must belong to the same provider");return null;}
@@ -218,7 +218,7 @@ module.exports=async function handler(req,res){
     if(!r.ok)return json(res,502,{ok:false,error:"MAX не принял подписку на события",details:r.data||r.raw});
     return json(res,200,{ok:true,message:"Подписка на события MAX обновлена",webhookUrl});
    }
-   if(action==="admin_overview"){const started=Date.now();const [users,pending,rateRaw,channelId,giveawayItems,taskItems,config]=await Promise.all([countUserKeys(),list("norka:pending"),redis(["GET","norka:exchange-rate"]),redis(["GET","norka:channel:chat_id"]),giveaways(),tasks(),progressConfig()]);return json(res,200,{ok:true,backendVersion:NORKA_BACKEND_VERSION,users,pending,giveaways:giveawayItems,tasks:taskItems,rate:Number(rateRaw)||100,channelId:channelId||"",progressConfig:config,loadTimeMs:Date.now()-started});}
+   if(action==="admin_overview"){const started=Date.now();const [pending,rateRaw,channelId,giveawayItems,taskItems,config]=await Promise.all([list("norka:pending"),redis(["GET","norka:exchange-rate"]),redis(["GET","norka:channel:chat_id"]),giveaways(),tasks(),progressConfig()]);return json(res,200,{ok:true,backendVersion:NORKA_BACKEND_VERSION,pending,giveaways:giveawayItems,tasks:taskItems,rate:Number(rateRaw)||100,channelId:channelId||"",progressConfig:config,loadTimeMs:Date.now()-started});}
    if(action==="admin_progress_config"){return json(res,200,{ok:true,config:await progressConfig()});}
    if(action==="admin_save_progress_config"){
     const input=body.config&&typeof body.config==="object"?body.config:{},xp=input.xp&&typeof input.xp==="object"?input.xp:{};
