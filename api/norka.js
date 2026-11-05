@@ -224,6 +224,14 @@ module.exports=async function handler(req,res){
    if(!process.env.NORKA_ADMIN_PASSWORD)return json(res,503,{ok:false,error:"Не задан пароль админ-панели. Добавь NORKA_ADMIN_PASSWORD в переменные окружения backend и перезапусти функцию."});
    if(!(await admin(req)))return json(res,401,{ok:false,error:"Неверный пароль админ-панели. Проверь NORKA_ADMIN_PASSWORD."});
    if(action==="admin_auth")return json(res,200,{ok:true,authenticated:true});
+   if(action==="admin_latest_channel_publication_status"){
+    const items=await list("norka:giveaways");
+    const item=items.filter(x=>x&&x.type==="numbers"&&x.status==="completed"&&Array.isArray(x.winners)&&x.winners.length).sort((a,b)=>String(b.drawnAt||b.createdAt||"").localeCompare(String(a.drawnAt||a.createdAt||"")))[0];
+    if(!item)return json(res,200,{ok:true,found:false,backendVersion:NORKA_BACKEND_VERSION,message:"Не найден завершённый розыгрыш по номерам с сохранёнными победителями."});
+    const giveawayId=String(item.id);
+    const [marker,error,imageError]=await Promise.all([redis(["GET","norka:giveaway:channel-published:"+giveawayId]),redis(["GET","norka:giveaway:channel-error:"+giveawayId]),redis(["GET","norka:giveaway:channel-image-error:"+giveawayId])]);
+    return json(res,200,{ok:true,found:true,backendVersion:NORKA_BACKEND_VERSION,giveaway:{id:giveawayId,title:String(item.title||"Без названия"),status:item.status,drawnAt:item.drawnAt||null,winners:item.winners.map(w=>({place:w.place,number:w.number,userId:String(w.userId||""),prize:String(w.prize||"")}))},publication:marker||"not_sent",lastError:error||null,imageError:imageError||null});
+   }
    if(action==="admin_channel_publication_status"){
     const giveawayId=clean(body.giveawayId,60);
     if(!giveawayId)return json(res,400,{ok:false,error:"Не указан ID розыгрыша"});
