@@ -1,5 +1,5 @@
 const { createHmac, timingSafeEqual, randomInt } = require("crypto");
-const { requestMax } = require("../lib/max-api");
+const { requestMax, sendMaxMessage } = require("../lib/max-api");
 const NORKA_BACKEND_VERSION="norka-numbered-giveaways-2026-11-05-v11-live-number-status";
 
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
@@ -237,10 +237,14 @@ module.exports=async function handler(req,res){
     if(!token)return json(res,503,{ok:false,error:"Не настроен MAX_BOT_TOKEN"});
     if(!channelId)return json(res,400,{ok:false,error:"В Redis не сохранён ID канала"});
     try{
-     const message="🔎 Тест связи с каналом от Норки · "+new Date().toLocaleString("ru-RU");
-     const result=await requestMax({token,method:"POST",apiPath:"/messages?chat_id="+encodeURIComponent(String(channelId)),body:{text:message}});
-     if(!result.ok)return json(res,502,{ok:false,error:"MAX отклонил тестовую публикацию",httpStatus:result.status,details:result.data||result.raw||null,channelId:String(channelId)});
-     return json(res,200,{ok:true,message:"Тестовое сообщение отправлено в канал",channelId:String(channelId),messageId:result.data?.message?.body?.mid||result.data?.message?.mid||null});
+     const channelInfo=await requestMax({token,method:"GET",apiPath:"/chats/"+encodeURIComponent(String(channelId))});
+     if(!channelInfo.ok)return json(res,502,{ok:false,error:"Не удалось получить сведения о канале по сохранённому ID",httpStatus:channelInfo.status,details:channelInfo.data||channelInfo.raw||null,channelId:String(channelId)});
+     const chatType=channelInfo.data?.chat_type||channelInfo.data?.type||null;
+     if(chatType && chatType!=="channel")return json(res,409,{ok:false,error:"Сохранённый ID принадлежит не каналу",chatType,channelId:String(channelId),channel:channelInfo.data});
+     const message="🔎 Тестовая публикация от бота Норка · "+new Date().toLocaleString("ru-RU");
+     const result=await sendMaxMessage({token,chatId:channelId,text:message});
+     if(!result.ok)return json(res,502,{ok:false,error:"Бот не смог отправить сообщение в канал",httpStatus:result.status,details:result.data||result.raw||null,channelId:String(channelId),chatType});
+     return json(res,200,{ok:true,message:"Бот отправил тестовое сообщение в канал",channelId:String(channelId),chatType,messageId:result.data?.message?.body?.mid||result.data?.message?.mid||null});
     }catch(error){return json(res,502,{ok:false,error:"Ошибка запроса к MAX: "+String(error&&error.message||error).slice(0,500),channelId:String(channelId)});}
    }
     if(action==="admin_setup_channel_tracking"){
