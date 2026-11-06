@@ -75,6 +75,8 @@ module.exports = async function handler(req, res) {
     const userId = String(orderSnapshot.userId || "");
     if (!userId) return json(res, 400, { ok: false, error: "ORDER_INVALID" });
     const referrerId = String(await redis(["GET", "norka:referral:inviter:" + userId]) || "");
+    const buyerLedger = await redis(["LRANGE", "norka:ledger:" + userId, "0", "-1"]);
+    const hasPriorCoinPurchase = Array.isArray(buyerLedger) && buyerLedger.some(raw => { try { return JSON.parse(raw)?.type === "coin_purchase"; } catch { return false; } });
     const referralBonusCoins = Math.floor((Number(orderSnapshot.coins) || 0) * 0.02);
     const referralRewardAt = new Date().toISOString();
     const referralLedgerItem = JSON.stringify({
@@ -107,7 +109,9 @@ module.exports = async function handler(req, res) {
       "redis.call('LPUSH',KEYS[4],cjson.encode({type='coin_purchase',title='Покупка монет',coins=coins,at=ARGV[4],orderId=order.id}));",
       "redis.call('LTRIM',KEYS[4],'0','99');",
       "local taskRewarded=0; local taskBonusCoins=0;",
-      "if redis.call('SET',KEYS[12],'1','NX')=='OK' then",
+      "if ARGV[12]=='1' then",
+      "  redis.call('SET',KEYS[12],'1','NX'); local claimsRaw=redis.call('GET',KEYS[15]); local claims={}; if claimsRaw then claims=cjson.decode(claimsRaw) end; claims['first_topup']='done'; redis.call('SET',KEYS[15],cjson.encode(claims));",
+      "elseif redis.call('SET',KEYS[12],'1','NX')=='OK' then",
       "  local bonusBerries=tonumber(ARGV[10]) or 250; taskBonusCoins=tonumber(ARGV[11]) or 0;",
       "  if taskBonusCoins>0 then redis.call('HINCRBY',KEYS[2],'coins',taskBonusCoins) end;",
       "  redis.call('HINCRBY',KEYS[2],'berries',bonusBerries); redis.call('INCRBY',KEYS[13],bonusBerries); redis.call('ZINCRBY',KEYS[14],bonusBerries,tostring(order.userId));",
@@ -144,7 +148,7 @@ module.exports = async function handler(req, res) {
       "norka:claims:" + userId,
       String(withdrawAmount), operationId, String(amount), now,
       referrerId, referralLedgerItem, String(referralBonusCoins), referralRewardRecord,
-      firstTopupLedgerItem, "250", String(firstTopupBonusCoins)
+      firstTopupLedgerItem, "250", String(firstTopupBonusCoins), hasPriorCoinPurchase ? "1" : "0"
     ]);
 
     return json(res, 200, { ok: true, status: "paid", coinsAdded: Array.isArray(result) ? Number(result[1]) || 0 : 0, referralRewardApplied: Array.isArray(result) && Number(result[2]) === 1, referralBonusCoins: Array.isArray(result) ? Number(result[3]) || 0 : 0, firstTopupRewardApplied: Array.isArray(result) && Number(result[4]) === 1, firstTopupBonusCoins: Array.isArray(result) ? Number(result[5]) || 0 : 0, firstTopupBonusBerries: Array.isArray(result) && Number(result[4]) === 1 ? 250 : 0 });
