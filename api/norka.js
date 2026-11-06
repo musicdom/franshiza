@@ -227,7 +227,7 @@ async function publishGiveawayStart(item){
   const prizeLines=item.type==="numbers"&&Array.isArray(item.prizes)?item.prizes.map((p,i)=>"🏆 "+(i+1)+". "+safe(p&&p.title||"Приз")):["🎁 "+safe(item.prize||"Приз розыгрыша")];
   const places=Number(item.capacity)||0;
   const lines=["🎉 НОВЫЙ РОЗЫГРЫШ В НОРКЕ!","","🎟 Розыгрыш №"+(Number(item.number)||"—")+" · "+safe(item.title||"Без названия"),item.description?safe(item.description):"","","👥 Участников: 0",(item.type==="numbers"?"🔢 Номеров":"🎟 Мест")+": "+places,"🪙 "+(item.type==="numbers"?"Цена номера: ":"Участие: ")+(Number(item.cost)||0)+" монет","","ПРИЗЫ",...prizeLines,"","Заходи в Норку и участвуй! 🌿"].filter(Boolean);
-  const text=lines.join("\\n"),keyboard={type:"inline_keyboard",payload:{buttons:[[{type:"open_app",text:"🎁 Участвовать в розыгрыше",web_app:miniApp}]]}};
+  const text=lines.join("\n"),keyboard={type:"inline_keyboard",payload:{buttons:[[{type:"open_app",text:"🎁 Участвовать в розыгрыше",web_app:miniApp}]]}};
   const post=attachments=>sendMaxMessage({token,chatId,text,attachments});let sent=null,imageError=null;
   try{
    const imageUrl="https://raw.githubusercontent.com/musicdom/franshiza/main/Image/%D0%90%D0%BD%D0%BE%D0%BD%D1%81%20%D1%80%D0%BE%D0%B7%D1%8B%D0%B3%D1%80%D1%8B%D1%88%D0%B0.png";
