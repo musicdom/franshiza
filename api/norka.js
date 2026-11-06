@@ -1,6 +1,6 @@
 const { createHmac, timingSafeEqual, randomInt, randomBytes } = require("crypto");
 const { requestMax, sendMaxMessage, uploadMaxImage } = require("../lib/max-api");
-const NORKA_BACKEND_VERSION="norka-referral-friends-list-2026-11-06-v25";
+const NORKA_BACKEND_VERSION="norka-permanent-tasks-2026-11-07-v26";
 
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function cfg(){const kvUrl=process.env.KV_REST_API_URL,kvToken=process.env.KV_REST_API_TOKEN,upstashUrl=process.env.UPSTASH_REDIS_REST_URL,upstashToken=process.env.UPSTASH_REDIS_REST_TOKEN;if(kvUrl&&kvToken)return {url:kvUrl.replace(/\/$/,""),token:kvToken,source:"KV"};if(upstashUrl&&upstashToken)return {url:upstashUrl.replace(/\/$/,""),token:upstashToken,source:"UPSTASH"};if(kvUrl||kvToken||upstashUrl||upstashToken)throw new Error("Redis configuration is incomplete: URL and token must belong to the same provider");return null;}
@@ -48,13 +48,26 @@ async function ensureUser(id,profile={}){
  return u;
 }
 async function ledger(id,item){await redis(["LPUSH","norka:ledger:"+id,JSON.stringify({...item,at:new Date().toISOString()})]);await redis(["LTRIM","norka:ledger:"+id,"0","99"]);}
+async function claimLaunchTask(id){
+ const reward=50,now=new Date().toISOString(),item=JSON.stringify({type:"task_reward",taskId:"launch",title:"Награда: Запустить бота",berries:reward,at:now});
+ const script=[
+  "if redis.call('GET',KEYS[1]) then return {0,tonumber(redis.call('HGET',KEYS[2],'berries') or '0')} end;",
+  "local raw=redis.call('GET',KEYS[4]);local claims={};if raw then claims=cjson.decode(raw) end;",
+  "if claims['launch']=='done' then redis.call('SET',KEYS[1],'1');return {0,tonumber(redis.call('HGET',KEYS[2],'berries') or '0')} end;",
+  "local b=redis.call('HINCRBY',KEYS[2],'berries',tonumber(ARGV[1]));redis.call('INCRBY',KEYS[5],tonumber(ARGV[1]));redis.call('ZINCRBY',KEYS[6],tonumber(ARGV[1]),ARGV[3]);",
+  "claims['launch']='done';redis.call('SET',KEYS[4],cjson.encode(claims));redis.call('SET',KEYS[1],'1');",
+  "redis.call('LPUSH',KEYS[3],ARGV[2]);redis.call('LTRIM',KEYS[3],'0','99');return {1,b}"
+ ].join(" ");
+ const result=await redis(["EVAL",script,"6","norka:taskclaim:"+id+":launch","norka:wallet:"+id,"norka:ledger:"+id,"norka:claims:"+id,"norka:berries:earned:"+id,"norka:berries:ranking",String(reward),item,id]);
+ return {awarded:Number(result?.[0])===1,berries:Number(result?.[1])||0,reward};
+}
 async function updateBalances(id,berryDelta,coinDelta){const script="local b=tonumber(redis.call('HGET',KEYS[1],'berries') or '0'); local c=tonumber(redis.call('HGET',KEYS[1],'coins') or '0'); local db=tonumber(ARGV[1]); local dc=tonumber(ARGV[2]); if b+db<0 or c+dc<0 then return {err='INSUFFICIENT'} end; redis.call('HSET',KEYS[1],'berries',b+db,'coins',c+dc); return {b+db,c+dc}";const raw=await redis(["EVAL",script,"1","norka:wallet:"+id,String(berryDelta),String(coinDelta)]);if(!raw||raw.error)throw new Error("Wallet update failed");return {berries:Number(raw[0]),coins:Number(raw[1])};}
 async function readWallet(id){let w=await redis(["HGETALL","norka:wallet:"+id]);if(!Array.isArray(w)||!w.length)return {berries:0,coins:0};const o={};for(let i=0;i<w.length;i+=2)o[w[i]]=Number(w[i+1]);return {berries:o.berries||0,coins:o.coins||0};}
 async function list(key){const ids=await redis(["LRANGE",key,"0","99"]);return Array.isArray(ids)?ids.map(x=>{try{return JSON.parse(x)}catch{return null}}).filter(Boolean):[];}
 async function countUserKeys(){let cursor="0",count=0,iterations=0;do{const page=await redis(["SCAN",cursor,"MATCH","norka:user:*","COUNT","500"]);if(!Array.isArray(page)||page.length<2)throw new Error("Unexpected Redis SCAN response");cursor=String(page[0]);const keys=Array.isArray(page[1])?page[1]:[];count+=keys.filter(key=>/^norka:user:[^:]+$/.test(String(key))).length;iterations++;if(iterations>=200&&cursor!=="0")throw new Error("User count scan exceeded safety limit");}while(cursor!=="0");return count;}
 async function admin(req){const expected=process.env.NORKA_ADMIN_PASSWORD;if(!expected)return false;const supplied=clean(req.headers["x-norka-admin"]||req.body?.adminPassword,300);const a=Buffer.from(supplied),b=Buffer.from(expected);return a.length===b.length&&timingSafeEqual(a,b);}
-const DEFAULT_TASKS=[{id:"daily",title:"Ежедневный визит",description:"Заглядывай в Норку каждый день",reward:10,type:"daily",active:true},{id:"channel",title:"Подписка на канал",description:"Подпишись на канал Норки и отправь заявку на проверку",reward:30,type:"subscription",url:process.env.NORKA_CHANNEL_URL||"https://max.ru/join/L_PrwMy9zacHRuwZDM8NF49IhSs_p_XpLuXUfzjXEpk",active:true}];
-async function tasks(){const saved=await get("norka:tasks");if(!Array.isArray(saved))return DEFAULT_TASKS;const out=saved.slice();if(!out.some(t=>t.id==="daily"))out.unshift(DEFAULT_TASKS[0]);return out;}
+const DEFAULT_TASKS=[{id:"daily",title:"Ежедневный визит",description:"Заглядывай в Норку каждый день",reward:10,type:"daily",active:true},{id:"launch",title:"Запустить бота",description:"Открой Норку впервые и получи награду",reward:50,type:"launch",active:true},{id:"channel",title:"Подписаться на канал",description:"Подпишись на канал Норки и подтверди подписку",reward:100,type:"subscription",url:process.env.NORKA_CHANNEL_URL||"https://max.ru/join/L_PrwMy9zacHRuwZDM8NF49IhSs_p_XpLuXUfzjXEpk",active:true},{id:"first_topup",title:"Первое пополнение",description:"Пополнить баланс впервые и получить бонус",reward:250,type:"first_topup",active:true}];
+async function tasks(){const saved=await get("norka:tasks");const custom=Array.isArray(saved)?saved.filter(t=>!DEFAULT_TASKS.some(d=>d.id===t.id)):[];return [...DEFAULT_TASKS,...custom];}
 
 const DEFAULT_PROGRESS_CONFIG={
  xp:{visit:2,daily:5,task:20,exchange:3,giveaway:5},
@@ -618,7 +631,7 @@ module.exports=async function handler(req,res){
     const started=Date.now(),timings={};
     const stage=async(name,fn)=>{const at=Date.now();try{return await fn();}finally{timings[name]=Date.now()-at;console.info("NORKA bootstrap stage",JSON.stringify({stage:name,durationMs:timings[name]}));}};
     let u=null,w={berries:0,coins:0},history=[],ts=[],gs=[],claims={},rate=100,progress={xp:0,level:1,streak:0,bestStreak:0,achievements:[]},rewards=[],community=null;
-    try{const existing=Boolean(await stage("user_exists",()=>get(userKey(id))));u=await stage("user",()=>ensureUser(id,profile));if(!existing&&verified.startParam)await stage("referral_signup",()=>applyReferralSignup(id,verified.startParam));}catch(error){console.error("NORKA bootstrap user:",error&&error.message||"unknown");return json(res,503,{ok:false,error:"Не удалось загрузить профиль пользователя.",code:"BOOTSTRAP_USER_READ_FAILED",stage:"user",backendVersion:NORKA_BACKEND_VERSION});}
+    try{const existing=Boolean(await stage("user_exists",()=>get(userKey(id))));u=await stage("user",()=>ensureUser(id,profile));if(!existing&&verified.startParam)await stage("referral_signup",()=>applyReferralSignup(id,verified.startParam));await stage("launch_task",()=>claimLaunchTask(id));}catch(error){console.error("NORKA bootstrap user:",error&&error.message||"unknown");return json(res,503,{ok:false,error:"Не удалось загрузить профиль пользователя.",code:"BOOTSTRAP_USER_READ_FAILED",stage:"user",backendVersion:NORKA_BACKEND_VERSION});}
     try{w=await stage("wallet",()=>readWallet(id));}catch(error){console.error("NORKA bootstrap wallet:",error&&error.message||"unknown");w={berries:Number(u?.berries)||0,coins:Number(u?.coins)||0};}
     try{history=await stage("history",()=>list("norka:ledger:"+id));}catch(error){console.error("NORKA bootstrap history:",error&&error.message||"unknown");}
     try{ts=(await stage("tasks",()=>tasks())).filter(t=>t.active);}catch(error){console.error("NORKA bootstrap tasks:",error&&error.message||"unknown");}
