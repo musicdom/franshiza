@@ -34,8 +34,7 @@ module.exports=async function handler(req,res){
     await send(chatId,"🌿 Норка ждёт тебя! Открой приложение, чтобы проверить баланс ягод и монет, выполнить задания и посмотреть розыгрыши.",[{type:"inline_keyboard",payload:{buttons:[[{type:"open_app",text:"🌿 Открыть Норку",web_app:"se14711525_bot"}]]}}]);
     return json(res,200,{ok:true,action:"norka_start"});
    }
-   await send(chatId,"Я пока умею только открывать Норку 🌿 Нажми кнопку ниже, чтобы перейти в приложение.",[{type:"inline_keyboard",payload:{buttons:[[{type:"open_app",text:"🌿 Открыть Норку",web_app:"se14711525_bot"}]]}}]);
-   return json(res,200,{ok:true});
+   return json(res,200,{ok:true,ignored:"unsupported_message"});
   }
   return json(res,200,{ok:true,ignored:type||"unknown update type"});
  }catch(e){if(dedupeKey){try{await redis(["DEL",dedupeKey]);}catch{}}console.error("NORKA webhook:",e&&e.message||"unknown error");return json(res,200,{ok:true,processing_error:true});}
