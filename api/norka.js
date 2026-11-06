@@ -1,6 +1,6 @@
 const { createHmac, timingSafeEqual, randomInt, randomBytes } = require("crypto");
 const { requestMax, sendMaxMessage, uploadMaxImage } = require("../lib/max-api");
-const NORKA_BACKEND_VERSION="norka-giveaway-channel-start-2026-11-06-v22";
+const NORKA_BACKEND_VERSION="norka-giveaway-channel-start-2026-11-06-v23";
 
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function cfg(){const kvUrl=process.env.KV_REST_API_URL,kvToken=process.env.KV_REST_API_TOKEN,upstashUrl=process.env.UPSTASH_REDIS_REST_URL,upstashToken=process.env.UPSTASH_REDIS_REST_TOKEN;if(kvUrl&&kvToken)return {url:kvUrl.replace(/\/$/,""),token:kvToken,source:"KV"};if(upstashUrl&&upstashToken)return {url:upstashUrl.replace(/\/$/,""),token:upstashToken,source:"UPSTASH"};if(kvUrl||kvToken||upstashUrl||upstashToken)throw new Error("Redis configuration is incomplete: URL and token must belong to the same provider");return null;}
@@ -224,14 +224,14 @@ async function publishGiveawayStart(item){
   const token=process.env.MAX_BOT_TOKEN,chatId=await redis(["GET","norka:channel:chat_id"]);
   if(!token||!chatId)throw new Error(!token?"MAX_BOT_TOKEN is not configured":"Norka channel ID is not configured in Redis");
   const miniApp=process.env.NORKA_MINI_APP_URL||"https://max.ru/se14711525_bot";
-  const safe=v=>String(v==null?"":v).replace(/[\\r\\n]+/g," ").trim();
+  const safe=v=>String(v==null?"":v).replace(/[\r\n]+/g," ").trim();
   const prizes=numbered&&Array.isArray(item.prizes)?item.prizes.map((p,i)=>"🏆 "+(i+1)+". "+safe(p&&p.title||"Приз")):["🎁 "+safe(item.prize||"Приз розыгрыша")];
   const title=safe(item.title||"Без названия"),description=safe(item.description||"");
   const common=["🎉 НОВЫЙ РОЗЫГРЫШ В НОРКЕ!","","🎟 Розыгрыш №"+(Number(item.number)||"—")+" · "+title,description,"","👥 Участников: 0"];
   const lines=numbered
    ? [...common,"🔢 Всего номеров: "+(Number(item.capacity)||0),"🪙 Стоимость одного номера: "+(Number(item.cost)||0)+" монет","","🏆 ЧТО РАЗЫГРЫВАЕМ",...prizes,"","Выбирай свободные номера и участвуй!"]
    : [...common,"🎫 Доступно мест: "+(Number(item.capacity)||0),"🪙 Стоимость участия: "+(Number(item.cost)||0)+" монет","","🎁 ПРИЗ",...prizes,"","Присоединяйся к розыгрышу в Норке — участвуй и жди итоги!"];
-  const text=lines.filter(Boolean).join("\\n");
+  const text=lines.filter(Boolean).join("\n");
   const keyboard={type:"inline_keyboard",payload:{buttons:[[{type:"open_app",text:numbered?"🎟 Выбрать номер":"🎉 Участвовать",web_app:miniApp}]]}};
   const post=attachments=>sendMaxMessage({token,chatId,text,attachments});let sent=null,imageError=null;
   try{
