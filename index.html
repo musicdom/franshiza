@@ -352,12 +352,12 @@ function renderCommunity(){
  $("referralLinkText").textContent=link||"Ссылка пока недоступна";
  $("referralCount").textContent=fmt(r.count||0);$("referralBerries").textContent=fmt(r.berries||0);$("referralCoins").textContent=fmt(r.coins||0);
  const friends=Array.isArray(r.friends)?r.friends:[];
- $("referralFriendsCount").textContent=fmt(friends.length);
+ $("referralFriendsCount").textContent=fmt(r.count||friends.length);
  const dateLabel=value=>{if(!value)return "Дата не указана";const date=new Date(value);return Number.isNaN(date.getTime())?"Дата не указана":date.toLocaleDateString("ru-RU",{day:"numeric",month:"short",year:"numeric"});};
  $("referralFriends").innerHTML=friends.length?friends.map(friend=>{
   const avatar=String(friend.avatar||"").startsWith("https://")?'<img class="referral-friend-avatar" src="'+esc(friend.avatar)+'" alt="" onerror="this.style.display=\'none\'">':'<span class="referral-friend-avatar referral-friend-placeholder">🐾</span>';
   const topup=friend.topup;
-  const topupText=topup?('Пополнение: +'+fmt(topup.berries||100)+' 🍓'+(Number(topup.coins)>0?' +'+fmt(topup.coins)+' 🪙':'')+(Number(topup.purchaseCoins)>0?' · покупка '+fmt(topup.purchaseCoins)+' монет':'')):'Бонус за пополнение: ожидается';
+  const topupText=topup?('Пополнение: +'+fmt(topup.berries||100)+' 🍓'+(topup.coinsKnown===false?' · бонус в монетах начислен, сумма не восстановлена':Number(topup.coins)>0?' +'+fmt(topup.coins)+' 🪙':' · бонус в монетах: 0')+(Number(topup.purchaseCoins)>0?' · покупка '+fmt(topup.purchaseCoins)+' монет':'')):'Бонус за пополнение: ожидается';
   return '<article class="referral-friend-row">'+avatar+'<div class="referral-friend-info"><strong>'+esc(friend.name||"Участник Норки")+'</strong><small>Перешёл '+dateLabel(friend.joinedAt)+'</small><span>За переход: +'+fmt(friend.signupReward?.berries||25)+' 🍓</span><span class="referral-friend-topup '+(topup?'is-earned':'')+'">'+esc(topupText)+'</span></div></article>';
  }).join(""):'<div class="ranking-empty">Пока никто не перешёл по твоей ссылке. Поделись ссылкой, чтобы пригласить первого друга! 🍓</div>';
  $("berryMyRank").textContent=g.rank?"#"+fmt(g.rank):"Пока нет места";$("berryMyTotal").textContent=fmt(g.total||0)+" 🍓";
