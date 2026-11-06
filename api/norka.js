@@ -103,13 +103,13 @@ async function readCommunityData(id,user){
  const [count,statsRaw,topRaw,rankRaw,earnedRaw,friendIds]=await Promise.all([redis(["SCARD","norka:referrals:"+id]),redis(["HGETALL","norka:referral:stats:"+id]),redis(["ZREVRANGE","norka:berries:ranking","0","19","WITHSCORES"]),redis(["ZREVRANK","norka:berries:ranking",id]),redis(["GET","norka:berries:earned:"+id]),redis(["SMEMBERS","norka:referrals:"+id])]);
  const stats={};if(Array.isArray(statsRaw))for(let i=0;i<statsRaw.length;i+=2)stats[statsRaw[i]]=Number(statsRaw[i+1])||0;
  const top=[];if(Array.isArray(topRaw))for(let i=0;i+1<topRaw.length;i+=2){const uid=String(topRaw[i]),score=Number(topRaw[i+1])||0,profile=await get(userKey(uid));top.push({userId:uid,name:clean(profile?.name,100)||"Участник Норки",avatar:clean(profile?.avatar,500),berries:score});}
- const referralIds=Array.isArray(friendIds)?friendIds.map(String).slice(0,200):[];
+ const referralIds=Array.isArray(friendIds)?friendIds.map(String).slice(0,100):[];
  const referrals=await Promise.all(referralIds.map(async friendId=>{
   const [profileRaw,rewardRaw]=await Promise.all([get(userKey(friendId)),get("norka:referral:reward:"+friendId)]);
   const profile=profileRaw&&typeof profileRaw==="object"?profileRaw:{};
   let topup=null;
   if(rewardRaw&&typeof rewardRaw==="object"&&String(rewardRaw.referrerId||"")===String(id)){
-   topup={berries:Number(rewardRaw.berries)||100,coins:Number(rewardRaw.coins)||0,purchaseCoins:Number(rewardRaw.purchaseCoins)||0,at:clean(rewardRaw.at,40)};
+   topup={berries:Number(rewardRaw.berries)||100,coins:Number(rewardRaw.coins)||0,purchaseCoins:Number(rewardRaw.purchaseCoins)||0,coinsKnown:true,at:clean(rewardRaw.at,40)};
   }else{
    const marker=await redis(["GET","norka:referral:first_topup:"+friendId]);
    if(marker){
@@ -120,8 +120,8 @@ async function readCommunityData(id,user){
     if(firstPurchase){
      let order=null;if(firstPurchase.orderId){const orderRaw=await get("norka:payment:order:"+String(firstPurchase.orderId));if(orderRaw&&typeof orderRaw==="object")order=orderRaw;}
      const purchaseCoins=Number(order?.coins||firstPurchase.coins)||0;
-     topup={berries:100,coins:Math.floor(purchaseCoins*0.02),purchaseCoins,at:clean(order?.paidAt||firstPurchase.at,40)};
-    }else topup={berries:100,coins:0,purchaseCoins:0,at:""};
+     topup={berries:100,coins:Math.floor(purchaseCoins*0.02),purchaseCoins,coinsKnown:true,at:clean(order?.paidAt||firstPurchase.at,40)};
+    }else topup={berries:100,coins:0,purchaseCoins:0,coinsKnown:false,at:""};
    }
   }
   return {userId:friendId,name:clean(profile.name,100)||"Участник Норки",avatar:clean(profile.avatar,500),joinedAt:clean(profile.createdAt,40),signupReward:{berries:25},topup};
