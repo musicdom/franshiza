@@ -1,6 +1,6 @@
 const { createHmac, timingSafeEqual, randomInt, randomBytes } = require("crypto");
 const { requestMax, sendMaxMessage, uploadMaxImage } = require("../lib/max-api");
-const NORKA_BACKEND_VERSION="norka-giveaway-channel-start-2026-11-06-v23";
+const NORKA_BACKEND_VERSION="norka-giveaway-channel-start-2026-11-06-v24";
 
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function cfg(){const kvUrl=process.env.KV_REST_API_URL,kvToken=process.env.KV_REST_API_TOKEN,upstashUrl=process.env.UPSTASH_REDIS_REST_URL,upstashToken=process.env.UPSTASH_REDIS_REST_TOKEN;if(kvUrl&&kvToken)return {url:kvUrl.replace(/\/$/,""),token:kvToken,source:"KV"};if(upstashUrl&&upstashToken)return {url:upstashUrl.replace(/\/$/,""),token:upstashToken,source:"UPSTASH"};if(kvUrl||kvToken||upstashUrl||upstashToken)throw new Error("Redis configuration is incomplete: URL and token must belong to the same provider");return null;}
@@ -235,7 +235,7 @@ async function publishGiveawayStart(item){
   const keyboard={type:"inline_keyboard",payload:{buttons:[[{type:"open_app",text:numbered?"🎟 Выбрать номер":"🎉 Участвовать",web_app:miniApp}]]}};
   const post=attachments=>sendMaxMessage({token,chatId,text,attachments});let sent=null,imageError=null;
   try{
-   const imagePath=numbered?"Image/%D0%B3%D0%B8%D0%B2%D0%B2%D0%B5%D0%B9.png":"Image/%D0%B3%D0%B8%D0%B2%D0%B2%D0%B5%D0%B92.png";
+   const imagePath=numbered?"Image/%D0%B3%D0%B8%D0%B2%D0%B2%D0%B5%D0%B8%CC%86.png":"Image/%D0%B3%D0%B8%D0%B2%D0%B2%D0%B5%D0%B8%CC%862.png";
    const imageUrl="https://raw.githubusercontent.com/musicdom/franshiza/main/"+imagePath;
    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);let response;
    try{response=await fetch(imageUrl,{signal:controller.signal});}finally{clearTimeout(timer);}
