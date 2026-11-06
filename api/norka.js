@@ -1,6 +1,6 @@
 const { createHmac, timingSafeEqual, randomInt, randomBytes } = require("crypto");
 const { requestMax, sendMaxMessage, uploadMaxImage } = require("../lib/max-api");
-const NORKA_BACKEND_VERSION="norka-referrals-berries-ranking-2026-11-06-v20";
+const NORKA_BACKEND_VERSION="norka-referrals-berries-ranking-2026-11-06-v21";
 
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function cfg(){const kvUrl=process.env.KV_REST_API_URL,kvToken=process.env.KV_REST_API_TOKEN,upstashUrl=process.env.UPSTASH_REDIS_REST_URL,upstashToken=process.env.UPSTASH_REDIS_REST_TOKEN;if(kvUrl&&kvToken)return {url:kvUrl.replace(/\/$/,""),token:kvToken,source:"KV"};if(upstashUrl&&upstashToken)return {url:upstashUrl.replace(/\/$/,""),token:upstashToken,source:"UPSTASH"};if(kvUrl||kvToken||upstashUrl||upstashToken)throw new Error("Redis configuration is incomplete: URL and token must belong to the same provider");return null;}
@@ -64,18 +64,29 @@ const DEFAULT_PROGRESS_CONFIG={
  achievementRewards:{}
 };
 async function migrateBerriesRanking(){
- if(await redis(["GET","norka:berries:ranking:migrated"]))return true;
- if(!(await redis(["GET","norka:berries:ranking:migration_reset_v20"]))){
-  await redis(["DEL","norka:berries:ranking"]);
-  await redis(["SET","norka:berries:ranking:migration_reset_v20","1"]);
-  await redis(["DEL","norka:berries:ranking:migration_cursor"]);
+ const resetKey="norka:berries:ranking:migration_reset_v21";
+ if(!(await redis(["GET",resetKey]))){
+  await redis(["DEL","norka:berries:ranking:migrated","norka:berries:ranking:migration_cursor","norka:berries:ranking"]);
+  await redis(["SET",resetKey,"1"]);
  }
+ if(await redis(["GET","norka:berries:ranking:migrated"]))return true;
  let cursor=String(await redis(["GET","norka:berries:ranking:migration_cursor"])||"0"),pages=0;
  while(pages<10){
-  const scan=await redis(["SCAN",cursor,"MATCH","norka:user:*","COUNT","500"]);cursor=String(scan?.[0]||"0");
-  const userKeys=(Array.isArray(scan?.[1])?scan[1]:[]).filter(k=>/^norka:user:[^:]+$/.test(String(k)));
-  if(userKeys.length){const script="for i=1,#ARGV do local key=ARGV[i];local id=string.sub(key,12);local totalKey='norka:berries:earned:'..id;local total=redis.call('GET',totalKey);if not total then local balance=tonumber(redis.call('HGET','norka:wallet:'..id,'berries') or '0');total=tostring(balance);redis.call('SET',totalKey,total);end;if (tonumber(total) or 0)>0 then redis.call('ZADD',KEYS[1],tonumber(total),id) else redis.call('ZREM',KEYS[1],id) end;end;return #ARGV";await redis(["EVAL",script,"1","norka:berries:ranking",...userKeys]);}
-  pages++;if(cursor==="0"){await redis(["SET","norka:berries:ranking:migrated","1"]);await redis(["DEL","norka:berries:ranking:migration_cursor"]);return true;}await redis(["SET","norka:berries:ranking:migration_cursor",cursor]);
+  const scan=await redis(["SCAN",cursor,"MATCH","norka:user:*","COUNT","500"]);
+  if(!Array.isArray(scan)||scan.length<2)throw new Error("Unexpected Redis SCAN response during berries migration");
+  cursor=String(scan[0]||"0");
+  const userKeys=(Array.isArray(scan[1])?scan[1]:[]).filter(k=>/^norka:user:[^:]+$/.test(String(k)));
+  if(userKeys.length){
+   const script="for i=1,#ARGV do local key=ARGV[i];local id=string.sub(key,12);local totalKey='norka:berries:earned:'..id;local old=tonumber(redis.call('GET',totalKey) or '0');local balance=tonumber(redis.call('HGET','norka:wallet:'..id,'berries') or '0');local total=math.max(old,balance);redis.call('SET',totalKey,tostring(total));if total>0 then redis.call('ZADD',KEYS[1],total,id) else redis.call('ZREM',KEYS[1],id) end;end;return #ARGV";
+   await redis(["EVAL",script,"1","norka:berries:ranking",...userKeys]);
+  }
+  pages++;
+  if(cursor==="0"){
+   await redis(["SET","norka:berries:ranking:migrated","1"]);
+   await redis(["DEL","norka:berries:ranking:migration_cursor"]);
+   return true;
+  }
+  await redis(["SET","norka:berries:ranking:migration_cursor",cursor]);
  }
  return false;
 }
