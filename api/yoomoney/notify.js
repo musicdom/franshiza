@@ -85,6 +85,8 @@ module.exports = async function handler(req, res) {
       at: referralRewardAt
     });
     const referralRewardRecord = JSON.stringify({referrerId,berries:100,coins:referralBonusCoins,purchaseCoins:Number(orderSnapshot.coins)||0,at:referralRewardAt});
+    const firstTopupBonusCoins = Math.floor((Number(orderSnapshot.coins)||0) * 0.01);
+    const firstTopupLedgerItem = JSON.stringify({type:"first_topup_task",title:"Бонус за первое пополнение",berries:250,coins:firstTopupBonusCoins,at:referralRewardAt});
 
     const now = new Date().toISOString();
     const script = [
@@ -104,6 +106,14 @@ module.exports = async function handler(req, res) {
       "redis.call('SET',KEYS[1],cjson.encode(order));",
       "redis.call('LPUSH',KEYS[4],cjson.encode({type='coin_purchase',title='Покупка монет',coins=coins,at=ARGV[4],orderId=order.id}));",
       "redis.call('LTRIM',KEYS[4],'0','99');",
+      "local taskRewarded=0; local taskBonusCoins=0;",
+      "if redis.call('SET',KEYS[12],'1','NX')=='OK' then",
+      "  local bonusBerries=tonumber(ARGV[10]) or 250; taskBonusCoins=tonumber(ARGV[11]) or 0;",
+      "  if taskBonusCoins>0 then redis.call('HINCRBY',KEYS[2],'coins',taskBonusCoins) end;",
+      "  redis.call('HINCRBY',KEYS[2],'berries',bonusBerries); redis.call('INCRBY',KEYS[13],bonusBerries); redis.call('ZINCRBY',KEYS[14],bonusBerries,tostring(order.userId));",
+      "  local claimsRaw=redis.call('GET',KEYS[15]); local claims={}; if claimsRaw then claims=cjson.decode(claimsRaw) end; claims['first_topup']='done'; redis.call('SET',KEYS[15],cjson.encode(claims));",
+      "  redis.call('LPUSH',KEYS[4],ARGV[9]); redis.call('LTRIM',KEYS[4],'0','99'); taskRewarded=1;",
+      "end;",
       "local rewarded=0; local bonusCoins=0;",
       "if ARGV[5]~='' and ARGV[5]~=tostring(order.userId) and redis.call('SET',KEYS[5],'1','NX')=='OK' then",
       "  local bonusBerries=100; bonusCoins=tonumber(ARGV[7]) or 0;",
@@ -112,11 +122,11 @@ module.exports = async function handler(req, res) {
       "  redis.call('HINCRBY',KEYS[9],'berries',bonusBerries); if bonusCoins>0 then redis.call('HINCRBY',KEYS[9],'coins',bonusCoins) end;",
       "  redis.call('LPUSH',KEYS[10],ARGV[6]); redis.call('LTRIM',KEYS[10],'0','99'); redis.call('SET',KEYS[11],ARGV[8]); rewarded=1;",
       "end;",
-      "return {1,coins,rewarded,bonusCoins};"
+      "return {1,coins,rewarded,bonusCoins,taskRewarded,taskBonusCoins};"
     ].join(" ");
 
     const result = await redis([
-      "EVAL", script, "11",
+      "EVAL", script, "15",
       "norka:payment:order:" + orderId,
       "norka:wallet:" + userId,
       "norka:payment:operation:" + operationId,
@@ -128,11 +138,16 @@ module.exports = async function handler(req, res) {
       "norka:referral:stats:" + (referrerId || "__no_referrer__"),
       "norka:ledger:" + (referrerId || "__no_referrer__"),
       "norka:referral:reward:" + userId,
+      "norka:taskclaim:" + userId + ":first_topup",
+      "norka:berries:earned:" + userId,
+      "norka:berries:ranking",
+      "norka:claims:" + userId,
       String(withdrawAmount), operationId, String(amount), now,
-      referrerId, referralLedgerItem, String(referralBonusCoins), referralRewardRecord
+      referrerId, referralLedgerItem, String(referralBonusCoins), referralRewardRecord,
+      firstTopupLedgerItem, "250", String(firstTopupBonusCoins)
     ]);
 
-    return json(res, 200, { ok: true, status: "paid", coinsAdded: Array.isArray(result) ? Number(result[1]) || 0 : 0, referralRewardApplied: Array.isArray(result) && Number(result[2]) === 1, referralBonusCoins: Array.isArray(result) ? Number(result[3]) || 0 : 0 });
+    return json(res, 200, { ok: true, status: "paid", coinsAdded: Array.isArray(result) ? Number(result[1]) || 0 : 0, referralRewardApplied: Array.isArray(result) && Number(result[2]) === 1, referralBonusCoins: Array.isArray(result) ? Number(result[3]) || 0 : 0, firstTopupRewardApplied: Array.isArray(result) && Number(result[4]) === 1, firstTopupBonusCoins: Array.isArray(result) ? Number(result[5]) || 0 : 0, firstTopupBonusBerries: Array.isArray(result) && Number(result[4]) === 1 ? 250 : 0 });
   } catch (error) {
     const message = String(error && error.message || "PAYMENT_HANDLER_ERROR");
     if (message.includes("ORDER_NOT_FOUND")) return json(res, 404, { ok: false, error: "ORDER_NOT_FOUND" });
