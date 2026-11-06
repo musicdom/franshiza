@@ -1,6 +1,6 @@
 const { createHmac, timingSafeEqual, randomInt, randomBytes } = require("crypto");
 const { requestMax, sendMaxMessage, uploadMaxImage } = require("../lib/max-api");
-const NORKA_BACKEND_VERSION="norka-giveaway-channel-start-2026-11-06-v24";
+const NORKA_BACKEND_VERSION="norka-referral-friends-list-2026-11-06-v25";
 
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function cfg(){const kvUrl=process.env.KV_REST_API_URL,kvToken=process.env.KV_REST_API_TOKEN,upstashUrl=process.env.UPSTASH_REDIS_REST_URL,upstashToken=process.env.UPSTASH_REDIS_REST_TOKEN;if(kvUrl&&kvToken)return {url:kvUrl.replace(/\/$/,""),token:kvToken,source:"KV"};if(upstashUrl&&upstashToken)return {url:upstashUrl.replace(/\/$/,""),token:upstashToken,source:"UPSTASH"};if(kvUrl||kvToken||upstashUrl||upstashToken)throw new Error("Redis configuration is incomplete: URL and token must belong to the same provider");return null;}
@@ -100,10 +100,34 @@ async function applyReferralSignup(friendId,startParam){
 }
 async function readCommunityData(id,user){
  const migrationComplete=await migrateBerriesRanking(),code=String(user?.referralCode||"");
- const [count,statsRaw,topRaw,rankRaw,earnedRaw]=await Promise.all([redis(["SCARD","norka:referrals:"+id]),redis(["HGETALL","norka:referral:stats:"+id]),redis(["ZREVRANGE","norka:berries:ranking","0","19","WITHSCORES"]),redis(["ZREVRANK","norka:berries:ranking",id]),redis(["GET","norka:berries:earned:"+id])]);
+ const [count,statsRaw,topRaw,rankRaw,earnedRaw,friendIds]=await Promise.all([redis(["SCARD","norka:referrals:"+id]),redis(["HGETALL","norka:referral:stats:"+id]),redis(["ZREVRANGE","norka:berries:ranking","0","19","WITHSCORES"]),redis(["ZREVRANK","norka:berries:ranking",id]),redis(["GET","norka:berries:earned:"+id]),redis(["SMEMBERS","norka:referrals:"+id])]);
  const stats={};if(Array.isArray(statsRaw))for(let i=0;i<statsRaw.length;i+=2)stats[statsRaw[i]]=Number(statsRaw[i+1])||0;
  const top=[];if(Array.isArray(topRaw))for(let i=0;i+1<topRaw.length;i+=2){const uid=String(topRaw[i]),score=Number(topRaw[i+1])||0,profile=await get(userKey(uid));top.push({userId:uid,name:clean(profile?.name,100)||"Участник Норки",avatar:clean(profile?.avatar,500),berries:score});}
- return {referral:{code,count:Number(count)||0,berries:stats.berries||0,coins:stats.coins||0},ranking:{top,rank:rankRaw===null||rankRaw===undefined?null:Number(rankRaw)+1,total:Number(earnedRaw)||0,migrationComplete}};
+ const referralIds=Array.isArray(friendIds)?friendIds.map(String).slice(0,200):[];
+ const referrals=await Promise.all(referralIds.map(async friendId=>{
+  const [profileRaw,rewardRaw]=await Promise.all([get(userKey(friendId)),get("norka:referral:reward:"+friendId)]);
+  const profile=profileRaw&&typeof profileRaw==="object"?profileRaw:{};
+  let topup=null;
+  if(rewardRaw&&typeof rewardRaw==="object"&&String(rewardRaw.referrerId||"")===String(id)){
+   topup={berries:Number(rewardRaw.berries)||100,coins:Number(rewardRaw.coins)||0,purchaseCoins:Number(rewardRaw.purchaseCoins)||0,at:clean(rewardRaw.at,40)};
+  }else{
+   const marker=await redis(["GET","norka:referral:first_topup:"+friendId]);
+   if(marker){
+    const ledgerRaw=await redis(["LRANGE","norka:ledger:"+friendId,"0","99"]);
+    const entries=Array.isArray(ledgerRaw)?ledgerRaw.map(raw=>{try{return JSON.parse(raw)}catch{return null}}).filter(Boolean):[];
+    const purchases=entries.filter(entry=>entry.type==="coin_purchase");
+    const firstPurchase=purchases[purchases.length-1];
+    if(firstPurchase){
+     let order=null;if(firstPurchase.orderId){const orderRaw=await get("norka:payment:order:"+String(firstPurchase.orderId));if(orderRaw&&typeof orderRaw==="object")order=orderRaw;}
+     const purchaseCoins=Number(order?.coins||firstPurchase.coins)||0;
+     topup={berries:100,coins:Math.floor(purchaseCoins*0.02),purchaseCoins,at:clean(order?.paidAt||firstPurchase.at,40)};
+    }else topup={berries:100,coins:0,purchaseCoins:0,at:""};
+   }
+  }
+  return {userId:friendId,name:clean(profile.name,100)||"Участник Норки",avatar:clean(profile.avatar,500),joinedAt:clean(profile.createdAt,40),signupReward:{berries:25},topup};
+ }));
+ referrals.sort((a,b)=>String(b.joinedAt||"").localeCompare(String(a.joinedAt||"")));
+ return {referral:{code,count:Number(count)||0,berries:stats.berries||0,coins:stats.coins||0,friends:referrals},ranking:{top,rank:rankRaw===null||rankRaw===undefined?null:Number(rankRaw)+1,total:Number(earnedRaw)||0,migrationComplete}};
 }
 
 async function progressConfig(){
