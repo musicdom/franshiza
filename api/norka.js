@@ -1,6 +1,6 @@
-const { createHmac, timingSafeEqual, randomInt } = require("crypto");
+const { createHmac, timingSafeEqual, randomInt, randomBytes } = require("crypto");
 const { requestMax, sendMaxMessage, uploadMaxImage } = require("../lib/max-api");
-const NORKA_BACKEND_VERSION="norka-numbered-giveaways-2026-11-06-v18-image-channel-test";
+const NORKA_BACKEND_VERSION="norka-referrals-berries-ranking-2026-11-06-v19";
 
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function cfg(){const kvUrl=process.env.KV_REST_API_URL,kvToken=process.env.KV_REST_API_TOKEN,upstashUrl=process.env.UPSTASH_REDIS_REST_URL,upstashToken=process.env.UPSTASH_REDIS_REST_TOKEN;if(kvUrl&&kvToken)return {url:kvUrl.replace(/\/$/,""),token:kvToken,source:"KV"};if(upstashUrl&&upstashToken)return {url:upstashUrl.replace(/\/$/,""),token:upstashToken,source:"UPSTASH"};if(kvUrl||kvToken||upstashUrl||upstashToken)throw new Error("Redis configuration is incomplete: URL and token must belong to the same provider");return null;}
@@ -26,11 +26,25 @@ function verifyInitData(req){
   if(supplied.length!==expected.length||!timingSafeEqual(supplied,expected))return null;
   const user=JSON.parse(params.get("user")||"null");
   if(!user||!user.id)return null;
-  return {id:String(user.id),profile:{name:[user.first_name,user.last_name].filter(Boolean).join(" ")||user.name||user.username||"Участник Норки",avatar:user.photo_url||""}};
+  return {id:String(user.id),profile:{name:[user.first_name,user.last_name].filter(Boolean).join(" ")||user.name||user.username||"Участник Норки",avatar:user.photo_url||""},startParam:clean(params.get("start_param")||"",512)};
  }catch{return null;}
 }
 function userKey(id){return "norka:user:"+id;}
-async function ensureUser(id,profile={}){let u=await get(userKey(id));if(!u){u={id,name:clean(profile.name,100)||"Участник Норки",avatar:clean(profile.avatar,500),berries:0,coins:0,createdAt:new Date().toISOString(),lastDaily:null};await set(userKey(id),u);return u;}const name=clean(profile.name,100),avatar=clean(profile.avatar,500);let changed=false;if(name&&u.name!==name){u.name=name;changed=true;}if(avatar&&u.avatar!==avatar){u.avatar=avatar;changed=true;}if(changed)await set(userKey(id),u);return u;}
+async function ensureUser(id,profile={}){
+ let u=await get(userKey(id)),changed=false;
+ if(!u){u={id,name:clean(profile.name,100)||"Участник Норки",avatar:clean(profile.avatar,500),berries:0,coins:0,createdAt:new Date().toISOString(),lastDaily:null};changed=true;}
+ const name=clean(profile.name,100),avatar=clean(profile.avatar,500);
+ if(name&&u.name!==name){u.name=name;changed=true;}
+ if(avatar&&u.avatar!==avatar){u.avatar=avatar;changed=true;}
+ let mapped=u.referralCode?String(await redis(["GET","norka:referral:code:"+u.referralCode])||""):"";
+ if(!u.referralCode||mapped&&mapped!==String(id)){
+  u.referralCode="";
+  for(let i=0;i<8&&!u.referralCode;i++){const code=randomBytes(6).toString("hex"),saved=await redis(["SET","norka:referral:code:"+code,id,"NX"]);if(saved==="OK"){u.referralCode=code;changed=true;}}
+ }else if(!mapped){const saved=await redis(["SET","norka:referral:code:"+u.referralCode,id,"NX"]);if(saved!=="OK")throw new Error("REFERRAL_CODE_MAPPING_FAILED");}
+ if(!u.referralCode)throw new Error("REFERRAL_CODE_CREATE_FAILED");
+ if(changed)await set(userKey(id),u);
+ return u;
+}
 async function ledger(id,item){await redis(["LPUSH","norka:ledger:"+id,JSON.stringify({...item,at:new Date().toISOString()})]);await redis(["LTRIM","norka:ledger:"+id,"0","99"]);}
 async function updateBalances(id,berryDelta,coinDelta){const script="local b=tonumber(redis.call('HGET',KEYS[1],'berries') or '0'); local c=tonumber(redis.call('HGET',KEYS[1],'coins') or '0'); local db=tonumber(ARGV[1]); local dc=tonumber(ARGV[2]); if b+db<0 or c+dc<0 then return {err='INSUFFICIENT'} end; redis.call('HSET',KEYS[1],'berries',b+db,'coins',c+dc); return {b+db,c+dc}";const raw=await redis(["EVAL",script,"1","norka:wallet:"+id,String(berryDelta),String(coinDelta)]);if(!raw||raw.error)throw new Error("Wallet update failed");return {berries:Number(raw[0]),coins:Number(raw[1])};}
 async function readWallet(id){let w=await redis(["HGETALL","norka:wallet:"+id]);if(!Array.isArray(w)||!w.length)return {berries:0,coins:0};const o={};for(let i=0;i<w.length;i+=2)o[w[i]]=Number(w[i+1]);return {berries:o.berries||0,coins:o.coins||0};}
@@ -47,6 +61,33 @@ const DEFAULT_PROGRESS_CONFIG={
  levelRewards:{"5":25,"10":75},
  achievementRewards:{}
 };
+async function migrateBerriesRanking(){
+ if(await redis(["GET","norka:berries:ranking:migrated"]))return true;
+ let cursor=String(await redis(["GET","norka:berries:ranking:migration_cursor"])||"0"),pages=0;
+ while(pages<10){
+  const scan=await redis(["SCAN",cursor,"MATCH","norka:user:*","COUNT","500"]);cursor=String(scan?.[0]||"0");
+  const userKeys=(Array.isArray(scan?.[1])?scan[1]:[]).filter(k=>/^norka:user:[^:]+$/.test(String(k)));
+  if(userKeys.length){const script="for i=1,#ARGV do local key=ARGV[i];local id=string.sub(key,11);local totalKey='norka:berries:earned:'..id;local total=redis.call('GET',totalKey);if not total then local balance=tonumber(redis.call('HGET','norka:wallet:'..id,'berries') or '0');total=tostring(balance);redis.call('SET',totalKey,total);end;redis.call('ZADD',KEYS[1],tonumber(total) or 0,id);end;return #ARGV";await redis(["EVAL",script,"1","norka:berries:ranking",...userKeys]);}
+  pages++;if(cursor==="0"){await redis(["SET","norka:berries:ranking:migrated","1"]);await redis(["DEL","norka:berries:ranking:migration_cursor"]);return true;}await redis(["SET","norka:berries:ranking:migration_cursor",cursor]);
+ }
+ return false;
+}
+async function applyReferralSignup(friendId,startParam){
+ const match=/^ref_([a-f0-9]{12})$/.exec(String(startParam||""));if(!match)return false;
+ const referrerId=String(await redis(["GET","norka:referral:code:"+match[1]])||"");if(!referrerId||referrerId===String(friendId))return false;
+ const reward=25,ledgerItem=JSON.stringify({type:"referral_signup",title:"Друг присоединился к Норке",berries:reward,at:new Date().toISOString()});
+ const script=["if ARGV[1]==ARGV[2] or redis.call('EXISTS',KEYS[4])==1 then return {0,0} end;","if redis.call('SISMEMBER',KEYS[5],ARGV[1])==1 then return {0,0} end;","redis.call('SET',KEYS[4],ARGV[2]);redis.call('SADD',KEYS[5],ARGV[1]);","local balance=redis.call('HINCRBY',KEYS[1],'berries',tonumber(ARGV[3]));","redis.call('INCRBY',KEYS[2],tonumber(ARGV[3]));redis.call('ZINCRBY',KEYS[3],tonumber(ARGV[3]),ARGV[2]);","redis.call('HINCRBY',KEYS[6],'berries',tonumber(ARGV[3]));","redis.call('LPUSH',KEYS[7],ARGV[4]);redis.call('LTRIM',KEYS[7],'0','99');","return {1,balance}"].join(" ");
+ const result=await redis(["EVAL",script,"7","norka:wallet:"+referrerId,"norka:berries:earned:"+referrerId,"norka:berries:ranking","norka:referral:inviter:"+friendId,"norka:referrals:"+referrerId,"norka:referral:stats:"+referrerId,"norka:ledger:"+referrerId,String(friendId),referrerId,String(reward),ledgerItem]);
+ if(Number(result?.[0])===1){notifyUser(referrerId,"referral-signup:"+friendId,"🍓 По твоей ссылке в Норку пришёл новый друг!\nТебе начислено 25 ягод.");return true;}return false;
+}
+async function readCommunityData(id,user){
+ const migrationComplete=await migrateBerriesRanking(),code=String(user?.referralCode||"");
+ const [count,statsRaw,topRaw,rankRaw,earnedRaw]=await Promise.all([redis(["SCARD","norka:referrals:"+id]),redis(["HGETALL","norka:referral:stats:"+id]),redis(["ZREVRANGE","norka:berries:ranking","0","19","WITHSCORES"]),redis(["ZREVRANK","norka:berries:ranking",id]),redis(["GET","norka:berries:earned:"+id])]);
+ const stats={};if(Array.isArray(statsRaw))for(let i=0;i<statsRaw.length;i+=2)stats[statsRaw[i]]=Number(statsRaw[i+1])||0;
+ const top=[];if(Array.isArray(topRaw))for(let i=0;i+1<topRaw.length;i+=2){const uid=String(topRaw[i]),score=Number(topRaw[i+1])||0,profile=await get(userKey(uid));top.push({userId:uid,name:clean(profile?.name,100)||"Участник Норки",avatar:clean(profile?.avatar,500),berries:score});}
+ return {referral:{code,count:Number(count)||0,berries:stats.berries||0,coins:stats.coins||0},ranking:{top,rank:rankRaw===null||rankRaw===undefined?null:Number(rankRaw)+1,total:Number(earnedRaw)||0,migrationComplete}};
+}
+
 async function progressConfig(){
  const saved=await get("norka:progress:config");
  if(!saved||typeof saved!=="object")return DEFAULT_PROGRESS_CONFIG;
@@ -138,10 +179,10 @@ async function grantProgress(id,eventId,kind,day,sendNotification=true){
   "local berries=0; local ledger={}; local streakRewards=cjson.decode(ARGV[6]);",
   "if kind=='visit' then local milestones={3,7,14,30}; for _,m in ipairs(milestones) do if tonumber(p.streak)==m and redis.call('SADD',KEYS[6],tostring(m))==1 then local reward=tonumber(streakRewards[tostring(m)]) or 0; if reward>0 then berries=berries+reward; table.insert(ledger,cjson.encode({type='streak_reward',title='Награда за серию '..m..' дней',berries=reward,at=ARGV[8]})) end; achievement('streak_'..m) end end end;",
   "local levelRewards=cjson.decode(ARGV[7]); for l=oldLevel+1,level do local reward=tonumber(levelRewards[tostring(l)]) or 0; if reward>0 and redis.call('SADD',KEYS[7],tostring(l))==1 then berries=berries+reward; table.insert(ledger,cjson.encode({type='level_reward',title='Награда за уровень '..l,berries=reward,at=ARGV[8]})) end; if l==5 or l==10 then achievement('level_'..l) end end;",
-  "if berries>0 then redis.call('HINCRBY',KEYS[2],'berries',berries); for _,item in ipairs(ledger) do redis.call('LPUSH',KEYS[3],item) end; redis.call('LTRIM',KEYS[3],'0','99') end;",
+  "if berries>0 then redis.call('HINCRBY',KEYS[2],'berries',berries);redis.call('INCRBY',KEYS[8],berries);redis.call('ZINCRBY',KEYS[9],berries,ARGV[10]);for _,item in ipairs(ledger) do redis.call('LPUSH',KEYS[3],item) end;redis.call('LTRIM',KEYS[3],'0','99') end;",
   "redis.call('SET',KEYS[1],cjson.encode(p)); return {1,p.xp,p.level,p.streak,berries,#unlocked,oldLevel}"
  ].join(" ");
- const result=await redis(["EVAL",script,"7","norka:progress:"+id,"norka:wallet:"+id,"norka:ledger:"+id,"norka:progress:events:"+id,"norka:achievements:"+id,"norka:streak:rewards:"+id,"norka:level:rewards:"+id,eventId,day,kind,String(xp),JSON.stringify(thresholds),JSON.stringify(config.streakRewards),JSON.stringify(config.levelRewards),new Date().toISOString(),new Date(Date.parse(day+"T00:00:00Z")-86400000).toISOString().slice(0,10)]);
+ const result=await redis(["EVAL",script,"9","norka:progress:"+id,"norka:wallet:"+id,"norka:ledger:"+id,"norka:progress:events:"+id,"norka:achievements:"+id,"norka:streak:rewards:"+id,"norka:level:rewards:"+id,"norka:berries:earned:"+id,"norka:berries:ranking",eventId,day,kind,String(xp),JSON.stringify(thresholds),JSON.stringify(config.streakRewards),JSON.stringify(config.levelRewards),new Date().toISOString(),new Date(Date.parse(day+"T00:00:00Z")-86400000).toISOString().slice(0,10),id]);
  const progress={applied:Number(result[0])===1,xp:Number(result[1])||0,level:Number(result[2])||1,streak:Number(result[3])||0,berries:Number(result[4])||0};if(sendNotification&&progress.applied&&(progress.berries>0||Number(result[5])>0||progress.level>Number(result[6])))await notifyUser(id,"progress:"+eventId,"🌿 Отличная работа в Норке!\nУровень: "+progress.level+" · Опыт: "+progress.xp+" XP\nСерия: "+progress.streak+" дней\n"+(progress.berries>0?"🍓 Начислено ягод: "+progress.berries:"Новое достижение открыто!"));return progress;
 }
 async function readProgress(id){
@@ -456,14 +497,14 @@ module.exports=async function handler(req,res){
     "local claimsRaw=redis.call('GET',KEYS[4]); local claims={}; if claimsRaw then claims=cjson.decode(claimsRaw) end;",
     "if claims[ARGV[2]]=='done' then return redis.error_reply('TASK_ALREADY') end;",
     "local current=tonumber(redis.call('HGET',KEYS[2],'berries') or '0');",
-    "redis.call('HINCRBY',KEYS[2],'berries',tonumber(ARGV[1]));",
+    "redis.call('HINCRBY',KEYS[2],'berries',tonumber(ARGV[1]));redis.call('INCRBY',KEYS[6],tonumber(ARGV[1]));redis.call('ZINCRBY',KEYS[7],tonumber(ARGV[1]),ARGV[5]);",
     "redis.call('SET',KEYS[1],'1','EX','31536000');",
     "claims[ARGV[2]]='done'; redis.call('SET',KEYS[4],cjson.encode(claims));",
     "redis.call('LPUSH',KEYS[3],ARGV[3]); redis.call('LTRIM',KEYS[3],'0','99');",
     "redis.call('LREM',KEYS[5],'1',ARGV[4]);",
     "return {current+tonumber(ARGV[1]),tonumber(redis.call('HGET',KEYS[2],'coins') or '0')}"
    ].join(" ");
-   const result=await redis(["EVAL",script,"5","norka:taskapproved:"+id+":"+taskId,"norka:wallet:"+id,"norka:ledger:"+id,"norka:claims:"+id,"norka:pending",String(reward),taskId,ledgerItem,JSON.stringify(p)]);
+   const result=await redis(["EVAL",script,"7","norka:taskapproved:"+id+":"+taskId,"norka:wallet:"+id,"norka:ledger:"+id,"norka:claims:"+id,"norka:pending","norka:berries:earned:"+id,"norka:berries:ranking",String(reward),taskId,ledgerItem,JSON.stringify(p),id]);
    await grantProgress(id,"task:"+taskId,"task",new Date().toISOString().slice(0,10));await notifyUser(id,"task-approved:"+taskId,"✅ Твоё задание «"+t.title+"» подтверждено!\n🍓 Начислено ягод: "+reward);return json(res,200,{ok:true,wallet:await readWallet(id),progress:await readProgress(id)});
   }
    return json(res,400,{ok:false,error:"Неизвестное действие"});
@@ -491,8 +532,8 @@ module.exports=async function handler(req,res){
    if(action==="bootstrap"){
     const started=Date.now(),timings={};
     const stage=async(name,fn)=>{const at=Date.now();try{return await fn();}finally{timings[name]=Date.now()-at;console.info("NORKA bootstrap stage",JSON.stringify({stage:name,durationMs:timings[name]}));}};
-    let u=null,w={berries:0,coins:0},history=[],ts=[],gs=[],claims={},rate=100,progress={xp:0,level:1,streak:0,bestStreak:0,achievements:[]},rewards=[];
-    try{u=await stage("user",()=>ensureUser(id,profile));}catch(error){console.error("NORKA bootstrap user:",error&&error.message||"unknown");return json(res,503,{ok:false,error:"Не удалось загрузить профиль пользователя.",code:"BOOTSTRAP_USER_READ_FAILED",stage:"user",backendVersion:NORKA_BACKEND_VERSION});}
+    let u=null,w={berries:0,coins:0},history=[],ts=[],gs=[],claims={},rate=100,progress={xp:0,level:1,streak:0,bestStreak:0,achievements:[]},rewards=[],community=null;
+    try{const existing=Boolean(await stage("user_exists",()=>get(userKey(id))));u=await stage("user",()=>ensureUser(id,profile));if(!existing&&verified.startParam)await stage("referral_signup",()=>applyReferralSignup(id,verified.startParam));}catch(error){console.error("NORKA bootstrap user:",error&&error.message||"unknown");return json(res,503,{ok:false,error:"Не удалось загрузить профиль пользователя.",code:"BOOTSTRAP_USER_READ_FAILED",stage:"user",backendVersion:NORKA_BACKEND_VERSION});}
     try{w=await stage("wallet",()=>readWallet(id));}catch(error){console.error("NORKA bootstrap wallet:",error&&error.message||"unknown");w={berries:Number(u?.berries)||0,coins:Number(u?.coins)||0};}
     try{history=await stage("history",()=>list("norka:ledger:"+id));}catch(error){console.error("NORKA bootstrap history:",error&&error.message||"unknown");}
     try{ts=(await stage("tasks",()=>tasks())).filter(t=>t.active);}catch(error){console.error("NORKA bootstrap tasks:",error&&error.message||"unknown");}
@@ -503,9 +544,9 @@ module.exports=async function handler(req,res){
     try{claims=await stage("claims",async()=>await get("norka:claims:"+id)||{});}catch(error){console.error("NORKA bootstrap claims:",error&&error.message||"unknown");}
     try{rate=await stage("rate",async()=>Number(await redis(["GET","norka:exchange-rate"]))||100);}catch(error){console.error("NORKA bootstrap rate:",error&&error.message||"unknown");}
     try{progress=await stage("progress",async()=>{const day=new Date().toISOString().slice(0,10);await grantProgress(id,"visit:"+day,"visit",day,false);if(u?.lastDaily)await grantProgress(id,"daily:"+u.lastDaily,"daily",u.lastDaily,false);return readProgress(id);});}catch(error){console.error("NORKA bootstrap progress:",error&&error.message||"unknown");}
-    try{rewards=await stage("rewards",()=>readUserRewards(id));}catch(error){console.error("NORKA bootstrap rewards:",error&&error.message||"unknown");}
+    try{rewards=await stage("rewards",()=>readUserRewards(id));}catch(error){console.error("NORKA bootstrap rewards:",error&&error.message||"unknown");}try{community=await stage("community",()=>readCommunityData(id,u));}catch(error){console.error("NORKA bootstrap community:",error&&error.message||"unknown");community={referral:{code:u?.referralCode||"",count:0,berries:0,coins:0},ranking:{top:[],rank:null,total:0,migrationComplete:false}};}
     timings.total=Date.now()-started;console.info("NORKA bootstrap complete",JSON.stringify(timings));
-    return json(res,200,{ok:true,user:u,wallet:w,tasks:ts,giveaways:gs,history,claims,rate,progress,rewards,backendVersion:NORKA_BACKEND_VERSION,diagnostics:timings});
+    return json(res,200,{ok:true,user:u,wallet:w,tasks:ts,giveaways:gs,history,claims,rate,progress,rewards,community,backendVersion:NORKA_BACKEND_VERSION,diagnostics:timings});
    }
   await ensureUser(id,profile);
   if(action==="numbered_giveaway_state"){
@@ -525,13 +566,13 @@ module.exports=async function handler(req,res){
     "local raw=redis.call('GET',KEYS[1]); if not raw then return redis.error_reply('USER_NOT_FOUND') end;",
     "local user=cjson.decode(raw); local current=tonumber(redis.call('HGET',KEYS[2],'berries') or '0'); local coins=tonumber(redis.call('HGET',KEYS[2],'coins') or '0');",
     "if redis.call('GET',KEYS[4]) or user.lastDaily==ARGV[1] then return {0,current,coins} end;",
-    "redis.call('HINCRBY',KEYS[2],'berries',tonumber(ARGV[2]));",
+    "redis.call('HINCRBY',KEYS[2],'berries',tonumber(ARGV[2]));redis.call('INCRBY',KEYS[5],tonumber(ARGV[2]));redis.call('ZINCRBY',KEYS[6],tonumber(ARGV[2]),ARGV[4]);",
     "user.lastDaily=ARGV[1]; redis.call('SET',KEYS[1],cjson.encode(user));",
     "redis.call('SET',KEYS[4],'1','EX','172800');",
     "redis.call('LPUSH',KEYS[3],ARGV[3]); redis.call('LTRIM',KEYS[3],'0','99');",
     "return {1,current+tonumber(ARGV[2]),coins}"
    ].join(" ");
-   const result=await redis(["EVAL",script,"4",userKey(id),"norka:wallet:"+id,"norka:ledger:"+id,"norka:daily:"+id+":"+day,day,String(reward),ledgerItem]);
+   const result=await redis(["EVAL",script,"6",userKey(id),"norka:wallet:"+id,"norka:ledger:"+id,"norka:daily:"+id+":"+day,"norka:berries:earned:"+id,"norka:berries:ranking",day,String(reward),ledgerItem,id]);
    const already=Number(result[0])!==1;
    if(!already)grantProgress(id,"daily:"+day,"daily",day).catch(error=>console.error("NORKA daily progress failed:",error&&error.message||"unknown"));
    return json(res,200,{ok:true,already,wallet:{berries:Number(result[1])||0,coins:Number(result[2])||0},reward:already?0:reward});
@@ -552,13 +593,13 @@ module.exports=async function handler(req,res){
     "local claimsRaw=redis.call('GET',KEYS[4]); local claims={}; if claimsRaw then claims=cjson.decode(claimsRaw) end;",
     "if claims[ARGV[1]]=='done' then return redis.error_reply('SUBSCRIPTION_ALREADY') end;",
     "local current=tonumber(redis.call('HGET',KEYS[2],'berries') or '0');",
-    "redis.call('HINCRBY',KEYS[2],'berries',tonumber(ARGV[2]));",
+    "redis.call('HINCRBY',KEYS[2],'berries',tonumber(ARGV[2]));redis.call('INCRBY',KEYS[6],tonumber(ARGV[2]));redis.call('ZINCRBY',KEYS[7],tonumber(ARGV[2]),ARGV[4]);",
     "redis.call('SET',KEYS[1],'1','EX','31536000');",
     "claims[ARGV[1]]='done'; redis.call('SET',KEYS[4],cjson.encode(claims));",
     "redis.call('LPUSH',KEYS[3],ARGV[3]); redis.call('LTRIM',KEYS[3],'0','99');",
     "return {current+tonumber(ARGV[2]),tonumber(redis.call('HGET',KEYS[2],'coins') or '0')}"
    ].join(" ");
-   const result=await redis(["EVAL",script,"5","norka:taskclaim:"+id+":"+taskId,"norka:wallet:"+id,"norka:ledger:"+id,"norka:claims:"+id,"norka:taskapproved:"+id+":"+taskId,taskId,String(reward),ledgerItem]);
+   const result=await redis(["EVAL",script,"7","norka:taskclaim:"+id+":"+taskId,"norka:wallet:"+id,"norka:ledger:"+id,"norka:claims:"+id,"norka:taskapproved:"+id+":"+taskId,"norka:berries:earned:"+id,"norka:berries:ranking",taskId,String(reward),ledgerItem,id]);
    await grantProgress(id,"task:"+taskId,"task",new Date().toISOString().slice(0,10));return json(res,200,{ok:true,wallet:await readWallet(id),reward,claims:{[taskId]:"done"},progress:await readProgress(id)});
   }
   if(action==="request_task"){
