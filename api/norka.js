@@ -235,7 +235,7 @@ async function publishGiveawayStart(item){
   const keyboard={type:"inline_keyboard",payload:{buttons:[[{type:"open_app",text:numbered?"🎟 Выбрать номер":"🎉 Участвовать",web_app:miniApp}]]}};
   const post=attachments=>sendMaxMessage({token,chatId,text,attachments});let sent=null,imageError=null;
   try{
-   const imagePath=numbered?"Image/%D0%B3%D0%B8%D0%B2%D0%B2%D0%B5%D0%B8%CC%86.png":"Image/%D0%B3%D0%B8%D0%B2%D0%B2%D0%B5%D0%B8%CC%862.png";
+   const imagePath=numbered?"Image/%D0%B3%D0%B8%D0%B2%D0%B2%D0%B5%D0%B8%CC%862.png":"Image/%D0%B3%D0%B8%D0%B2%D0%B2%D0%B5%D0%B8%CC%86.png";
    const imageUrl="https://raw.githubusercontent.com/musicdom/franshiza/main/"+imagePath;
    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);let response;
    try{response=await fetch(imageUrl,{signal:controller.signal});}finally{clearTimeout(timer);}
