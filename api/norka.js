@@ -42,6 +42,8 @@ async function ensureUser(id,profile={}){
   for(let i=0;i<8&&!u.referralCode;i++){const code=randomBytes(6).toString("hex"),saved=await redis(["SET","norka:referral:code:"+code,id,"NX"]);if(saved==="OK"){u.referralCode=code;changed=true;}}
  }else if(!mapped){const saved=await redis(["SET","norka:referral:code:"+u.referralCode,id,"NX"]);if(saved!=="OK")throw new Error("REFERRAL_CODE_MAPPING_FAILED");}
  if(!u.referralCode)throw new Error("REFERRAL_CODE_CREATE_FAILED");
+ const seedScript="if redis.call('EXISTS',KEYS[1])==0 then local b=tonumber(redis.call('HGET',KEYS[3],'berries') or '0');redis.call('SET',KEYS[1],b);if b>0 then redis.call('ZADD',KEYS[2],b,ARGV[1]);end;return b;end;return tonumber(redis.call('GET',KEYS[1])) or 0";
+ await redis(["EVAL",seedScript,"3","norka:berries:earned:"+id,"norka:berries:ranking","norka:wallet:"+id,id]);
  if(changed)await set(userKey(id),u);
  return u;
 }
@@ -67,7 +69,7 @@ async function migrateBerriesRanking(){
  while(pages<10){
   const scan=await redis(["SCAN",cursor,"MATCH","norka:user:*","COUNT","500"]);cursor=String(scan?.[0]||"0");
   const userKeys=(Array.isArray(scan?.[1])?scan[1]:[]).filter(k=>/^norka:user:[^:]+$/.test(String(k)));
-  if(userKeys.length){const script="for i=1,#ARGV do local key=ARGV[i];local id=string.sub(key,11);local totalKey='norka:berries:earned:'..id;local total=redis.call('GET',totalKey);if not total then local balance=tonumber(redis.call('HGET','norka:wallet:'..id,'berries') or '0');total=tostring(balance);redis.call('SET',totalKey,total);end;redis.call('ZADD',KEYS[1],tonumber(total) or 0,id);end;return #ARGV";await redis(["EVAL",script,"1","norka:berries:ranking",...userKeys]);}
+  if(userKeys.length){const script="for i=1,#ARGV do local key=ARGV[i];local id=string.sub(key,11);local totalKey='norka:berries:earned:'..id;local total=redis.call('GET',totalKey);if not total then local balance=tonumber(redis.call('HGET','norka:wallet:'..id,'berries') or '0');total=tostring(balance);redis.call('SET',totalKey,total);end;if (tonumber(total) or 0)>0 then redis.call('ZADD',KEYS[1],tonumber(total),id) else redis.call('ZREM',KEYS[1],id) end;end;return #ARGV";await redis(["EVAL",script,"1","norka:berries:ranking",...userKeys]);}
   pages++;if(cursor==="0"){await redis(["SET","norka:berries:ranking:migrated","1"]);await redis(["DEL","norka:berries:ranking:migration_cursor"]);return true;}await redis(["SET","norka:berries:ranking:migration_cursor",cursor]);
  }
  return false;
