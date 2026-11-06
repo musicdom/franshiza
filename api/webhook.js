@@ -4,6 +4,18 @@ async function redis(parts){const c=redisConfig();if(!c)throw new Error("Redis i
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function clean(v,n=200){return typeof v==="string"?v.trim().slice(0,n):"";}
 async function send(chatId,text,attachments=[]){const token=process.env.MAX_BOT_TOKEN;const r=await sendMaxMessage({token,chatId,text,attachments});if(!r.ok)throw new Error("MAX message failed: "+r.status+" "+String(r.raw||"").slice(0,800));}
+async function grantLaunchReward(userId){
+ const reward=50,now=new Date().toISOString(),item=JSON.stringify({type:"task_reward",taskId:"launch",title:"Награда: Запустить бота",berries:reward,at:now});
+ const script=[
+  "if redis.call('GET',KEYS[1]) then return 0 end;",
+  "local raw=redis.call('GET',KEYS[4]);local claims={};if raw then claims=cjson.decode(raw) end;",
+  "if claims['launch']=='done' then redis.call('SET',KEYS[1],'1');return 0 end;",
+  "redis.call('HINCRBY',KEYS[2],'berries',tonumber(ARGV[1]));redis.call('INCRBY',KEYS[5],tonumber(ARGV[1]));redis.call('ZINCRBY',KEYS[6],tonumber(ARGV[1]),ARGV[3]);",
+  "claims['launch']='done';redis.call('SET',KEYS[4],cjson.encode(claims));redis.call('SET',KEYS[1],'1');",
+  "redis.call('LPUSH',KEYS[3],ARGV[2]);redis.call('LTRIM',KEYS[3],'0','99');return 1"
+ ].join(" ");
+ return Number(await redis(["EVAL",script,"6","norka:taskclaim:"+userId+":launch","norka:wallet:"+userId,"norka:ledger:"+userId,"norka:claims:"+userId,"norka:berries:earned:"+userId,"norka:berries:ranking",String(reward),item,String(userId)]) )===1;
+}
 module.exports=async function handler(req,res){
  if(req.method!=="POST"){res.setHeader("Allow","POST");return json(res,405,{ok:false,error:"Method not allowed"});}
  const secret=process.env.MAX_WEBHOOK_SECRET;if(!secret)return json(res,503,{ok:false,error:"Webhook secret is not configured"});
@@ -23,6 +35,9 @@ module.exports=async function handler(req,res){
   }
   if(type==="bot_started"){
    if(!chatId)return json(res,200,{ok:true,ignored:"missing chat id"});
+   const startedUser=u.user||u.from||u.message?.sender||{};
+   const startedUserId=String(u.user_id||u.userId||startedUser.user_id||startedUser.id||"");
+   if(startedUserId)await grantLaunchReward(startedUserId);
    const buttons=[{type:"inline_keyboard",payload:{buttons:[[{type:"open_app",text:"🌿 Открыть Норку",web_app:"se14711525_bot"}]]}}];
    await send(chatId,"Привет! 👋 Добро пожаловать в «Норку»!\n\n🍓 Собирай ягоды за задания и активность.\n🪙 Обменивай ягоды на монеты.\n🎁 Используй монеты для участия в розыгрышах призов.\n\nЗагляни в свою Норку — здесь начинается удача!",buttons);
    return json(res,200,{ok:true,action:"norka_welcome"});
