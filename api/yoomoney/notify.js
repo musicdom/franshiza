@@ -76,13 +76,15 @@ module.exports = async function handler(req, res) {
     if (!userId) return json(res, 400, { ok: false, error: "ORDER_INVALID" });
     const referrerId = String(await redis(["GET", "norka:referral:inviter:" + userId]) || "");
     const referralBonusCoins = Math.floor((Number(orderSnapshot.coins) || 0) * 0.02);
+    const referralRewardAt = new Date().toISOString();
     const referralLedgerItem = JSON.stringify({
       type: "referral_first_topup",
       title: "Бонус за первое пополнение приглашённого друга",
       berries: 100,
       coins: referralBonusCoins,
-      at: new Date().toISOString()
+      at: referralRewardAt
     });
+    const referralRewardRecord = JSON.stringify({referrerId,berries:100,coins:referralBonusCoins,purchaseCoins:Number(orderSnapshot.coins)||0,at:referralRewardAt});
 
     const now = new Date().toISOString();
     const script = [
@@ -108,13 +110,13 @@ module.exports = async function handler(req, res) {
       "  redis.call('HINCRBY',KEYS[6],'berries',bonusBerries); if bonusCoins>0 then redis.call('HINCRBY',KEYS[6],'coins',bonusCoins) end;",
       "  redis.call('INCRBY',KEYS[7],bonusBerries); redis.call('ZINCRBY',KEYS[8],bonusBerries,ARGV[5]);",
       "  redis.call('HINCRBY',KEYS[9],'berries',bonusBerries); if bonusCoins>0 then redis.call('HINCRBY',KEYS[9],'coins',bonusCoins) end;",
-      "  redis.call('LPUSH',KEYS[10],ARGV[6]); redis.call('LTRIM',KEYS[10],'0','99'); rewarded=1;",
+      "  redis.call('LPUSH',KEYS[10],ARGV[6]); redis.call('LTRIM',KEYS[10],'0','99'); redis.call('SET',KEYS[11],ARGV[8]); rewarded=1;",
       "end;",
       "return {1,coins,rewarded,bonusCoins};"
     ].join(" ");
 
     const result = await redis([
-      "EVAL", script, "10",
+      "EVAL", script, "11",
       "norka:payment:order:" + orderId,
       "norka:wallet:" + userId,
       "norka:payment:operation:" + operationId,
@@ -125,8 +127,9 @@ module.exports = async function handler(req, res) {
       "norka:berries:ranking",
       "norka:referral:stats:" + (referrerId || "__no_referrer__"),
       "norka:ledger:" + (referrerId || "__no_referrer__"),
+      "norka:referral:reward:" + userId,
       String(withdrawAmount), operationId, String(amount), now,
-      referrerId, referralLedgerItem, String(referralBonusCoins)
+      referrerId, referralLedgerItem, String(referralBonusCoins), referralRewardRecord
     ]);
 
     return json(res, 200, { ok: true, status: "paid", coinsAdded: Array.isArray(result) ? Number(result[1]) || 0 : 0, referralRewardApplied: Array.isArray(result) && Number(result[2]) === 1, referralBonusCoins: Array.isArray(result) ? Number(result[3]) || 0 : 0 });
