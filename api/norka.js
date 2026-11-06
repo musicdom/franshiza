@@ -217,20 +217,26 @@ async function nextGiveawayNumber(){
 }
 async function publishGiveawayStart(item){
  const id=String(item&&item.id||"");if(!id)return false;
+ const numbered=item.type==="numbers";
  const marker="norka:giveaway:start-channel-published:"+id,errorKey="norka:giveaway:start-channel-error:"+id;
  const lock=await redis(["SET",marker,"sending","NX","EX","900"]);if(!lock)return false;
  try{
   const token=process.env.MAX_BOT_TOKEN,chatId=await redis(["GET","norka:channel:chat_id"]);
   if(!token||!chatId)throw new Error(!token?"MAX_BOT_TOKEN is not configured":"Norka channel ID is not configured in Redis");
   const miniApp=process.env.NORKA_MINI_APP_URL||"https://max.ru/se14711525_bot";
-  const safe=v=>String(v==null?"":v).replace(/[\r\n]+/g," ").trim();
-  const prizeLines=item.type==="numbers"&&Array.isArray(item.prizes)?item.prizes.map((p,i)=>"🏆 "+(i+1)+". "+safe(p&&p.title||"Приз")):["🎁 "+safe(item.prize||"Приз розыгрыша")];
-  const places=Number(item.capacity)||0;
-  const lines=["🎉 НОВЫЙ РОЗЫГРЫШ В НОРКЕ!","","🎟 Розыгрыш №"+(Number(item.number)||"—")+" · "+safe(item.title||"Без названия"),item.description?safe(item.description):"","","👥 Участников: 0",(item.type==="numbers"?"🔢 Номеров":"🎟 Мест")+": "+places,"🪙 "+(item.type==="numbers"?"Цена номера: ":"Участие: ")+(Number(item.cost)||0)+" монет","","ПРИЗЫ",...prizeLines,"","Заходи в Норку и участвуй! 🌿"].filter(Boolean);
-  const text=lines.join("\n"),keyboard={type:"inline_keyboard",payload:{buttons:[[{type:"open_app",text:"🎁 Участвовать в розыгрыше",web_app:miniApp}]]}};
+  const safe=v=>String(v==null?"":v).replace(/[\\r\\n]+/g," ").trim();
+  const prizes=numbered&&Array.isArray(item.prizes)?item.prizes.map((p,i)=>"🏆 "+(i+1)+". "+safe(p&&p.title||"Приз")):["🎁 "+safe(item.prize||"Приз розыгрыша")];
+  const title=safe(item.title||"Без названия"),description=safe(item.description||"");
+  const common=["🎉 НОВЫЙ РОЗЫГРЫШ В НОРКЕ!","","🎟 Розыгрыш №"+(Number(item.number)||"—")+" · "+title,description,"","👥 Участников: 0"];
+  const lines=numbered
+   ? [...common,"🔢 Всего номеров: "+(Number(item.capacity)||0),"🪙 Стоимость одного номера: "+(Number(item.cost)||0)+" монет","","🏆 ЧТО РАЗЫГРЫВАЕМ",...prizes,"","Выбирай свободные номера и участвуй!"]
+   : [...common,"🎫 Доступно мест: "+(Number(item.capacity)||0),"🪙 Стоимость участия: "+(Number(item.cost)||0)+" монет","","🎁 ПРИЗ",...prizes,"","Присоединяйся к розыгрышу в Норке — участвуй и жди итоги!"];
+  const text=lines.filter(Boolean).join("\\n");
+  const keyboard={type:"inline_keyboard",payload:{buttons:[[{type:"open_app",text:numbered?"🎟 Выбрать номер":"🎉 Участвовать",web_app:miniApp}]]}};
   const post=attachments=>sendMaxMessage({token,chatId,text,attachments});let sent=null,imageError=null;
   try{
-   const imageUrl="https://raw.githubusercontent.com/musicdom/franshiza/main/Image/%D0%90%D0%BD%D0%BE%D0%BD%D1%81%20%D1%80%D0%BE%D0%B7%D1%8B%D0%B3%D1%80%D1%8B%D1%88%D0%B0.png";
+   const imagePath=numbered?"Image/%D0%B3%D0%B8%D0%B2%D0%B2%D0%B5%D0%B9.png":"Image/%D0%B3%D0%B8%D0%B2%D0%B2%D0%B5%D0%B92.png";
+   const imageUrl="https://raw.githubusercontent.com/musicdom/franshiza/main/"+imagePath;
    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);let response;
    try{response=await fetch(imageUrl,{signal:controller.signal});}finally{clearTimeout(timer);}
    if(!response.ok)throw new Error("GitHub announcement image HTTP "+response.status);
