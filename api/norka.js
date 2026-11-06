@@ -583,6 +583,7 @@ module.exports=async function handler(req,res){
    if(action==="admin_approve_task"){
    const id=clean(body.userId,80),taskId=clean(body.taskId,50);
    if(!id||!taskId)return json(res,400,{ok:false,error:"Нет пользователя или задания"});
+   if(DEFAULT_TASKS.some(t=>t.id===taskId))return json(res,400,{ok:false,error:"Постоянные системные задания подтверждаются автоматически"});
    const pending=await list("norka:pending"),p=pending.find(x=>x.userId===id&&x.taskId===taskId);
    if(!p)return json(res,404,{ok:false,error:"Заявка не найдена"});
    const ts=await tasks(),t=ts.find(x=>x.id===taskId);
@@ -701,7 +702,7 @@ module.exports=async function handler(req,res){
    await grantProgress(id,"task:"+taskId,"task",new Date().toISOString().slice(0,10));return json(res,200,{ok:true,wallet:await readWallet(id),reward,claims:{[taskId]:"done"},progress:await readProgress(id)});
   }
   if(action==="request_task"){
-   const taskId=clean(body.taskId,50),ts=await tasks(),t=ts.find(x=>x.id===taskId&&x.id!=="channel"&&x.active&&x.type!=="daily");
+   const taskId=clean(body.taskId,50),ts=await tasks(),t=ts.find(x=>x.id===taskId&&!DEFAULT_TASKS.some(d=>d.id===x.id)&&x.active&&x.type!=="daily");
    if(!t)return json(res,404,{ok:false,error:"Задание не найдено"});
    const claims=await get("norka:claims:"+id)||{};
    if(claims[taskId])return json(res,409,{ok:false,error:"Задание уже отправлено или выполнено"});
