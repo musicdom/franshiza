@@ -74,6 +74,15 @@ module.exports = async function handler(req, res) {
     try { orderSnapshot = JSON.parse(orderRaw); } catch { return json(res, 500, { ok: false, error: "ORDER_INVALID" }); }
     const userId = String(orderSnapshot.userId || "");
     if (!userId) return json(res, 400, { ok: false, error: "ORDER_INVALID" });
+    const referrerId = String(await redis(["GET", "norka:referral:inviter:" + userId]) || "");
+    const referralBonusCoins = Math.floor((Number(orderSnapshot.coins) || 0) * 0.02);
+    const referralLedgerItem = JSON.stringify({
+      type: "referral_first_topup",
+      title: "Бонус за первое пополнение приглашённого друга",
+      berries: 100,
+      coins: referralBonusCoins,
+      at: new Date().toISOString()
+    });
 
     const now = new Date().toISOString();
     const script = [
@@ -86,26 +95,41 @@ module.exports = async function handler(req, res) {
       "local coins=tonumber(order.coins);",
       "if coins==nil or coins<1 or coins~=math.floor(coins) or not order.userId then return redis.error_reply('ORDER_INVALID') end;",
       "local existing=redis.call('GET',KEYS[3]);",
-      "if existing then if existing==tostring(order.id) then return {2,coins} else return redis.error_reply('DUPLICATE_OPERATION') end end;",
+      "if existing then if existing==tostring(order.id) then return {2,coins,0,0} else return redis.error_reply('DUPLICATE_OPERATION') end end;",
       "redis.call('HINCRBY',KEYS[2],'coins',coins);",
       "redis.call('SET',KEYS[3],ARGV[2]);",
       "order.status='paid'; order.operationId=ARGV[2]; order.paidAmount=tonumber(ARGV[3]); order.withdrawAmount=tonumber(ARGV[1]); order.paidAt=ARGV[4];",
       "redis.call('SET',KEYS[1],cjson.encode(order));",
       "redis.call('LPUSH',KEYS[4],cjson.encode({type='coin_purchase',title='Покупка монет',coins=coins,at=ARGV[4],orderId=order.id}));",
       "redis.call('LTRIM',KEYS[4],'0','99');",
-      "return {1,coins};"
+      "local rewarded=0; local bonusCoins=0;",
+      "if ARGV[5]~='' and ARGV[5]~=tostring(order.userId) and redis.call('SET',KEYS[5],'1','NX')=='OK' then",
+      "  local bonusBerries=100; bonusCoins=tonumber(ARGV[7]) or 0;",
+      "  redis.call('HINCRBY',KEYS[6],'berries',bonusBerries); if bonusCoins>0 then redis.call('HINCRBY',KEYS[6],'coins',bonusCoins) end;",
+      "  redis.call('INCRBY',KEYS[7],bonusBerries); redis.call('ZINCRBY',KEYS[8],bonusBerries,ARGV[5]);",
+      "  redis.call('HINCRBY',KEYS[9],'berries',bonusBerries); if bonusCoins>0 then redis.call('HINCRBY',KEYS[9],'coins',bonusCoins) end;",
+      "  redis.call('LPUSH',KEYS[10],ARGV[6]); redis.call('LTRIM',KEYS[10],'0','99'); rewarded=1;",
+      "end;",
+      "return {1,coins,rewarded,bonusCoins};"
     ].join(" ");
 
     const result = await redis([
-      "EVAL", script, "4",
+      "EVAL", script, "10",
       "norka:payment:order:" + orderId,
       "norka:wallet:" + userId,
       "norka:payment:operation:" + operationId,
       "norka:ledger:" + userId,
-      String(withdrawAmount), operationId, String(amount), now
+      "norka:referral:first_topup:" + userId,
+      "norka:wallet:" + (referrerId || "__no_referrer__"),
+      "norka:berries:earned:" + (referrerId || "__no_referrer__"),
+      "norka:berries:ranking",
+      "norka:referral:stats:" + (referrerId || "__no_referrer__"),
+      "norka:ledger:" + (referrerId || "__no_referrer__"),
+      String(withdrawAmount), operationId, String(amount), now,
+      referrerId, referralLedgerItem, String(referralBonusCoins)
     ]);
 
-    return json(res, 200, { ok: true, status: "paid", coinsAdded: Array.isArray(result) ? Number(result[1]) || 0 : 0 });
+    return json(res, 200, { ok: true, status: "paid", coinsAdded: Array.isArray(result) ? Number(result[1]) || 0 : 0, referralRewardApplied: Array.isArray(result) && Number(result[2]) === 1, referralBonusCoins: Array.isArray(result) ? Number(result[3]) || 0 : 0 });
   } catch (error) {
     const message = String(error && error.message || "PAYMENT_HANDLER_ERROR");
     if (message.includes("ORDER_NOT_FOUND")) return json(res, 404, { ok: false, error: "ORDER_NOT_FOUND" });
