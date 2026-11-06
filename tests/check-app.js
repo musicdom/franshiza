@@ -24,7 +24,9 @@ for (const task of ['id:"launch"', 'id:"channel"', 'id:"first_topup"']) if (!api
 if (!api.includes("claimLaunchTask") || !api.includes("norka:taskclaim:")) throw new Error("Permanent launch reward is missing");
 if (!api.includes("Постоянное системное задание нельзя удалить")) throw new Error("Permanent tasks can be deleted");
 const payment = fs.readFileSync("api/yoomoney/notify.js", "utf8");
-for (const marker of ["firstTopupBonusCoins", "first_topup_task", "norka:taskclaim:", "taskBonusRewarded"]) if (marker === "taskBonusRewarded" ? false : !payment.includes(marker)) throw new Error("First top-up reward component is missing: " + marker);
+for (const marker of ["firstTopupBonusCoins", "first_topup_task", "norka:taskclaim:", "taskBonusCoins"]) if (!payment.includes(marker)) throw new Error("First top-up reward component is missing: " + marker);
+const webhook = fs.readFileSync("api/webhook.js", "utf8");
+if (!webhook.includes("grantLaunchReward") || !webhook.includes("bot_started")) throw new Error("Bot-start reward webhook is missing");
 if (!match[1].includes("Пополнить кошелёк") || !match[1].includes("1% монетами + 250 🍓")) throw new Error("First top-up task UI is missing");
 if (match[1].includes("confirm(")) throw new Error("Native browser confirmations must not block MAX admin actions");
 if (!api.includes("participantsRemoved") || !api.includes("backendVersion:NORKA_BACKEND_VERSION")) throw new Error("Giveaway deletion diagnostics are missing");
