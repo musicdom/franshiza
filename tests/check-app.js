@@ -19,6 +19,11 @@ const api = fs.readFileSync("api/norka.js", "utf8");
 for (const action of ["admin_save_progress_config", "admin_delete_giveaway", "admin_draw_winner", "admin_create_giveaway", "bootstrap", "daily_claim", "admin_approve_task", "exchange", "enter_giveaway"]) if (!api.includes("action===\"" + action + "\"")) throw new Error("Missing Norka action: " + action);
 for (const marker of ["completeGiveaway", "ensureGiveawayReward", "processGiveawayLifecycle", "NORKA_BACKEND_VERSION", "norka:rewards:", "norka:giveaway:reward:"]) if (!api.includes(marker)) throw new Error("Missing giveaway lifecycle component: " + marker);
 if (!api.includes("no_participants") || !api.includes("status=\'cancelled\'")) throw new Error("Orphaned giveaway draw recovery is missing");
+if (!api.includes("const [walletResult,historyResult,tasksResult,giveawaysResult,claimsResult,rateResult,progressResult,rewardsResult,communityResult]=await Promise.all([")) throw new Error("Bootstrap sections must load concurrently");
+if (!api.includes("const topProfiles=await Promise.all(topEntries.map(entry=>get(userKey(entry.userId))))")) throw new Error("Ranking profiles must load concurrently");
+if (!match[1].includes("async function fetchAdminOverview()") || !match[1].includes("for(let attempt=0;attempt<2;attempt++)")) throw new Error("Admin overview must retry transient failures");
+if (!match[1].includes('action:"admin_overview"') || match[1].includes('await fetch(YANDEX_FUNCTION+"?route=norka&action=auth_check"')) throw new Error("App startup must not block on the background auth check");
+
 if (!html.includes("id=\"profileGifts\"") || !match[1].includes("function renderGifts")) throw new Error("Winner gifts UI is missing");
 for (const task of ['id:"launch"', 'id:"channel"', 'id:"first_topup"']) if (!api.includes(task)) throw new Error("Missing permanent task: " + task);
 if (!api.includes("claimLaunchTask") || !api.includes("norka:taskclaim:")) throw new Error("Permanent launch reward is missing");
