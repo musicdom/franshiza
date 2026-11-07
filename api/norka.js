@@ -115,7 +115,9 @@ async function readCommunityData(id,user){
  const migrationComplete=await migrateBerriesRanking(),code=String(user?.referralCode||"");
  const [count,statsRaw,topRaw,rankRaw,earnedRaw,friendIds]=await Promise.all([redis(["SCARD","norka:referrals:"+id]),redis(["HGETALL","norka:referral:stats:"+id]),redis(["ZREVRANGE","norka:berries:ranking","0","19","WITHSCORES"]),redis(["ZREVRANK","norka:berries:ranking",id]),redis(["GET","norka:berries:earned:"+id]),redis(["SMEMBERS","norka:referrals:"+id])]);
  const stats={};if(Array.isArray(statsRaw))for(let i=0;i<statsRaw.length;i+=2)stats[statsRaw[i]]=Number(statsRaw[i+1])||0;
- const top=[];if(Array.isArray(topRaw))for(let i=0;i+1<topRaw.length;i+=2){const uid=String(topRaw[i]),score=Number(topRaw[i+1])||0,profile=await get(userKey(uid));top.push({userId:uid,name:clean(profile?.name,100)||"Участник Норки",avatar:clean(profile?.avatar,500),berries:score});}
+ const topEntries=[];if(Array.isArray(topRaw))for(let i=0;i+1<topRaw.length;i+=2)topEntries.push({userId:String(topRaw[i]),berries:Number(topRaw[i+1])||0});
+ const topProfiles=await Promise.all(topEntries.map(entry=>get(userKey(entry.userId))));
+ const top=topEntries.map((entry,index)=>{const profile=topProfiles[index];return {userId:entry.userId,name:clean(profile?.name,100)||"Участник Норки",avatar:clean(profile?.avatar,500),berries:entry.berries};});
  const referralIds=Array.isArray(friendIds)?friendIds.map(String).slice(0,100):[];
  const referrals=await Promise.all(referralIds.map(async friendId=>{
   const [profileRaw,rewardRaw]=await Promise.all([get(userKey(friendId)),get("norka:referral:reward:"+friendId)]);
@@ -633,17 +635,19 @@ module.exports=async function handler(req,res){
     const stage=async(name,fn)=>{const at=Date.now();try{return await fn();}finally{timings[name]=Date.now()-at;console.info("NORKA bootstrap stage",JSON.stringify({stage:name,durationMs:timings[name]}));}};
     let u=null,w={berries:0,coins:0},history=[],ts=[],gs=[],claims={},rate=100,progress={xp:0,level:1,streak:0,bestStreak:0,achievements:[]},rewards=[],community=null;
     try{const existing=Boolean(await stage("user_exists",()=>get(userKey(id))));u=await stage("user",()=>ensureUser(id,profile));if(!existing&&verified.startParam)await stage("referral_signup",()=>applyReferralSignup(id,verified.startParam));await stage("launch_task",()=>claimLaunchTask(id));}catch(error){console.error("NORKA bootstrap user:",error&&error.message||"unknown");return json(res,503,{ok:false,error:"Не удалось загрузить профиль пользователя.",code:"BOOTSTRAP_USER_READ_FAILED",stage:"user",backendVersion:NORKA_BACKEND_VERSION});}
-    try{w=await stage("wallet",()=>readWallet(id));}catch(error){console.error("NORKA bootstrap wallet:",error&&error.message||"unknown");w={berries:Number(u?.berries)||0,coins:Number(u?.coins)||0};}
-    try{history=await stage("history",()=>list("norka:ledger:"+id));}catch(error){console.error("NORKA bootstrap history:",error&&error.message||"unknown");}
-    try{ts=(await stage("tasks",()=>tasks())).filter(t=>t.active);}catch(error){console.error("NORKA bootstrap tasks:",error&&error.message||"unknown");}
-    try{
-     const items=(await stage("giveaways_list",()=>list("norka:giveaways"))).filter(g=>g.status==="active");
-     gs=await stage("giveaways_details",()=>Promise.all(items.map(async g=>{if(g.type==="numbers"){const entries=await readNumberedEntries(g.id),userNumbers=entries.filter(x=>String(x.userId)===String(id)).map(x=>x.number);return {...g,entries:entries.length,soldNumbers:entries.map(x=>x.number),userNumbers,joined:userNumbers.length>0};}const count=await redis(["SCARD","norka:entries:"+g.id]);let joined=0;try{joined=await redis(["SISMEMBER","norka:entries:"+g.id,id]);}catch(error){console.error("NORKA bootstrap giveaway membership:",error&&error.message||"unknown");}return {...g,entries:Number(count)||0,joined:Number(joined)===1};})));
-    }catch(error){console.error("NORKA bootstrap giveaways:",error&&error.message||"unknown");gs=[];}
-    try{claims=await stage("claims",async()=>await get("norka:claims:"+id)||{});}catch(error){console.error("NORKA bootstrap claims:",error&&error.message||"unknown");}
-    try{rate=await stage("rate",async()=>Number(await redis(["GET","norka:exchange-rate"]))||100);}catch(error){console.error("NORKA bootstrap rate:",error&&error.message||"unknown");}
-    try{progress=await stage("progress",async()=>{const day=new Date().toISOString().slice(0,10);await grantProgress(id,"visit:"+day,"visit",day,false);if(u?.lastDaily)await grantProgress(id,"daily:"+u.lastDaily,"daily",u.lastDaily,false);return readProgress(id);});}catch(error){console.error("NORKA bootstrap progress:",error&&error.message||"unknown");}
-    try{rewards=await stage("rewards",()=>readUserRewards(id));}catch(error){console.error("NORKA bootstrap rewards:",error&&error.message||"unknown");}try{community=await stage("community",()=>readCommunityData(id,u));}catch(error){console.error("NORKA bootstrap community:",error&&error.message||"unknown");community={referral:{code:u?.referralCode||"",count:0,berries:0,coins:0},ranking:{top:[],rank:null,total:0,migrationComplete:false}};}
+    const runStage=async(name,fn,fallback)=>{try{return await stage(name,fn);}catch(error){console.error("NORKA bootstrap "+name+":",error&&error.message||"unknown");return fallback;}};
+    const [walletResult,historyResult,tasksResult,giveawaysResult,claimsResult,rateResult,progressResult,rewardsResult,communityResult]=await Promise.all([
+     runStage("wallet",()=>readWallet(id),{berries:Number(u?.berries)||0,coins:Number(u?.coins)||0}),
+     runStage("history",()=>list("norka:ledger:"+id),[]),
+     runStage("tasks",async()=>(await tasks()).filter(t=>t.active),[]),
+     runStage("giveaways",async()=>{const items=(await list("norka:giveaways")).filter(g=>g.status==="active");return Promise.all(items.map(async g=>{if(g.type==="numbers"){const entries=await readNumberedEntries(g.id),userNumbers=entries.filter(x=>String(x.userId)===String(id)).map(x=>x.number);return {...g,entries:entries.length,soldNumbers:entries.map(x=>x.number),userNumbers,joined:userNumbers.length>0};}const [count,joined]=await Promise.all([redis(["SCARD","norka:entries:"+g.id]),redis(["SISMEMBER","norka:entries:"+g.id,id])]);return {...g,entries:Number(count)||0,joined:Number(joined)===1};}));},[]),
+     runStage("claims",async()=>await get("norka:claims:"+id)||{},{}),
+     runStage("rate",async()=>Number(await redis(["GET","norka:exchange-rate"]))||100,100),
+     runStage("progress",async()=>{const day=new Date().toISOString().slice(0,10);await grantProgress(id,"visit:"+day,"visit",day,false);if(u?.lastDaily)await grantProgress(id,"daily:"+u.lastDaily,"daily",u.lastDaily,false);return readProgress(id);},progress),
+     runStage("rewards",()=>readUserRewards(id),[]),
+     runStage("community",()=>readCommunityData(id,u),{referral:{code:u?.referralCode||"",count:0,berries:0,coins:0},ranking:{top:[],rank:null,total:0,migrationComplete:false}})
+    ]);
+    w=walletResult;history=historyResult;ts=tasksResult;gs=giveawaysResult;claims=claimsResult;rate=rateResult;progress=progressResult;rewards=rewardsResult;community=communityResult;
     timings.total=Date.now()-started;console.info("NORKA bootstrap complete",JSON.stringify(timings));
     return json(res,200,{ok:true,user:u,wallet:w,tasks:ts,giveaways:gs,history,claims,rate,progress,rewards,community,backendVersion:NORKA_BACKEND_VERSION,diagnostics:timings});
    }
