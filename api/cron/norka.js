@@ -11,7 +11,7 @@ module.exports=async function(req,res){
  const secret=process.env.CRON_SECRET;if(!secret||req.headers.authorization!=="Bearer "+secret)return json(res,401,{ok:false,error:"Unauthorized"});
  try{
   const day=new Date().toISOString().slice(0,10),keys=await redis(["KEYS","norka:user:*"]);let reminders=0;
-  for(const key of (Array.isArray(keys)?keys:[])){if(key.split(":").length!==3)continue;const raw=await redis(["GET",key]);if(!raw)continue;let u;try{u=JSON.parse(raw)}catch{continue;}if(u.lastDaily===day)continue;const id=key.slice(11),mark="norka:reminder:"+id+":"+day;if(await redis(["GET",mark]))continue;if(await send(id,"🍓 Твоя ежедневная награда в Норке уже ждёт! Загляни в приложение и продолжай серию посещений.")){await redis(["SET",mark,"1","EX","172800"]);reminders++;}}
+  for(const key of (Array.isArray(keys)?keys:[])){if(key.split(":").length!==3)continue;const raw=await redis(["GET",key]);if(!raw)continue;let u;try{u=JSON.parse(raw)}catch{continue;}const id=key.slice(11);if(u.lastDaily===day||await redis(["GET","norka:daily:"+id+":"+day]))continue;const mark="norka:reminder:"+id+":"+day;if(await redis(["GET",mark]))continue;if(await send(id,"🍓 Тебе доступны ежедневные 10 ягод! Открой Норку и нажми «Забрать ягоды». Забирай награду и продолжай серию посещений.")){await redis(["SET",mark,"1","EX","172800"]);reminders++;}}
   let closedGiveaways=0,finishMessages=0,refundedGiveaways=0,refundMessages=0,winnerMessages=0,giftsCreated=0;
   const rows=await redis(["LRANGE","norka:giveaways","0","99"]);
   for(const raw of Array.isArray(rows)?rows:[]){
