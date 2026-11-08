@@ -52,6 +52,9 @@ function paymentUrl(orderId, price) {
   u.searchParams.set("quickpay-form", "button");
   u.searchParams.set("sum", Number(price).toFixed(2));
   u.searchParams.set("label", orderId);
+  u.searchParams.set("targets", "Покупка монет в Норке");
+  u.searchParams.set("formcomment", "Норка — покупка монет");
+  u.searchParams.set("short-dest", "Монеты Норки");
   u.searchParams.set("paymentType", "AC");
   u.searchParams.set("successURL", "https://musicdom.github.io/franshiza/");
   return u.toString();
