@@ -61,6 +61,18 @@ async function claimLaunchTask(id){
  const result=await redis(["EVAL",script,"6","norka:taskclaim:"+id+":launch","norka:wallet:"+id,"norka:ledger:"+id,"norka:claims:"+id,"norka:berries:earned:"+id,"norka:berries:ranking",String(reward),item,id]);
  return {awarded:Number(result?.[0])===1,berries:Number(result?.[1])||0,reward};
 }
+async function syncSystemTaskClaims(id){
+ const script=[
+  "local raw=redis.call('GET',KEYS[1]);local claims={};if raw then claims=cjson.decode(raw) end;",
+  "local changed=0;",
+  "if redis.call('GET',KEYS[2]) and claims['launch']~='done' then claims['launch']='done';changed=1 end;",
+  "if redis.call('GET',KEYS[3]) and claims['channel']~='done' then claims['channel']='done';changed=1 end;",
+  "if redis.call('GET',KEYS[4]) and claims['first_topup']~='done' then claims['first_topup']='done';changed=1 end;",
+  "if changed==1 then redis.call('SET',KEYS[1],cjson.encode(claims)) end;",
+  "return changed;"
+ ].join(" ");
+ return redis(["EVAL",script,"4","norka:claims:"+id,"norka:taskclaim:"+id+":launch","norka:taskclaim:"+id+":channel","norka:taskclaim:"+id+":first_topup"]);
+}
 async function updateBalances(id,berryDelta,coinDelta){const script="local b=tonumber(redis.call('HGET',KEYS[1],'berries') or '0'); local c=tonumber(redis.call('HGET',KEYS[1],'coins') or '0'); local db=tonumber(ARGV[1]); local dc=tonumber(ARGV[2]); if b+db<0 or c+dc<0 then return {err='INSUFFICIENT'} end; redis.call('HSET',KEYS[1],'berries',b+db,'coins',c+dc); return {b+db,c+dc}";const raw=await redis(["EVAL",script,"1","norka:wallet:"+id,String(berryDelta),String(coinDelta)]);if(!raw||raw.error)throw new Error("Wallet update failed");return {berries:Number(raw[0]),coins:Number(raw[1])};}
 function wheelDayInfo(){
  const parts=new Intl.DateTimeFormat("en-US",{timeZone:"Europe/Moscow",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
@@ -687,7 +699,7 @@ module.exports=async function handler(req,res){
     const started=Date.now(),timings={};
     const stage=async(name,fn)=>{const at=Date.now();try{return await fn();}finally{timings[name]=Date.now()-at;console.info("NORKA bootstrap stage",JSON.stringify({stage:name,durationMs:timings[name]}));}};
     let u=null,w={berries:0,coins:0},history=[],ts=[],gs=[],claims={},rate=100,progress={xp:0,level:1,streak:0,bestStreak:0,achievements:[]},rewards=[],community=null;
-    try{const existing=Boolean(await stage("user_exists",()=>get(userKey(id))));u=await stage("user",()=>ensureUser(id,profile));if(!existing&&verified.startParam)await stage("referral_signup",()=>applyReferralSignup(id,verified.startParam));await stage("launch_task",()=>claimLaunchTask(id));}catch(error){console.error("NORKA bootstrap user:",error&&error.message||"unknown");return json(res,503,{ok:false,error:"Не удалось загрузить профиль пользователя.",code:"BOOTSTRAP_USER_READ_FAILED",stage:"user",backendVersion:NORKA_BACKEND_VERSION});}
+    try{const existing=Boolean(await stage("user_exists",()=>get(userKey(id))));u=await stage("user",()=>ensureUser(id,profile));if(!existing&&verified.startParam)await stage("referral_signup",()=>applyReferralSignup(id,verified.startParam));await stage("launch_task",()=>claimLaunchTask(id));await stage("sync_system_task_claims",()=>syncSystemTaskClaims(id));}catch(error){console.error("NORKA bootstrap user:",error&&error.message||"unknown");return json(res,503,{ok:false,error:"Не удалось загрузить профиль пользователя.",code:"BOOTSTRAP_USER_READ_FAILED",stage:"user",backendVersion:NORKA_BACKEND_VERSION});}
     const runStage=async(name,fn,fallback)=>{try{return await stage(name,fn);}catch(error){console.error("NORKA bootstrap "+name+":",error&&error.message||"unknown");return fallback;}};
     const [walletResult,historyResult,tasksResult,giveawaysResult,claimsResult,rateResult,progressResult,rewardsResult,communityResult]=await Promise.all([
      runStage("wallet",()=>readWallet(id),{berries:Number(u?.berries)||0,coins:Number(u?.coins)||0}),
