@@ -1,6 +1,22 @@
 <!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#101713"><style>html,body{background-color:#101713;color-scheme:dark}html{min-height:100%;background:#101713}body{background-color:#101713}</style><link rel="preload" as="image" href="Image/Фон загрузки .JPG" fetchpriority="high"><link rel="preload" as="image" href="Image/Загрузка норка.png" fetchpriority="high"><link rel="preload" as="image" href="Image/Клубника загрузка.png"><link rel="preload" as="image" href="Image/Малина загрузка .png"><link rel="preload" as="image" href="Image/Черника загрузка .png"><title>Норка — место удачи</title>
 <style>
+html,body{margin:0;min-height:100%;background:#071b20;color:#fff;color-scheme:dark}
+body.splash-open{overflow:hidden}
+.norka-splash{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;overflow:hidden;padding:24px 18px calc(24px + env(safe-area-inset-bottom));background:#071b20 url("Image/Фон загрузки .JPG") center center/cover no-repeat}
+.norka-splash:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#06171a44 0%,#07191dcc 78%,#07191df2 100%);pointer-events:none}
+.splash-inner{position:relative;z-index:1;width:min(100%,430px);display:flex;flex-direction:column;align-items:center;text-align:center}
+.splash-brand{font-size:13px;font-weight:950;letter-spacing:4px;color:#f6f8f1;margin-bottom:4px}
+.splash-art{position:relative;width:100%;height:min(53vh,440px);min-height:280px;display:grid;place-items:center}
+.splash-mascot{position:relative;z-index:2;width:min(82%,350px);height:100%;object-fit:contain}
+.splash-berry{position:absolute;z-index:3;width:clamp(45px,14vw,72px);height:clamp(45px,14vw,72px);object-fit:contain}
+.splash-berry.strawberry{left:5%;top:24%}.splash-berry.raspberry{right:3%;top:16%}.splash-berry.blueberry{right:11%;bottom:7%;width:clamp(40px,12vw,62px);height:clamp(40px,12vw,62px)}
+.splash-caption{margin-top:2px;color:#fff4e9;font-size:15px;font-weight:750;text-align:center}
+.splash-subcaption{margin-top:5px;color:#c3ddd5;font-size:10px;letter-spacing:1.6px;text-transform:uppercase}
+.splash-progress{width:min(78%,280px);height:6px;margin-top:20px;border-radius:20px;overflow:hidden;background:#ffffff2b}
+.splash-progress i{display:block;width:38%;height:100%;border-radius:20px;background:linear-gradient(90deg,#6cf2d8,#d2f5a2,#ff91b6);animation:splash-loading 1.35s ease-in-out infinite}
+</style></head><body class="splash-open"><div class="norka-splash" id="norkaSplash" role="status" aria-live="polite"><div class="splash-inner"><div class="splash-brand">НОРКА</div><div class="splash-art"><img class="splash-mascot" src="Image/Загрузка норка.png" alt="Норка с корзинкой ягод" fetchpriority="high" decoding="sync"><img class="splash-berry strawberry" src="Image/Клубника загрузка.png" alt=""><img class="splash-berry raspberry" src="Image/Малина загрузка .png" alt=""><img class="splash-berry blueberry" src="Image/Черника загрузка .png" alt=""></div><div class="splash-caption" id="splashCaption">Норка собирает твои ягодки…</div><div class="splash-subcaption">Подготавливаем твой уютный уголок</div><div class="splash-progress" aria-hidden="true"><i></i></div><div class="splash-error" id="splashError"></div><button class="splash-retry" id="splashRetry" type="button">Повторить загрузку</button></div></div><style>
+
 :root{color-scheme:dark;--bg:#071b20;--bg2:#0b252c;--panel:#102a32;--panel2:#142f38;--text:#f3f8fa;--muted:#9bb1b9;--teal:#42e0cf;--teal2:#19b8b4;--violet:#9b79ff;--berry:#ff5e9b;--gold:#f4c96b;--line:#b7e5e522;--shadow:0 18px 44px #020b10a8}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;overflow-x:hidden;background:var(--bg);color:var(--text);font:15px/1.48 Inter,-apple-system,BlinkMacSystemFont,system-ui,sans-serif}
@@ -344,7 +360,7 @@ body.splash-open{overflow:hidden}
 .berries-view .berry-hub-grid{gap:9px;margin:13px 0 7px}
 .berries-view .berry-hub-card{min-height:70px;padding:11px 10px}
 @media(max-width:390px){.berries-view .berries-heading{min-height:148px;padding:16px}.berries-view .berry-daily{padding:12px}.berries-view .berry-hub-card{min-height:68px;padding:10px 9px}}
-</style></head><body class="splash-open"><div class="norka-splash" id="norkaSplash" role="status" aria-live="polite"><div class="splash-inner"><div class="splash-brand">НОРКА</div><div class="splash-art"><img class="splash-mascot" src="Image/Загрузка норка.png" alt="Норка с корзинкой ягод" fetchpriority="high" decoding="sync"><img class="splash-berry strawberry" src="Image/Клубника загрузка.png" alt=""><img class="splash-berry raspberry" src="Image/Малина загрузка .png" alt=""><img class="splash-berry blueberry" src="Image/Черника загрузка .png" alt=""></div><div class="splash-caption" id="splashCaption">Норка собирает твои ягодки…</div><div class="splash-subcaption">Подготавливаем твой уютный уголок</div><div class="splash-progress" aria-hidden="true"><i></i></div><div class="splash-error" id="splashError"></div><button class="splash-retry" id="splashRetry" type="button">Повторить загрузку</button></div></div><script src="https://st.max.ru/js/max-web-app.js" defer></script><div class="app">
+</style><script src="https://st.max.ru/js/max-web-app.js" defer></script><div class="app">
 <header class="top"><div class="brand"><button class="brand-home" id="homeBtn" type="button" aria-label="На главную"><img class="brand-home-icon" src="Image/Кнопка%20навигации%20Главная.png" alt=""></button> НОРКА</div><button class="profile" id="profileBtn">👤 Профиль</button></header>
 <main><section class="view active home-view" id="home">
 <div class="home-scene"><div><span>ТВОЯ НОРКА</span><h1>Привет,<br><b id="homeName">друг!</b></h1><p>Загляни к своей Норке — она тебя ждёт.</p><div class="home-level">УРОВЕНЬ <strong id="progressLevel">1</strong> · <span id="progressXp">0 XP</span></div></div><div class="home-mascot">🦦</div></div>
