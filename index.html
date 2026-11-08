@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#10251c"><script src="https://st.max.ru/js/max-web-app.js"></script><title>Норка — место удачи</title>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#101713"><style>html,body{background-color:#101713;color-scheme:dark}html{min-height:100%;background:#101713}body{background-color:#101713}</style><script src="https://st.max.ru/js/max-web-app.js"></script><title>Норка — место удачи</title>
 <style>
 :root{color-scheme:dark;--bg:#071b20;--bg2:#0b252c;--panel:#102a32;--panel2:#142f38;--text:#f3f8fa;--muted:#9bb1b9;--teal:#42e0cf;--teal2:#19b8b4;--violet:#9b79ff;--berry:#ff5e9b;--gold:#f4c96b;--line:#b7e5e522;--shadow:0 18px 44px #020b10a8}
 *{box-sizing:border-box}
@@ -334,6 +334,16 @@ body.splash-open{overflow:hidden}
 .profile-history-section .profile-history-list{padding:0 0 8px;background:transparent}.profile-history-section .history{border-top:1px solid #ffffff12;padding:11px 0;font-size:11px}.profile-history-section .empty{margin:0 0 10px;padding:15px 8px;background:#ffffff05;border-color:#ffffff14}
 .profile-view .profile-admin-toggle{margin:16px 0 4px;border-color:#a9d58d35}
 @media(max-width:370px){.profile-shortcuts{grid-template-columns:1fr}.profile-user-row{gap:11px}.profile-avatar-frame{width:68px;height:68px;flex-basis:68px}.profile-user-copy h1{font-size:22px}}
+
+/* Fast first paint for MAX WebView + compact berry overview */
+.berries-view .berries-heading{min-height:156px;padding:18px 18px 17px}
+.berries-view .berries-heading h1{margin:9px 0 5px}
+.berries-view .berry-daily{margin:10px 0 16px;padding:13px}
+.berries-view .berry-daily-claim{margin-top:11px;padding:10px}
+.berries-view .berry-streak{margin-top:12px;padding-top:11px}
+.berries-view .berry-hub-grid{gap:9px;margin:13px 0 7px}
+.berries-view .berry-hub-card{min-height:70px;padding:11px 10px}
+@media(max-width:390px){.berries-view .berries-heading{min-height:148px;padding:16px}.berries-view .berry-daily{padding:12px}.berries-view .berry-hub-card{min-height:68px;padding:10px 9px}}
 </style></head><body class="splash-open"><div class="norka-splash" id="norkaSplash" role="status" aria-live="polite"><div class="splash-inner"><div class="splash-brand">НОРКА</div><div class="splash-art"><img class="splash-mascot" src="Image/Загрузка норка.png" alt="Норка с корзинкой ягод"><img class="splash-berry strawberry" src="Image/Клубника загрузка.png" alt=""><img class="splash-berry raspberry" src="Image/Малина загрузка .png" alt=""><img class="splash-berry blueberry" src="Image/Черника загрузка .png" alt=""></div><div class="splash-caption" id="splashCaption">Норка собирает твои ягодки…</div><div class="splash-subcaption">Подготавливаем твой уютный уголок</div><div class="splash-progress" aria-hidden="true"><i></i></div><div class="splash-error" id="splashError"></div><button class="splash-retry" id="splashRetry" type="button">Повторить загрузку</button></div></div><div class="app">
 <header class="top"><div class="brand"><button class="brand-home" id="homeBtn" type="button" aria-label="На главную"><img class="brand-home-icon" src="Image/Кнопка%20навигации%20Главная.png" alt=""></button> НОРКА</div><button class="profile" id="profileBtn">👤 Профиль</button></header>
 <main><section class="view active home-view" id="home">
