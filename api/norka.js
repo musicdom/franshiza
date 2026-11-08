@@ -1,6 +1,6 @@
 const { createHmac, timingSafeEqual, randomInt, randomBytes } = require("crypto");
 const { requestMax, sendMaxMessage, uploadMaxImage } = require("../lib/max-api");
-const NORKA_BACKEND_VERSION="norka-wheel-daily-limit-2026-11-08-v29";
+const NORKA_BACKEND_VERSION="norka-wheel-daily-limit-spin-fix-2026-11-09-v30";
 
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function cfg(){const kvUrl=process.env.KV_REST_API_URL,kvToken=process.env.KV_REST_API_TOKEN,upstashUrl=process.env.UPSTASH_REDIS_REST_URL,upstashToken=process.env.UPSTASH_REDIS_REST_TOKEN;if(kvUrl&&kvToken)return {url:kvUrl.replace(/\/$/,""),token:kvToken,source:"KV"};if(upstashUrl&&upstashToken)return {url:upstashUrl.replace(/\/$/,""),token:upstashToken,source:"UPSTASH"};if(kvUrl||kvToken||upstashUrl||upstashToken)throw new Error("Redis configuration is incomplete: URL and token must belong to the same provider");return null;}
@@ -761,14 +761,15 @@ module.exports=async function handler(req,res){
     "redis.call('HSET',KEYS[1],'berries',nextB,'coins',nextC);",
     "if tonumber(ARGV[2])>0 then redis.call('INCRBY',KEYS[4],tonumber(ARGV[2])); redis.call('ZINCRBY',KEYS[5],tonumber(ARGV[2]),ARGV[6]); end;",
     "redis.call('LPUSH',KEYS[2],ARGV[4]); redis.call('LTRIM',KEYS[2],'0','99');",
-    "used=redis.call('INCR',KEYS[6]); redis.call('EXPIREAT',KEYS[6],tonumber(ARGV[8]));",
+    "used=redis.call('INCR',KEYS[6]); redis.call('EXPIREAT',KEYS[6],tonumber(ARGV[7]));",
     "local result={wallet={berries=nextB,coins=nextC},prize=cjson.decode(ARGV[5]),duplicate=false,used=used,remaining=3-used};",
     "redis.call('SET',KEYS[3],cjson.encode(result),'EX','86400'); return cjson.encode(result)"
    ].join(" ");
    const raw=await redis(["EVAL",script,"6","norka:wallet:"+id,"norka:ledger:"+id,"norka:wheel:request:"+id+":"+requestId,"norka:berries:earned:"+id,"norka:berries:ranking",dailyKey,String(cost),String(berryReward),String(coinReward),ledgerItem,prizeData,id,String(day.resetAt)]);
    const result=typeof raw==="string"?JSON.parse(raw):raw;
    if(result?.error==="INSUFFICIENT")return json(res,409,{ok:false,error:"Для вращения нужно 50 ягод. Пополни запас и попробуй ещё раз.",wallet:result.wallet});
-   return json(res,200,{ok:true,wallet:result.wallet,prize:result.prize,duplicate:Boolean(result.duplicate)});
+   if(result?.error==="DAILY_LIMIT")return json(res,429,{ok:false,error:"На сегодня все 3 вращения закончились. Возвращайся завтра!",used:Number(result.used)||3,remaining:0});
+   return json(res,200,{ok:true,wallet:result.wallet,prize:result.prize,duplicate:Boolean(result.duplicate),used:Number(result.used)||0,remaining:Number(result.remaining)||0});
   }
 
   if(action==="exchange"){
