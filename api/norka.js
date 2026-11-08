@@ -1,6 +1,6 @@
 const { createHmac, timingSafeEqual, randomInt, randomBytes } = require("crypto");
 const { requestMax, sendMaxMessage, uploadMaxImage } = require("../lib/max-api");
-const NORKA_BACKEND_VERSION="norka-giveaway-editor-2026-11-09-v31";
+const NORKA_BACKEND_VERSION="norka-admin-users-last-opened-2026-11-09-v32";
 
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function cfg(){const kvUrl=process.env.KV_REST_API_URL,kvToken=process.env.KV_REST_API_TOKEN,upstashUrl=process.env.UPSTASH_REDIS_REST_URL,upstashToken=process.env.UPSTASH_REDIS_REST_TOKEN;if(kvUrl&&kvToken)return {url:kvUrl.replace(/\/$/,""),token:kvToken,source:"KV"};if(upstashUrl&&upstashToken)return {url:upstashUrl.replace(/\/$/,""),token:upstashToken,source:"UPSTASH"};if(kvUrl||kvToken||upstashUrl||upstashToken)throw new Error("Redis configuration is incomplete: URL and token must belong to the same provider");return null;}
@@ -383,6 +383,24 @@ module.exports=async function handler(req,res){
    if(!process.env.NORKA_ADMIN_PASSWORD)return json(res,503,{ok:false,error:"Не задан пароль админ-панели. Добавь NORKA_ADMIN_PASSWORD в переменные окружения backend и перезапусти функцию."});
    if(!(await admin(req)))return json(res,401,{ok:false,error:"Неверный пароль админ-панели. Проверь NORKA_ADMIN_PASSWORD."});
    if(action==="admin_auth")return json(res,200,{ok:true,authenticated:true});
+   if(action==="admin_users"){
+    const started=Date.now(),keys=[];let cursor="0",pages=0;
+    do{
+     const scan=await redis(["SCAN",cursor,"MATCH","norka:user:*","COUNT","500"]);
+     if(!Array.isArray(scan)||scan.length<2)throw new Error("Unexpected Redis SCAN response");
+     cursor=String(scan[0]||"0");
+     for(const key of (Array.isArray(scan[1])?scan[1]:[]))if(/^norka:user:[^:]+$/.test(String(key)))keys.push(String(key));
+     pages++;
+     if(pages>=200&&cursor!=="0")throw new Error("Слишком много пользователей для одного запроса. Уменьши выборку.");
+    }while(cursor!=="0");
+    const rawUsers=keys.length?await redis(["MGET",...keys]):[];
+    const users=(Array.isArray(rawUsers)?rawUsers:[]).map((raw,index)=>{
+     if(!raw)return null;let user;try{user=JSON.parse(raw)}catch{return null;}
+     if(!user||typeof user!=="object")return null;
+     return {userId:String(user.id||keys[index].slice(11)),name:clean(user.name,100)||"Участник Норки",avatar:/^https:\/\//i.test(String(user.avatar||""))?clean(user.avatar,500):"",createdAt:clean(user.createdAt,40),lastOpenedAt:clean(user.lastOpenedAt,40)};
+    }).filter(Boolean).sort((a,b)=>String(b.lastOpenedAt||"").localeCompare(String(a.lastOpenedAt||"")));
+    return json(res,200,{ok:true,total:users.length,users:users.slice(0,500),limit:500,loadTimeMs:Date.now()-started});
+   }
    if(action==="admin_winner_publisher_diagnostics"){
     const diagnostics={
      backendVersion:NORKA_BACKEND_VERSION,
@@ -699,7 +717,7 @@ module.exports=async function handler(req,res){
     const started=Date.now(),timings={};
     const stage=async(name,fn)=>{const at=Date.now();try{return await fn();}finally{timings[name]=Date.now()-at;console.info("NORKA bootstrap stage",JSON.stringify({stage:name,durationMs:timings[name]}));}};
     let u=null,w={berries:0,coins:0},history=[],ts=[],gs=[],claims={},rate=100,progress={xp:0,level:1,streak:0,bestStreak:0,achievements:[]},rewards=[],community=null;
-    try{const existing=Boolean(await stage("user_exists",()=>get(userKey(id))));u=await stage("user",()=>ensureUser(id,profile));if(!existing&&verified.startParam)await stage("referral_signup",()=>applyReferralSignup(id,verified.startParam));await stage("launch_task",()=>claimLaunchTask(id));await stage("sync_system_task_claims",()=>syncSystemTaskClaims(id));}catch(error){console.error("NORKA bootstrap user:",error&&error.message||"unknown");return json(res,503,{ok:false,error:"Не удалось загрузить профиль пользователя.",code:"BOOTSTRAP_USER_READ_FAILED",stage:"user",backendVersion:NORKA_BACKEND_VERSION});}
+    try{const existing=Boolean(await stage("user_exists",()=>get(userKey(id))));u=await stage("user",()=>ensureUser(id,profile));u.lastOpenedAt=new Date().toISOString();await stage("last_opened_at",()=>set(userKey(id),u));if(!existing&&verified.startParam)await stage("referral_signup",()=>applyReferralSignup(id,verified.startParam));await stage("launch_task",()=>claimLaunchTask(id));await stage("sync_system_task_claims",()=>syncSystemTaskClaims(id));}catch(error){console.error("NORKA bootstrap user:",error&&error.message||"unknown");return json(res,503,{ok:false,error:"Не удалось загрузить профиль пользователя.",code:"BOOTSTRAP_USER_READ_FAILED",stage:"user",backendVersion:NORKA_BACKEND_VERSION});}
     const runStage=async(name,fn,fallback)=>{try{return await stage(name,fn);}catch(error){console.error("NORKA bootstrap "+name+":",error&&error.message||"unknown");return fallback;}};
     const [walletResult,historyResult,tasksResult,giveawaysResult,claimsResult,rateResult,progressResult,rewardsResult,communityResult]=await Promise.all([
      runStage("wallet",()=>readWallet(id),{berries:Number(u?.berries)||0,coins:Number(u?.coins)||0}),
