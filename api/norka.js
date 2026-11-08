@@ -1,6 +1,6 @@
 const { createHmac, timingSafeEqual, randomInt, randomBytes } = require("crypto");
 const { requestMax, sendMaxMessage, uploadMaxImage } = require("../lib/max-api");
-const NORKA_BACKEND_VERSION="norka-bootstrap-parallel-2026-11-07-v27";
+const NORKA_BACKEND_VERSION="norka-wheel-2026-11-08-v28";
 
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function cfg(){const kvUrl=process.env.KV_REST_API_URL,kvToken=process.env.KV_REST_API_TOKEN,upstashUrl=process.env.UPSTASH_REDIS_REST_URL,upstashToken=process.env.UPSTASH_REDIS_REST_TOKEN;if(kvUrl&&kvToken)return {url:kvUrl.replace(/\/$/,""),token:kvToken,source:"KV"};if(upstashUrl&&upstashToken)return {url:upstashUrl.replace(/\/$/,""),token:upstashToken,source:"UPSTASH"};if(kvUrl||kvToken||upstashUrl||upstashToken)throw new Error("Redis configuration is incomplete: URL and token must belong to the same provider");return null;}
@@ -722,6 +722,41 @@ module.exports=async function handler(req,res){
    await redis(["EVAL",script,"3","norka:taskclaim:"+id+":"+taskId,"norka:claims:"+id,"norka:pending",taskId,JSON.stringify(p)]);
    return json(res,200,{ok:true,message:"Заявка отправлена на проверку"});
   }
+  if(action==="spin_wheel"){
+   const requestId=clean(body.requestId,80),cost=50;
+   if(!requestId||!/^[a-zA-Z0-9_-]{8,80}$/.test(requestId))return json(res,400,{ok:false,error:"Не удалось определить вращение. Попробуй ещё раз."});
+   const prizes=[
+    {index:0,icon:"🪙",title:"+1 монета",type:"coins",amount:1,chance:10},
+    {index:1,icon:"🍓",title:"+25 ягод",type:"berries",amount:25,chance:25},
+    {index:2,icon:"💰",title:"+2 монеты",type:"coins",amount:2,chance:7},
+    {index:3,icon:"🧰",title:"+250 ягод",type:"berries",amount:250,chance:15},
+    {index:4,icon:"💎",title:"+5 монет",type:"coins",amount:5,chance:5},
+    {index:5,icon:"⭐",title:"+150 ягод",type:"berries",amount:150,chance:15},
+    {index:6,icon:"💠",title:"+10 монет",type:"coins",amount:10,chance:3},
+    {index:7,icon:"🏆",title:"+75 ягод",type:"berries",amount:75,chance:20}
+   ];
+   const roll=randomInt(100);let cumulative=0,prize=prizes[prizes.length-1];
+   for(const item of prizes){cumulative+=item.chance;if(roll<cumulative){prize=item;break;}}
+   const berryReward=prize.type==="berries"?prize.amount:0,coinReward=prize.type==="coins"?prize.amount:0,now=new Date().toISOString();
+   const ledgerItem=JSON.stringify({type:"wheel_spin",title:"Колесо удачи — "+prize.title,berries:berryReward-cost,coins:coinReward,spentBerries:cost,rewardBerries:berryReward,rewardCoins:coinReward,at:now});
+   const prizeData=JSON.stringify(prize);
+   const script=[
+    "local previous=redis.call('GET',KEYS[3]); if previous then local cached=cjson.decode(previous); cached.duplicate=true; return cjson.encode(cached) end;",
+    "local b=tonumber(redis.call('HGET',KEYS[1],'berries') or '0'); local c=tonumber(redis.call('HGET',KEYS[1],'coins') or '0');",
+    "if b<tonumber(ARGV[1]) then return cjson.encode({error='INSUFFICIENT',wallet={berries=b,coins=c}}) end;",
+    "local nextB=b-tonumber(ARGV[1])+tonumber(ARGV[2]); local nextC=c+tonumber(ARGV[3]);",
+    "redis.call('HSET',KEYS[1],'berries',nextB,'coins',nextC);",
+    "if tonumber(ARGV[2])>0 then redis.call('INCRBY',KEYS[4],tonumber(ARGV[2])); redis.call('ZINCRBY',KEYS[5],tonumber(ARGV[2]),ARGV[6]); end;",
+    "redis.call('LPUSH',KEYS[2],ARGV[4]); redis.call('LTRIM',KEYS[2],'0','99');",
+    "local result={wallet={berries=nextB,coins=nextC},prize=cjson.decode(ARGV[5]),duplicate=false};",
+    "redis.call('SET',KEYS[3],cjson.encode(result),'EX','86400'); return cjson.encode(result)"
+   ].join(" ");
+   const raw=await redis(["EVAL",script,"5","norka:wallet:"+id,"norka:ledger:"+id,"norka:wheel:request:"+id+":"+requestId,"norka:berries:earned:"+id,"norka:berries:ranking",String(cost),String(berryReward),String(coinReward),ledgerItem,prizeData,id]);
+   const result=typeof raw==="string"?JSON.parse(raw):raw;
+   if(result?.error==="INSUFFICIENT")return json(res,409,{ok:false,error:"Для вращения нужно 50 ягод. Пополни запас и попробуй ещё раз.",wallet:result.wallet});
+   return json(res,200,{ok:true,wallet:result.wallet,prize:result.prize,duplicate:Boolean(result.duplicate)});
+  }
+
   if(action==="exchange"){
    const rate=Number(await redis(["GET","norka:exchange-rate"]))||100,amount=Math.floor(Number(body.berries)||0),requestId=clean(body.requestId,80);
    if(!requestId||!/^[a-zA-Z0-9_-]{8,80}$/.test(requestId))return json(res,400,{ok:false,error:"Не удалось идентифицировать операцию обмена. Повтори попытку."});
