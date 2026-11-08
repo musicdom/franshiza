@@ -1,6 +1,6 @@
 const { createHmac, timingSafeEqual, randomInt, randomBytes } = require("crypto");
 const { requestMax, sendMaxMessage, uploadMaxImage } = require("../lib/max-api");
-const NORKA_BACKEND_VERSION="norka-wheel-2026-11-08-v28";
+const NORKA_BACKEND_VERSION="norka-wheel-daily-limit-2026-11-08-v29";
 
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function cfg(){const kvUrl=process.env.KV_REST_API_URL,kvToken=process.env.KV_REST_API_TOKEN,upstashUrl=process.env.UPSTASH_REDIS_REST_URL,upstashToken=process.env.UPSTASH_REDIS_REST_TOKEN;if(kvUrl&&kvToken)return {url:kvUrl.replace(/\/$/,""),token:kvToken,source:"KV"};if(upstashUrl&&upstashToken)return {url:upstashUrl.replace(/\/$/,""),token:upstashToken,source:"UPSTASH"};if(kvUrl||kvToken||upstashUrl||upstashToken)throw new Error("Redis configuration is incomplete: URL and token must belong to the same provider");return null;}
@@ -62,6 +62,13 @@ async function claimLaunchTask(id){
  return {awarded:Number(result?.[0])===1,berries:Number(result?.[1])||0,reward};
 }
 async function updateBalances(id,berryDelta,coinDelta){const script="local b=tonumber(redis.call('HGET',KEYS[1],'berries') or '0'); local c=tonumber(redis.call('HGET',KEYS[1],'coins') or '0'); local db=tonumber(ARGV[1]); local dc=tonumber(ARGV[2]); if b+db<0 or c+dc<0 then return {err='INSUFFICIENT'} end; redis.call('HSET',KEYS[1],'berries',b+db,'coins',c+dc); return {b+db,c+dc}";const raw=await redis(["EVAL",script,"1","norka:wallet:"+id,String(berryDelta),String(coinDelta)]);if(!raw||raw.error)throw new Error("Wallet update failed");return {berries:Number(raw[0]),coins:Number(raw[1])};}
+function wheelDayInfo(){
+ const parts=new Intl.DateTimeFormat("en-US",{timeZone:"Europe/Moscow",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
+ const values=Object.fromEntries(parts.map(p=>[p.type,p.value]));
+ const day=values.year+"-"+values.month+"-"+values.day;
+ const nextMidnight=Math.floor((Date.UTC(Number(values.year),Number(values.month)-1,Number(values.day)+1)-3*60*60*1000)/1000);
+ return {day,key:"norka:wheel:daily:"+day,resetAt:nextMidnight};
+}
 async function readWallet(id){let w=await redis(["HGETALL","norka:wallet:"+id]);if(!Array.isArray(w)||!w.length)return {berries:0,coins:0};const o={};for(let i=0;i<w.length;i+=2)o[w[i]]=Number(w[i+1]);return {berries:o.berries||0,coins:o.coins||0};}
 async function list(key){const ids=await redis(["LRANGE",key,"0","99"]);return Array.isArray(ids)?ids.map(x=>{try{return JSON.parse(x)}catch{return null}}).filter(Boolean):[];}
 async function countUserKeys(){let cursor="0",count=0,iterations=0;do{const page=await redis(["SCAN",cursor,"MATCH","norka:user:*","COUNT","500"]);if(!Array.isArray(page)||page.length<2)throw new Error("Unexpected Redis SCAN response");cursor=String(page[0]);const keys=Array.isArray(page[1])?page[1]:[];count+=keys.filter(key=>/^norka:user:[^:]+$/.test(String(key))).length;iterations++;if(iterations>=200&&cursor!=="0")throw new Error("User count scan exceeded safety limit");}while(cursor!=="0");return count;}
@@ -722,7 +729,12 @@ module.exports=async function handler(req,res){
    await redis(["EVAL",script,"3","norka:taskclaim:"+id+":"+taskId,"norka:claims:"+id,"norka:pending",taskId,JSON.stringify(p)]);
    return json(res,200,{ok:true,message:"Заявка отправлена на проверку"});
   }
+  if(action==="wheel_status"){
+   const day=wheelDayInfo(),used=Number(await redis(["GET",day.key+":"+id])||0);
+   return json(res,200,{ok:true,used,remaining:Math.max(0,3-used),limit:3,resetAt:day.resetAt,timeZone:"Europe/Moscow"});
+  }
   if(action==="spin_wheel"){
+   const day=wheelDayInfo(),dailyKey=day.key+":"+id;
    const requestId=clean(body.requestId,80),cost=50;
    if(!requestId||!/^[a-zA-Z0-9_-]{8,80}$/.test(requestId))return json(res,400,{ok:false,error:"Не удалось определить вращение. Попробуй ещё раз."});
    const prizes=[
@@ -742,16 +754,18 @@ module.exports=async function handler(req,res){
    const prizeData=JSON.stringify(prize);
    const script=[
     "local previous=redis.call('GET',KEYS[3]); if previous then local cached=cjson.decode(previous); cached.duplicate=true; return cjson.encode(cached) end;",
+    "local used=tonumber(redis.call('GET',KEYS[6]) or '0'); if used>=3 then return cjson.encode({error='DAILY_LIMIT',used=used,remaining=0}) end;",
     "local b=tonumber(redis.call('HGET',KEYS[1],'berries') or '0'); local c=tonumber(redis.call('HGET',KEYS[1],'coins') or '0');",
-    "if b<tonumber(ARGV[1]) then return cjson.encode({error='INSUFFICIENT',wallet={berries=b,coins=c}}) end;",
+    "if b<tonumber(ARGV[1]) then return cjson.encode({error='INSUFFICIENT',wallet={berries=b,coins=c},used=used,remaining=3-used}) end;",
     "local nextB=b-tonumber(ARGV[1])+tonumber(ARGV[2]); local nextC=c+tonumber(ARGV[3]);",
     "redis.call('HSET',KEYS[1],'berries',nextB,'coins',nextC);",
     "if tonumber(ARGV[2])>0 then redis.call('INCRBY',KEYS[4],tonumber(ARGV[2])); redis.call('ZINCRBY',KEYS[5],tonumber(ARGV[2]),ARGV[6]); end;",
     "redis.call('LPUSH',KEYS[2],ARGV[4]); redis.call('LTRIM',KEYS[2],'0','99');",
-    "local result={wallet={berries=nextB,coins=nextC},prize=cjson.decode(ARGV[5]),duplicate=false};",
+    "used=redis.call('INCR',KEYS[6]); redis.call('EXPIREAT',KEYS[6],tonumber(ARGV[8]));",
+    "local result={wallet={berries=nextB,coins=nextC},prize=cjson.decode(ARGV[5]),duplicate=false,used=used,remaining=3-used};",
     "redis.call('SET',KEYS[3],cjson.encode(result),'EX','86400'); return cjson.encode(result)"
    ].join(" ");
-   const raw=await redis(["EVAL",script,"5","norka:wallet:"+id,"norka:ledger:"+id,"norka:wheel:request:"+id+":"+requestId,"norka:berries:earned:"+id,"norka:berries:ranking",String(cost),String(berryReward),String(coinReward),ledgerItem,prizeData,id]);
+   const raw=await redis(["EVAL",script,"6","norka:wallet:"+id,"norka:ledger:"+id,"norka:wheel:request:"+id+":"+requestId,"norka:berries:earned:"+id,"norka:berries:ranking",dailyKey,String(cost),String(berryReward),String(coinReward),ledgerItem,prizeData,id,String(day.resetAt)]);
    const result=typeof raw==="string"?JSON.parse(raw):raw;
    if(result?.error==="INSUFFICIENT")return json(res,409,{ok:false,error:"Для вращения нужно 50 ягод. Пополни запас и попробуй ещё раз.",wallet:result.wallet});
    return json(res,200,{ok:true,wallet:result.wallet,prize:result.prize,duplicate:Boolean(result.duplicate)});
