@@ -393,8 +393,8 @@ module.exports=async function handler(req,res){
      pages++;
      if(pages>=200&&cursor!=="0")throw new Error("Слишком много пользователей для одного запроса. Уменьши выборку.");
     }while(cursor!=="0");
-    const rawUsers=keys.length?await redis(["MGET",...keys]):[];
-    const users=(Array.isArray(rawUsers)?rawUsers:[]).map((raw,index)=>{
+    const rawUsers=[];for(let offset=0;offset<keys.length;offset+=500){const batch=await redis(["MGET",...keys.slice(offset,offset+500)]);rawUsers.push(...(Array.isArray(batch)?batch:[]));}
+    const users=rawUsers.map((raw,index)=>{
      if(!raw)return null;let user;try{user=JSON.parse(raw)}catch{return null;}
      if(!user||typeof user!=="object")return null;
      return {userId:String(user.id||keys[index].slice(11)),name:clean(user.name,100)||"Участник Норки",avatar:/^https:\/\//i.test(String(user.avatar||""))?clean(user.avatar,500):"",createdAt:clean(user.createdAt,40),lastOpenedAt:clean(user.lastOpenedAt,40)};
