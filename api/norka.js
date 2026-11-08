@@ -1,6 +1,6 @@
 const { createHmac, timingSafeEqual, randomInt, randomBytes } = require("crypto");
 const { requestMax, sendMaxMessage, uploadMaxImage } = require("../lib/max-api");
-const NORKA_BACKEND_VERSION="norka-wheel-daily-limit-spin-fix-2026-11-09-v30";
+const NORKA_BACKEND_VERSION="norka-giveaway-editor-2026-11-09-v31";
 
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function cfg(){const kvUrl=process.env.KV_REST_API_URL,kvToken=process.env.KV_REST_API_TOKEN,upstashUrl=process.env.UPSTASH_REDIS_REST_URL,upstashToken=process.env.UPSTASH_REDIS_REST_TOKEN;if(kvUrl&&kvToken)return {url:kvUrl.replace(/\/$/,""),token:kvToken,source:"KV"};if(upstashUrl&&upstashToken)return {url:upstashUrl.replace(/\/$/,""),token:upstashToken,source:"UPSTASH"};if(kvUrl||kvToken||upstashUrl||upstashToken)throw new Error("Redis configuration is incomplete: URL and token must belong to the same provider");return null;}
@@ -568,6 +568,52 @@ module.exports=async function handler(req,res){
     await ensureGiveawayReward(item||{id:giveawayId},winnerId);
     await notifyGiveawayResult(item||{id:giveawayId},entrants,winnerId);
     return json(res,200,{ok:true,winnerId,title:item?.title||"",prize:item?.prize||"",entries:entrants.length,backendVersion:NORKA_BACKEND_VERSION});
+   }
+   if(action==="admin_update_giveaway"){
+    const giveawayId=clean(body.giveawayId,60),title=clean(body.title,100),description=clean(body.description,500),cost=Number(body.cost),capacity=Number(body.capacity);
+    if(!giveawayId)return json(res,400,{ok:false,error:"Не указан розыгрыш"});
+    if(!title)return json(res,400,{ok:false,error:"Укажите название розыгрыша"});
+    if(!Number.isInteger(cost)||cost<1||cost>100000)return json(res,400,{ok:false,error:"Стоимость должна быть от 1 до 100000 монет"});
+    if(!Number.isInteger(capacity)||capacity<1)return json(res,400,{ok:false,error:"Укажите корректное количество мест или номеров"});
+    const items=await list("norka:giveaways"),current=items.find(x=>String(x.id)===giveawayId);
+    if(!current)return json(res,404,{ok:false,error:"Розыгрыш не найден"});
+    if(current.status!=="active")return json(res,409,{ok:false,error:"Редактировать можно только активный розыгрыш"});
+    const numbered=current.type==="numbers",prize=clean(body.prize,120);
+    if(numbered){
+     if(capacity>500)return json(res,400,{ok:false,error:"Количество номеров не может превышать 500"});
+     const rawPrizes=Array.isArray(body.prizes)?body.prizes:[];
+     if(rawPrizes.length<1||rawPrizes.length>25||rawPrizes.length>capacity)return json(res,400,{ok:false,error:"Количество призов должно быть от 1 до 25 и не превышать количество номеров"});
+     const prizes=rawPrizes.map((p,i)=>({place:i+1,title:clean(p&&p.title,120),description:clean(p&&p.description,500),imageUrl:clean(p&&p.imageUrl,500)}));
+     if(prizes.some(p=>!p.title))return json(res,400,{ok:false,error:"Укажите название каждого приза"});
+     if(prizes.some(p=>p.imageUrl&&!/^https:\/\//i.test(p.imageUrl)))return json(res,400,{ok:false,error:"Ссылка на изображение должна начинаться с https://"});
+     current.prizes=prizes;
+    }else{
+     if(capacity>1000000)return json(res,400,{ok:false,error:"Количество мест не может превышать 1000000"});
+     if(!prize)return json(res,400,{ok:false,error:"Укажите приз"});
+     current.prize=prize;
+    }
+    current.title=title;current.description=description;current.cost=cost;current.capacity=capacity;current.updatedAt=new Date().toISOString();
+    const countKey=numbered?"norka:number-entries:"+giveawayId:"norka:entries:"+giveawayId;
+    const script=[
+     "local n=redis.call('LLEN',KEYS[1]);",
+     "for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[1],i);if raw then local ok,item=pcall(cjson.decode,raw);",
+     "if ok and tostring(item.id)==ARGV[1] then",
+     "if item.status~='active' then return {-2,0} end;",
+     "local count=0;local maxNumber=0;",
+     "if ARGV[5]=='numbers' then local all=redis.call('HKEYS',KEYS[2]);count=#all;for _,v in ipairs(all) do local x=tonumber(v) or 0;if x>maxNumber then maxNumber=x end end;",
+     "else count=redis.call('SCARD',KEYS[2]) end;",
+     "if tonumber(ARGV[3])<count or (ARGV[5]=='numbers' and tonumber(ARGV[3])<maxNumber) then return {-3,count} end;",
+     "if count>0 and tonumber(ARGV[2])~=tonumber(item.cost) then return {-4,count} end;",
+     "redis.call('LSET',KEYS[1],i,ARGV[4]);return {1,count}",
+     "end end end;return {0,0}"
+    ].join(" ");
+    const result=await redis(["EVAL",script,"2","norka:giveaways",countKey,giveawayId,String(cost),String(capacity),JSON.stringify(current),numbered?"numbers":"regular"]);
+    const code=Number(result&&result[0]);
+    if(code===0)return json(res,404,{ok:false,error:"Розыгрыш не найден"});
+    if(code===-2)return json(res,409,{ok:false,error:"Розыгрыш уже не активен. Обнови список."});
+    if(code===-3)return json(res,409,{ok:false,error:"Количество мест меньше уже занятых мест или проданного номера."});
+    if(code===-4)return json(res,409,{ok:false,error:"Стоимость нельзя менять после первого участия или продажи номера."});
+    return json(res,200,{ok:true,item:current,entries:Number(result[1])||0,backendVersion:NORKA_BACKEND_VERSION});
    }
    if(action==="admin_delete_giveaway"){const giveawayId=clean(body.giveawayId,60);if(!giveawayId)return json(res,400,{ok:false,error:"Не указан розыгрыш"});const script="local n=redis.call('LLEN',KEYS[1]); local keep={}; local removed=0; for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[1],i); if raw then local ok,item=pcall(cjson.decode,raw); if ok and tostring(item.id)==ARGV[1] then removed=removed+1 else table.insert(keep,raw) end end end; local participants=redis.call('SCARD',KEYS[2]); if removed>0 then redis.call('DEL',KEYS[1]); for i=#keep,1,-1 do redis.call('LPUSH',KEYS[1],keep[i]); end; redis.call('DEL',KEYS[2],KEYS[4]); redis.call('HDEL',KEYS[3],ARGV[1]); end; return {removed,participants}";const result=await redis(["EVAL",script,"4","norka:giveaways","norka:entries:"+giveawayId,"norka:giveaway-counts","norka:number-entries:"+giveawayId,giveawayId]);const removed=Array.isArray(result)?Number(result[0]):Number(result);if(!removed)return json(res,404,{ok:false,error:"Розыгрыш не найден в текущей базе Redis. Проверь подключение Яндекс-функции к той же базе, что использует приложение.",backendVersion:NORKA_BACKEND_VERSION});return json(res,200,{ok:true,deleted:removed,participantsRemoved:Array.isArray(result)?Number(result[1])||0:0,backendVersion:NORKA_BACKEND_VERSION});}
     if(action==="admin_create_numbered_giveaway"){
