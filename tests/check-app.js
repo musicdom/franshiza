@@ -35,6 +35,10 @@ if (!webhook.includes('const { requestMax, sendMaxMessage } = require("../lib/ma
 if (!webhook.includes("(u.message&&u.message.recipient&&u.message.recipient.chat_id)")) throw new Error("MAX callback chat ID must be read from the root message recipient");
 if (!webhook.includes("const callbackUserId=actorId||userIdFromUpdate(u);") || !webhook.includes('await sendUser(userId,"✍️ Опишите') || !webhook.includes('await sendUser(callbackUserId,"Хорошо!')) throw new Error("MAX private-dialog callbacks must reply using recipient user_id, not chat_id");
 if (!webhook.includes('callbackEventKey=type==="message_callback"')) throw new Error("MAX button callbacks must use unique callback event deduplication keys");
+if (!webhook.includes("Array.isArray(root.updates)") || !webhook.includes("for(const update of updates)")) throw new Error("MAX webhook must process batched updates");
+if (!webhook.includes('apiPath:"/answers?callback_id="+encodeURIComponent(String(callbackId))') || !webhook.includes('body:{notification:"Готово"}')) throw new Error("MAX callback acknowledgement is missing");
+if (!webhook.includes("callback.payload||u.payload||") || !webhook.includes("m.body&&m.body.text||m.text||u.body&&u.body.text||u.text")) throw new Error("MAX callback/message payload fallbacks are missing");
+
 if (!webhook.includes("grantLaunchReward") || !webhook.includes("bot_started")) throw new Error("Bot-start reward webhook is missing");
 const tracker = fs.readFileSync("api/track-user.js", "utf8");
 if (!tracker.includes('body:{text,format:"markdown"}') || !tracker.includes('max://user/')) throw new Error("Admin open-app alerts must contain clickable MAX user profile links");
