@@ -6,6 +6,18 @@ function json(res,status,data){res.status(status).setHeader("Content-Type","appl
 function clean(v,n=200){return typeof v==="string"?v.trim().slice(0,n):"";}
 async function send(chatId,text,attachments=[]){const token=process.env.MAX_BOT_TOKEN;const r=await sendMaxMessage({token,chatId,text,attachments});if(!r.ok)throw new Error("MAX message failed: "+r.status+" "+String(r.raw||"").slice(0,800));}
 async function sendUser(userId,text,attachments=[]){const token=process.env.MAX_BOT_TOKEN;if(!token)throw new Error("MAX_BOT_TOKEN is not configured");const body={text,format:"markdown"};if(attachments.length)body.attachments=attachments;const r=await requestMax({token,method:"POST",apiPath:"/messages?user_id="+encodeURIComponent(String(userId)),body});if(!r.ok)throw new Error("MAX user message failed: "+r.status+" "+String(r.raw||"").slice(0,800));}
+async function readUserWallet(userId){
+ const raw=await redis(["HGETALL","norka:wallet:"+String(userId)]);
+ const wallet={berries:0,coins:0};
+ if(Array.isArray(raw))for(let i=0;i+1<raw.length;i+=2){
+  if(raw[i]==="berries"||raw[i]==="coins")wallet[raw[i]]=Math.max(0,Number(raw[i+1])||0);
+ }
+ return wallet;
+}
+function asksForWallet(text){
+ const value=String(text||"").toLowerCase().replace(/ё/g,"е");
+ return /(баланс|сколько\s+(у\s+меня\s+)?(ягод|монет)|мои\s+(ягоды|монеты)|остаток\s+(ягод|монет)|кошелек|кошелёк)/i.test(value);
+}
 function supportButtons(){return [{type:"inline_keyboard",payload:{buttons:[[{type:"callback",text:"Да",payload:"norka_support_yes"},{type:"callback",text:"Нет",payload:"norka_support_no"}]]}}];}
 function replyButton(ticketId){return [{type:"inline_keyboard",payload:{buttons:[[{type:"callback",text:"Ответить клиенту",payload:"norka_support_reply:"+ticketId}]]}}];}
 function adminUserId(){return clean(process.env.MAX_ADMIN_USER_ID||process.env.MAX_OWNER_USER_ID||"163701646",80);}
@@ -189,13 +201,53 @@ module.exports=async function handler(req,res){
     senderIsBot:Boolean(sender.is_bot),hasOpenAIKey:Boolean(process.env.OPENAI_API_KEY)
    }));
    if(diagnosticMode)await sendDiagnostic("1/4 Сообщение получено webhook. Тип чата: "+(chatType||"не определён")+". chat_id: "+(chatId?"есть":"нет")+". user_id: "+(userId?"есть":"нет")+". Ключ OpenAI: "+(process.env.OPENAI_API_KEY?"настроен":"НЕ настроен")+".");
-   if(sender.is_bot||!chatId||!userId){
+   const privateDialog=chatType==="dialog"||(!chatId&&Boolean(recipient.user_id));\n   if(sender.is_bot||(!chatId&&!privateDialog)||!userId){
     if(diagnosticMode)await sendDiagnostic("ОШИБКА: сообщение остановлено до обработки. sender_is_bot="+Boolean(sender.is_bot)+", chat_id="+Boolean(chatId)+", user_id="+Boolean(userId)+".");
     console.warn("NORKA message ignored before routing",JSON.stringify({
      senderIsBot:Boolean(sender.is_bot),hasChatId:Boolean(chatId),hasUserId:Boolean(userId)
     }));
     return json(res,200,{ok:true,ignored:true});
    }
+   if(privateDialog && asksForWallet(rawText)){
+    try{
+     const wallet=await readUserWallet(userId);
+     await sendUser(userId,"👛 Твой актуальный баланс в Норке:\\n🍓 Ягоды: "+wallet.berries.toLocaleString("ru-RU")+"\\n🪙 Монеты: "+wallet.coins.toLocaleString("ru-RU")+"\\n\\nБаланс считан из кошелька приложения. Историю начислений и списаний можно посмотреть в разделе «Кошелёк».");
+     return json(res,200,{ok:true,action:"private_wallet_balance"});
+    }catch(error){
+     console.error("NORKA private wallet read failed:",error&&error.message||"unknown");
+     await sendUser(userId,"Не получилось получить баланс прямо сейчас. Открой приложение Норки → «Кошелёк» и проверь данные там. Если проблема повторится, напиши «поддержка».");
+     return json(res,200,{ok:true,action:"private_wallet_balance_unavailable"});
+    }
+   }
+   if(privateDialog && /(поддержк|оператор|жалоб|обращени)/i.test(rawText)){
+    await sendUser(userId,"🛟 Нужна помощь поддержки? Нажми «Да», затем опиши ситуацию одним сообщением. Не отправляй пароли и коды подтверждения.",supportButtons());
+    return json(res,200,{ok:true,action:"private_support_confirmation"});
+   }
+   if(privateDialog && /(обмен|курс|конвертац|перевести.*ягод|сколько.*монет.*ягод)/i.test(rawText)){
+    let rate=100;
+    try{rate=Math.max(1,Math.floor(Number(await redis(["GET","norka:exchange-rate"]))||100));}catch(error){console.warn("NORKA private exchange rate unavailable:",error&&error.message||"unknown");}
+    const amountMatch=rawText.toLowerCase().replace(/ё/g,"е").match(/(\d{1,9})\s*(?:ягод|ягоды|ягоду)/);
+    let answer="🔄 Обмен находится в приложении в разделе «Обмен». Сейчас курс: "+rate+" ягод = 1 монета. Укажи количество ягод — приложение покажет итог до подтверждения. Обмениваются целые монеты, остаток ягод сохраняется.";
+    if(amountMatch){
+     const amount=Number(amountMatch[1]),coins=Math.floor(amount/rate),spent=coins*rate,remainder=amount-spent;
+     answer="🔄 По текущему курсу "+rate+" ягод = 1 монета. За "+amount.toLocaleString("ru-RU")+" ягод получится "+coins.toLocaleString("ru-RU")+" монет; спишется "+spent.toLocaleString("ru-RU")+" ягод"+(remainder?", останется "+remainder+" ягод":"")+". Подтвердить обмен можно в разделе «Обмен».";
+    }
+    await sendUser(userId,answer);
+    return json(res,200,{ok:true,action:"private_exchange_help"});
+   }
+   if(privateDialog && /(купить|покупк|пополн|оплат|платеж|платёж|yoomoney|юмани)/i.test(rawText)){
+    const failed=/(не приш|не зачисл|не поступ|списал|ошибк|не прош|завис)/i.test(rawText);
+    const answer=failed
+     ?"💳 Если деньги уже списались, но монеты не поступили, проверь раздел «Кошелёк» → историю операций. Не создавай повторный платёж. Нажми «поддержка» и приложи сумму, примерное время платежа и номер заказа, если он есть. Не присылай данные карты, пароли или коды."
+     :"💳 Купить монеты можно в приложении: «Кошелёк» → «Купить монеты». Выбери сумму от 100 до 2000 ₽ с шагом 100 ₽, создай платёж и оплати по ссылке YooMoney. После подтверждения оплаты монеты автоматически поступят в кошелёк. Ягоды напрямую не продаются — их можно заработать за задания или получить через обмен.";
+    await sendUser(userId,answer);
+    return json(res,200,{ok:true,action:"private_payment_help"});
+   }
+   if(privateDialog && /(ягод|заработ|ежеднев|задан)/i.test(rawText)){
+    await sendUser(userId,"🍓 Ягоды можно получать за ежедневный визит и доступные задания. Открой «Задания», проверь ежедневную награду и условия активностей. Баланс и историю начислений найдёшь в «Кошельке». Ягоды можно обменять на монеты в разделе «Обмен».");
+    return json(res,200,{ok:true,action:"private_berries_help"});
+   }
+
    const adminId=adminUserId();
    if(chatType==="chat" && userId!==adminId) {
     const messageId=clean(String(m.body?.mid||m.mid||m.message_id||u.message_id||""),180);
