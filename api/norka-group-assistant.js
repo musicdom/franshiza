@@ -89,7 +89,7 @@ async function aiAnswer(text, history, userName) {
   if (!apiKey) return null;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 7000);
+  const timeout = setTimeout(() => controller.abort(), 12000);
   try {
     const messages = [
       { role: "system", content: systemPrompt() },
@@ -161,24 +161,38 @@ async function handleGroupMessage({ chatId, userId, userName, text, botMentioned
   if (!safeText || !safeChatId || !safeUserId || !shouldRespond(safeText)) {
     return { handled: false, reason: "not_relevant" };
   }
-  const history = await getHistory(safeChatId);
-  const chronological = history.reverse();
-  await saveHistory(safeChatId, "user", (clean(userName, 80) ? clean(userName, 80) + ": " : "") + safeText);
-  if (!(await allowed(safeChatId, safeUserId))) {
-    return { handled: false, reason: "rate_limited" };
+  // Redis stores cooldowns and dialogue history, but must not be a hard
+  // dependency for basic group help. If Redis is down, continue without memory.
+  let chronological = [];
+  let redisAvailable = true;
+  try {
+    chronological = (await getHistory(safeChatId)).reverse();
+    await saveHistory(safeChatId, "user", (clean(userName, 80) ? clean(userName, 80) + ": " : "") + safeText);
+    if (!(await allowed(safeChatId, safeUserId))) {
+      return { handled: false, reason: "rate_limited" };
+    }
+  } catch (error) {
+    redisAvailable = false;
+    console.error("NORKA group Redis unavailable; using stateless response:", error && error.message || "unknown");
   }
+
   let answer = await aiAnswer(safeText, chronological, clean(userName, 80));
-  // FAQ topics must always receive a useful answer, even if the AI is unavailable
-  // or decides to stay silent. Never let an API outage suppress core product help.
-  if ((!answer || answer === "[[SILENT]]") && hasKnowledgeTopic(safeText)) {
+  // FAQ and direct mentions must remain answerable during OpenAI or Redis outages.
+  if ((!answer || answer === "[[SILENT]]") && (hasKnowledgeTopic(safeText) || botMentioned)) {
     answer = localAnswer(safeText);
   }
   if (answer === "[[SILENT]]") return { handled: false, reason: "assistant_stayed_silent" };
   if (!answer) {
-    if (!botMentioned) return { handled: false, reason: "ai_unavailable" };
+    if (!botMentioned && !hasKnowledgeTopic(safeText)) return { handled: false, reason: "ai_unavailable" };
     answer = localAnswer(safeText);
   }
-  await saveHistory(safeChatId, "assistant", answer);
+  if (redisAvailable) {
+    try {
+      await saveHistory(safeChatId, "assistant", answer);
+    } catch (error) {
+      console.warn("NORKA group history save failed:", error && error.message || "unknown");
+    }
+  }
   return { handled: true, text: answer };
 }
 

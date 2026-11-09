@@ -51,7 +51,15 @@ module.exports=async function handler(req,res){
  const dedupeKey=eventId?"norka:webhook:processed:"+eventId:"";
  const chatId=u.chat_id||(u.message&&u.message.recipient&&u.message.recipient.chat_id)||(u.callback&&u.callback.message&&u.callback.message.recipient&&u.callback.message.recipient.chat_id);
  try{
-  if(dedupeKey){const claimed=await redis(["SET",dedupeKey,"1","NX","EX","604800"]);if(!claimed)return json(res,200,{ok:true,duplicate:true});}
+  if(dedupeKey){
+   try{
+    const claimed=await redis(["SET",dedupeKey,"1","NX","EX","604800"]);
+    if(!claimed)return json(res,200,{ok:true,duplicate:true});
+   }catch(error){
+    // Do not let a Redis outage prevent group assistant replies.
+    console.error("NORKA webhook dedupe Redis unavailable:",error&&error.message||"unknown");
+   }
+  }
   if(type==="bot_added" && u.is_channel && chatId){
    await redis(["SET","norka:channel:chat_id",String(chatId)]);
    await redis(["SET","norka:channel:added_at",new Date().toISOString()]);
@@ -132,7 +140,9 @@ module.exports=async function handler(req,res){
      return json(res,200,{ok:true,action:"support_reply_sent",ticketId:pendingTicket});
     }
    }
-   const supportState=await redis(["GET","norka:support:state:"+userId]);
+   let supportState=null;
+   try{supportState=await redis(["GET","norka:support:state:"+userId]);}
+   catch(error){console.error("NORKA support state Redis unavailable:",error&&error.message||"unknown");}
    if(supportState==="awaiting_issue"){
     if(!rawText){await send(chatId,"Пожалуйста, опишите проблему текстом одним сообщением.");return json(res,200,{ok:true,action:"support_text_required"});}
     const ticketId=Date.now().toString(36)+"-"+userId;
