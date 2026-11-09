@@ -8,7 +8,7 @@ async function sendUser(userId,text,attachments=[]){const token=process.env.MAX_
 function supportButtons(){return [{type:"inline_keyboard",payload:{buttons:[[{type:"callback",text:"Да",payload:"norka_support_yes"},{type:"callback",text:"Нет",payload:"norka_support_no"}]]}}];}
 function replyButton(ticketId){return [{type:"inline_keyboard",payload:{buttons:[[{type:"callback",text:"Ответить клиенту",payload:"norka_support_reply:"+ticketId}]]}}];}
 function adminUserId(){return clean(process.env.MAX_ADMIN_USER_ID||process.env.MAX_OWNER_USER_ID||"163701646",80);}
-function userIdFromUpdate(u){const m=u.message||{},s=m.sender||m.from||u.user||u.from||u.callback?.user||{};return clean(String(u.callback?.user?.user_id||u.callback?.user?.id||u.user?.user_id||u.user?.id||u.user_id||s.user_id||s.id||""),80);}
+function userIdFromUpdate(u){const m=u.message||{},cm=u.callback?.message||{},s=m.sender||m.from||cm.sender||cm.from||u.user||u.from||u.callback?.user||{};return clean(String(u.callback?.user?.user_id||u.callback?.user?.id||u.callback?.message?.recipient?.user_id||u.user?.user_id||u.user?.id||u.user_id||s.user_id||s.id||""),80);}
 async function grantLaunchReward(userId){
  const reward=50,now=new Date().toISOString(),item=JSON.stringify({type:"task_reward",taskId:"launch",title:"Награда: Запустить бота",berries:reward,at:now});
  const script=[
@@ -81,7 +81,7 @@ module.exports=async function handler(req,res){
     }catch(error){console.warn("NORKA callback acknowledgement error:",error&&error.message||"unknown error");}
    }
    // In a MAX dialog, message.recipient.chat_id is null; recipient.user_id identifies the DM target.
-   const callbackUserId=actorId||userIdFromUpdate(u);
+   const callbackUserId=actorId||userIdFromUpdate(u)||clean(String(callback.message?.recipient?.user_id||""),80);
    if(payload==="norka_support_yes"){
     const userId=callbackUserId;if(!userId)return json(res,200,{ok:true,ignored:"missing support user"});
     await redis(["SET","norka:support:state:"+userId,"awaiting_issue","EX","86400"]);
