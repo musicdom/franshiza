@@ -4,6 +4,11 @@ async function redis(parts){const c=redisConfig();if(!c)throw new Error("Redis i
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function clean(v,n=200){return typeof v==="string"?v.trim().slice(0,n):"";}
 async function send(chatId,text,attachments=[]){const token=process.env.MAX_BOT_TOKEN;const r=await sendMaxMessage({token,chatId,text,attachments});if(!r.ok)throw new Error("MAX message failed: "+r.status+" "+String(r.raw||"").slice(0,800));}
+async function sendUser(userId,text,attachments=[]){const token=process.env.MAX_BOT_TOKEN;if(!token)throw new Error("MAX_BOT_TOKEN is not configured");const body={text};if(attachments.length)body.attachments=attachments;const r=await requestMax({token,method:"POST",apiPath:"/messages?user_id="+encodeURIComponent(String(userId)),body});if(!r.ok)throw new Error("MAX user message failed: "+r.status+" "+String(r.raw||"").slice(0,800));}
+function supportButtons(){return [{type:"inline_keyboard",payload:{buttons:[[{type:"callback",text:"Да",payload:"norka_support_yes"},{type:"callback",text:"Нет",payload:"norka_support_no"}]]}}];}
+function replyButton(ticketId){return [{type:"inline_keyboard",payload:{buttons:[[{type:"callback",text:"Ответить клиенту",payload:"norka_support_reply:"+ticketId}]]}}];}
+function adminUserId(){return clean(process.env.MAX_ADMIN_USER_ID||process.env.MAX_OWNER_USER_ID||"163701646",80);}
+function userIdFromUpdate(u){const m=u.message||{},s=m.sender||u.user||u.from||{};return clean(String(s.user_id||s.id||u.user_id||""),80);}
 async function grantLaunchReward(userId){
  const reward=50,now=new Date().toISOString(),item=JSON.stringify({type:"task_reward",taskId:"launch",title:"Награда: Запустить бота",berries:reward,at:now});
  const script=[
@@ -42,12 +47,66 @@ module.exports=async function handler(req,res){
    await send(chatId,"Привет! 👋 Добро пожаловать в «Норку»!\n\n🍓 Собирай ягоды за задания и активность.\n🪙 Обменивай ягоды на монеты.\n🎁 Используй монеты для участия в розыгрышах призов.\n\nЗагляни в свою Норку — здесь начинается удача!",buttons);
    return json(res,200,{ok:true,action:"norka_welcome"});
   }
+  if(type==="message_callback"){
+   const callback=u.callback||{},payload=clean(String(callback.payload||""),180),actorId=clean(String(callback.user?.user_id||callback.user?.id||callback.sender?.user_id||""),80);
+   if(payload==="norka_support_yes"){
+    const userId=actorId||userIdFromUpdate(u);if(!userId||!chatId)return json(res,200,{ok:true,ignored:"missing support user"});
+    await redis(["SET","norka:support:state:"+userId,"awaiting_issue","EX","86400"]);
+    await send(chatId,"✍️ Опишите, пожалуйста, вашу ситуацию одним сообщением. Я передам обращение специалисту поддержки.");
+    return json(res,200,{ok:true,action:"support_issue_requested"});
+   }
+   if(payload==="norka_support_no"){
+    await send(chatId,"Хорошо! Если понадобится помощь, просто напишите «поддержка».");
+    return json(res,200,{ok:true,action:"support_cancelled"});
+   }
+   if(payload.startsWith("norka_support_reply:")){
+    if(actorId!==adminUserId())return json(res,200,{ok:true,ignored:"support_reply_not_admin"});
+    const ticketId=payload.slice("norka_support_reply:".length);
+    const ticketRaw=await redis(["GET","norka:support:ticket:"+ticketId]);
+    if(!ticketRaw){await send(chatId,"Обращение не найдено или срок ответа истёк.");return json(res,200,{ok:true,action:"support_ticket_missing"});}
+    await redis(["SET","norka:support:reply:"+actorId,ticketId,"EX","1800"]);
+    await send(chatId,"💬 Напишите следующим сообщением ответ клиенту. Я отправлю его в личный чат пользователя.");
+    return json(res,200,{ok:true,action:"support_reply_started"});
+   }
+   return json(res,200,{ok:true,ignored:"unknown_callback"});
+  }
   if(type==="message_created"){
-   const m=u.message||{},sender=m.sender||{},text=clean(m.body&&m.body.text,500).toLowerCase();
-   if(sender.is_bot||!chatId)return json(res,200,{ok:true,ignored:true});
+   const m=u.message||{},sender=m.sender||{},rawText=clean(m.body&&m.body.text,1500),text=rawText.toLowerCase(),userId=userIdFromUpdate(u);
+   if(sender.is_bot||!chatId||!userId)return json(res,200,{ok:true,ignored:true});
+   const adminId=adminUserId();
+   if(userId===adminId){
+    const pendingTicket=await redis(["GET","norka:support:reply:"+adminId]);
+    if(pendingTicket){
+     const ticketRaw=await redis(["GET","norka:support:ticket:"+pendingTicket]);
+     if(!ticketRaw){await redis(["DEL","norka:support:reply:"+adminId]);await send(chatId,"Обращение уже недоступно. Попросите пользователя создать новое.");return json(res,200,{ok:true,action:"support_ticket_expired"});}
+     const ticket=typeof ticketRaw==="string"?JSON.parse(ticketRaw):ticketRaw;
+     if(!rawText){await send(chatId,"Ответ должен быть текстовым сообщением. Напишите ответ клиенту.");return json(res,200,{ok:true,action:"support_reply_needs_text"});}
+     await sendUser(ticket.userId,"💬 Ответ поддержки Норки:\n\n"+rawText);
+     await redis(["DEL","norka:support:reply:"+adminId]);
+     await redis(["SET","norka:support:ticket:"+pendingTicket,JSON.stringify({...ticket,status:"answered",answeredAt:new Date().toISOString()}),"EX","2592000"]);
+     await send(chatId,"✅ Ответ отправлен пользователю.");
+     return json(res,200,{ok:true,action:"support_reply_sent",ticketId:pendingTicket});
+    }
+   }
+   const supportState=await redis(["GET","norka:support:state:"+userId]);
+   if(supportState==="awaiting_issue"){
+    if(!rawText){await send(chatId,"Пожалуйста, опишите проблему текстом одним сообщением.");return json(res,200,{ok:true,action:"support_text_required"});}
+    const ticketId=Date.now().toString(36)+"-"+userId;
+    const ticket={ticketId,userId,chatId,name:clean([sender.first_name,sender.last_name].filter(Boolean).join(" ")||sender.name||sender.username||"Пользователь",120),username:clean(sender.username||"",80),issue:rawText,createdAt:new Date().toISOString(),status:"open"};
+    await redis(["SET","norka:support:ticket:"+ticketId,JSON.stringify(ticket),"EX","2592000"]);
+    await redis(["DEL","norka:support:state:"+userId]);
+    const adminText="🆘 Новое обращение в поддержку Норки\n\n👤 Пользователь: ["+ticket.name.replace(/[\[\]\\]/g,"")+"](max://user/"+encodeURIComponent(userId)+")\n🆔 ID: "+userId+(ticket.username?"\n📛 @"+ticket.username.replace(/^@/,""):"")+"\n\n📝 Суть обращения:\n"+rawText;
+    await sendUser(adminId,adminText,replyButton(ticketId));
+    await send(chatId,"✅ Обращение передано в поддержку. Мы ответим вам здесь, в личном чате с Норкой.");
+    return json(res,200,{ok:true,action:"support_ticket_created",ticketId});
+   }
    if(text==="/start"||text==="старт"||text==="норка"){
     await send(chatId,"🌿 Норка ждёт тебя! Открой приложение, чтобы проверить баланс ягод и монет, выполнить задания и посмотреть розыгрыши.",[{type:"inline_keyboard",payload:{buttons:[[{type:"open_app",text:"🌿 Открыть Норку",web_app:"se14711525_bot"}]]}}]);
     return json(res,200,{ok:true,action:"norka_start"});
+   }
+   if(/(^|[^а-яё])поддержк[а-яё]*(?=$|[^а-яё])/i.test(text)){
+    await send(chatId,"Нужна помощь? Хотите связаться с поддержкой Норки?",supportButtons());
+    return json(res,200,{ok:true,action:"support_confirmation"});
    }
    return json(res,200,{ok:true,ignored:"unsupported_message"});
   }
