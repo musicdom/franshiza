@@ -1,4 +1,5 @@
 const { requestMax, sendMaxMessage } = require("../lib/max-api");
+const { handleGroupMessage } = require("./norka-group-assistant");
 function redisConfig(){const url=process.env.KV_REST_API_URL||process.env.UPSTASH_REDIS_REST_URL;const token=process.env.KV_REST_API_TOKEN||process.env.UPSTASH_REDIS_REST_TOKEN;return url&&token?{url:url.replace(/\/$/, ""),token}:null;}
 async function redis(parts){const c=redisConfig();if(!c)throw new Error("Redis is not configured");const r=await fetch(c.url,{method:"POST",headers:{Authorization:"Bearer "+c.token,"Content-Type":"application/json"},body:JSON.stringify(parts)});if(!r.ok)throw new Error("Redis HTTP "+r.status);const d=await r.json();if(d.error)throw new Error(d.error);return d.result;}
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
@@ -141,6 +142,25 @@ module.exports=async function handler(req,res){
    if(/(^|[^а-яё])поддержк[а-яё]*(?=$|[^а-яё])/i.test(text)){
     await send(chatId,"Нужна помощь? Хотите связаться с поддержкой Норки?",supportButtons());
     return json(res,200,{ok:true,action:"support_confirmation"});
+   }
+   const recipient=m.recipient||{};
+   const chatType=recipient.chat_type||m.chat_type||u.chat_type||"";
+   if(chatType==="chat"){
+    const botUsername=clean(process.env.MAX_BOT_USERNAME||"",80).replace(/^@/,"").toLowerCase();
+    const lowerText=rawText.toLowerCase();
+    const botMentioned=lowerText.includes("норка")||(botUsername&&lowerText.includes("@"+botUsername));
+    const result=await handleGroupMessage({
+     chatId,
+     userId,
+     userName:clean([sender.first_name,sender.last_name].filter(Boolean).join(" ")||sender.name||sender.username||"",80),
+     text:rawText,
+     botMentioned:Boolean(botMentioned)
+    });
+    if(result.handled){
+     await send(chatId,result.text);
+     return json(res,200,{ok:true,action:"group_assistant_reply"});
+    }
+    return json(res,200,{ok:true,ignored:result.reason||"group_message_not_relevant"});
    }
    return json(res,200,{ok:true,ignored:"unsupported_message"});
   }
