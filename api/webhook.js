@@ -10,7 +10,7 @@ function formatGroupMessage(text){
  if(/^🌿\s*\*\*НОРКА\*\*/i.test(content))return content;
  return "🌿 **НОРКА**\n\n"+content;
 }
-async function send(chatId,text,attachments=[]){const token=process.env.MAX_BOT_TOKEN;const r=await sendMaxMessage({token,chatId,text:formatGroupMessage(text),attachments});if(!r.ok)throw new Error("MAX message failed: "+r.status+" "+String(r.raw||"").slice(0,800));}
+async function send(chatId,text,attachments=[]){const token=process.env.MAX_BOT_TOKEN;const body={text:formatGroupMessage(text),format:"markdown"};if(attachments.length)body.attachments=attachments;const r=await requestMax({token,method:"POST",apiPath:"/messages?chat_id="+encodeURIComponent(String(chatId)),body});if(!r.ok)throw new Error("MAX message failed: "+r.status+" "+String(r.raw||"").slice(0,800));}
 async function sendUser(userId,text,attachments=[]){const token=process.env.MAX_BOT_TOKEN;if(!token)throw new Error("MAX_BOT_TOKEN is not configured");const body={text,format:"markdown"};if(attachments.length)body.attachments=attachments;const r=await requestMax({token,method:"POST",apiPath:"/messages?user_id="+encodeURIComponent(String(userId)),body});if(!r.ok)throw new Error("MAX user message failed: "+r.status+" "+String(r.raw||"").slice(0,800));}
 async function readUserWallet(userId){
  const raw=await redis(["HGETALL","norka:wallet:"+String(userId)]);
@@ -155,11 +155,16 @@ module.exports=async function handler(req,res){
    const added=u.user||{};
    if(added.is_bot)return json(res,200,{ok:true,ignored:"bot_joined_group"});
    const addedUserId=clean(String(added.user_id||added.id||""),80);
-   if(addedUserId){
-    try{
-     const claimed=await redis(["SET","norka:welcome:sent:"+chatId+":"+addedUserId,"1","NX","EX","120"]);
-     if(!claimed)return json(res,200,{ok:true,duplicate:true,action:"group_welcome_deduplicated"});
-    }catch(error){console.warn("NORKA welcome dedupe unavailable:",error&&error.message||"unknown");}
+   if(!addedUserId){
+    console.warn("NORKA group welcome skipped: added user id missing");
+    return json(res,200,{ok:true,ignored:"welcome_user_id_missing"});
+   }
+   try{
+    const claimed=await redis(["SET","norka:welcome:sent:"+chatId+":"+addedUserId,"1","NX","EX","86400"]);
+    if(!claimed)return json(res,200,{ok:true,duplicate:true,action:"group_welcome_deduplicated"});
+   }catch(error){
+    console.error("NORKA group welcome skipped: dedupe storage unavailable",error&&error.message||"unknown");
+    return json(res,200,{ok:true,ignored:"welcome_dedupe_unavailable"});
    }
    const name=clean([added.first_name,added.last_name].filter(Boolean).join(" ")||added.name||"",80);
    await send(chatId,(name?"Привет, "+name+"! 👋":"Привет! 👋")+" Добро пожаловать в наше сообщество Норки! 🌿\n\nЯ здесь, чтобы поболтать и подсказать про ягоды 🍓, монеты 🪙, задания и розыгрыши 🎁. Можешь писать обычными сообщениями — не нужно звать меня по имени или использовать команды. Я сама подключусь к разговору, когда смогу быть полезна 🙂",appButton());
