@@ -8,7 +8,7 @@ function formatGroupMessage(text){
  const content=String(text||"").trim();
  if(!content)return "🌿 **НОРКА**";
  if(/^🌿\s*\*\*НОРКА\*\*/i.test(content))return content;
- return "🌿 **НОРКА**\\n\\n"+content;
+ return "🌿 **НОРКА**\n\n"+content;
 }
 async function send(chatId,text,attachments=[]){const token=process.env.MAX_BOT_TOKEN;const r=await sendMaxMessage({token,chatId,text:formatGroupMessage(text),attachments});if(!r.ok)throw new Error("MAX message failed: "+r.status+" "+String(r.raw||"").slice(0,800));}
 async function sendUser(userId,text,attachments=[]){const token=process.env.MAX_BOT_TOKEN;if(!token)throw new Error("MAX_BOT_TOKEN is not configured");const body={text,format:"markdown"};if(attachments.length)body.attachments=attachments;const r=await requestMax({token,method:"POST",apiPath:"/messages?user_id="+encodeURIComponent(String(userId)),body});if(!r.ok)throw new Error("MAX user message failed: "+r.status+" "+String(r.raw||"").slice(0,800));}
