@@ -28,7 +28,7 @@ input{border:1px solid #cbd5e1}button{border:0;background:#145be7;color:white;fo
 </style></head>
 <body><main>
 <h1>Настройка webhook MAX</h1>
-<p>Вставь сюда значение <b>MAX_WEBHOOK_SECRET</b> из Vercel. Оно отправится только на этот же сайт в заголовке запроса и не будет отображаться в адресной строке.</p>
+<p>Вставь значение <b>MAX_WEBHOOK_SECRET</b>, заданное в переменных окружения функции Яндекс Cloud. Секрет будет отправлен только в заголовке запроса и не появится в адресной строке.</p>
 <form id="setup"><label for="secret">MAX_WEBHOOK_SECRET</label><input id="secret" type="password" autocomplete="off" required><button id="submit" type="submit">Подключить webhook</button></form>
 <div id="result" role="status"></div>
 <p class="small">Не отправляй секрет в чат и не делай скриншот с ним.</p>
@@ -72,18 +72,10 @@ module.exports = async function handler(req, res) {
     return json(res, 401, { ok: false, error: "Unauthorized" });
   }
 
-  const configuredHost = process.env.WEBHOOK_BASE_URL ||
-    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
-    process.env.VERCEL_URL;
-  if (!configuredHost) {
-    return json(res, 503, { ok: false, error: "Set WEBHOOK_BASE_URL to the stable HTTPS Vercel domain" });
+  const webhookUrl = String(process.env.MAX_WEBHOOK_URL || "").trim();
+  if (!/^https:\/\//i.test(webhookUrl)) {
+    return json(res, 503, { ok: false, error: "Set MAX_WEBHOOK_URL to the full HTTPS URL of the Yandex Cloud webhook function, including ?route=webhook" });
   }
-
-  let host = configuredHost.trim();
-  if (host.startsWith("https://")) host = host.slice(8);
-  if (host.startsWith("http://")) host = host.slice(7);
-  if (host.endsWith("/")) host = host.slice(0, -1);
-  const webhookUrl = `https://${host}/api/webhook`;
 
   try {
     const response = await requestMax({
