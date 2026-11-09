@@ -90,7 +90,8 @@ module.exports = async function handler(req, res) {
     });
     if (!response.ok || response.data.success === false) {
       console.error("MAX webhook subscription failed:", response.status);
-      const maxError = response.data && (response.data.message || response.data.error || response.data.code) ? String(response.data.message || response.data.error || response.data.code).slice(0, 500) : "";\n      return json(res, 502, { ok: false, error: "MAX rejected webhook subscription", status: response.status, max_error: maxError || undefined });
+      const maxError = response.data && (response.data.message || response.data.error || response.data.code) ? String(response.data.message || response.data.error || response.data.code).slice(0, 500) : "";
+      return json(res, 502, { ok: false, error: "MAX rejected webhook subscription", status: response.status, max_error: maxError || undefined });
     }
     return json(res, 200, { ok: true, webhook_url: webhookUrl, result: response.data });
   } catch (error) {
