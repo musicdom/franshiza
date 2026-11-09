@@ -31,9 +31,12 @@ module.exports=async function handler(req,res){
  if(Array.isArray(root.updates)){
   const results=[];
   for(const update of updates){
+   const normalizedUpdate={...root,...(update&&typeof update==="object"?update:{})};
+   delete normalizedUpdate.updates;
+   normalizedUpdate.update_type=update?.update_type||update?.type||root.update_type||root.type||"";
    let subStatus=200,subBody="";
    const subRes={status(code){subStatus=Number(code)||200;return this;},setHeader(){return this;},end(value=""){subBody=String(value||"");}};
-   await module.exports({...req,body:update},subRes);
+   await module.exports({...req,body:normalizedUpdate},subRes);
    let parsed={};try{parsed=JSON.parse(subBody||"{}");}catch{}
    results.push({status:subStatus,...parsed});
   }
@@ -70,6 +73,7 @@ module.exports=async function handler(req,res){
   if(type==="message_callback"){
    const callback=u.callback||{},payload=clean(String(callback.payload||u.payload||""),180),actorId=clean(String(callback.user?.user_id||callback.user?.id||callback.sender?.user_id||u.user?.user_id||u.user?.id||u.user_id||""),80);
    const callbackId=callback.callback_id||callback.id||null;
+   console.info("NORKA callback received",JSON.stringify({payload,hasCallbackId:!!callbackId,hasUserId:!!actorId}));
    if(callbackId){
     try{
      const ack=await requestMax({token:process.env.MAX_BOT_TOKEN,method:"POST",apiPath:"/answers?callback_id="+encodeURIComponent(String(callbackId)),body:{notification:"Готово"}});
