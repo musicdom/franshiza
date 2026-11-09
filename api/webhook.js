@@ -9,6 +9,7 @@ async function sendUser(userId,text,attachments=[]){const token=process.env.MAX_
 function supportButtons(){return [{type:"inline_keyboard",payload:{buttons:[[{type:"callback",text:"Да",payload:"norka_support_yes"},{type:"callback",text:"Нет",payload:"norka_support_no"}]]}}];}
 function replyButton(ticketId){return [{type:"inline_keyboard",payload:{buttons:[[{type:"callback",text:"Ответить клиенту",payload:"norka_support_reply:"+ticketId}]]}}];}
 function adminUserId(){return clean(process.env.MAX_ADMIN_USER_ID||process.env.MAX_OWNER_USER_ID||"163701646",80);}
+async function sendDiagnostic(text){try{await sendUser(adminUserId(),"🔧 Диагностика Норки\n"+text);}catch(error){console.warn("NORKA diagnostic DM failed:",error&&error.message||"unknown");}}
 function userIdFromUpdate(u){const m=u.message||{},cm=u.callback?.message||{},s=m.sender||m.from||cm.sender||cm.from||u.user||u.from||u.callback?.user||{};return clean(String(u.callback?.user?.user_id||u.callback?.user?.id||u.callback?.message?.recipient?.user_id||u.user?.user_id||u.user?.id||u.user_id||s.user_id||s.id||""),80);}
 async function grantLaunchReward(userId){
  const reward=50,now=new Date().toISOString(),item=JSON.stringify({type:"task_reward",taskId:"launch",title:"Награда: Запустить бота",berries:reward,at:now});
@@ -50,6 +51,7 @@ module.exports=async function handler(req,res){
  const eventId=clean(String(u.update_id||u.updateId||u.event_id||callbackEventKey||(u.message&&u.message.body&&u.message.body.mid)||""),180);
  const dedupeKey=eventId?"norka:webhook:processed:"+eventId:"";
  const chatId=u.chat_id||(u.message&&u.message.recipient&&u.message.recipient.chat_id)||(u.callback&&u.callback.message&&u.callback.message.recipient&&u.callback.message.recipient.chat_id);
+ let diagnosticMode=false,diagnosticStage="webhook";
  try{
   if(dedupeKey){
    try{
@@ -124,17 +126,16 @@ module.exports=async function handler(req,res){
    const m=u.message||{},sender=m.sender||m.from||{},rawText=clean(m.body&&m.body.text||m.text||u.body&&u.body.text||u.text,1500),text=rawText.toLowerCase(),userId=userIdFromUpdate(u);
    const recipient=m.recipient||{};
    const chatType=recipient.chat_type||m.chat_type||u.chat_type||"";
+   const botUsernameForDiagnostic=clean(process.env.MAX_BOT_USERNAME||"",80).replace(/^@/,"").toLowerCase();
+   diagnosticMode=/норка/i.test(rawText)||(botUsernameForDiagnostic&&rawText.toLowerCase().includes("@"+botUsernameForDiagnostic));
    console.info("NORKA incoming message",JSON.stringify({
-    updateType:type,
-    chatType:chatType||"missing",
-    hasChatId:Boolean(chatId),
-    hasUserId:Boolean(userId),
-    hasText:Boolean(rawText),
-    textLength:rawText.length,
-    senderIsBot:Boolean(sender.is_bot),
-    hasOpenAIKey:Boolean(process.env.OPENAI_API_KEY)
+    updateType:type,chatType:chatType||"missing",hasChatId:Boolean(chatId),
+    hasUserId:Boolean(userId),hasText:Boolean(rawText),textLength:rawText.length,
+    senderIsBot:Boolean(sender.is_bot),hasOpenAIKey:Boolean(process.env.OPENAI_API_KEY)
    }));
+   if(diagnosticMode)await sendDiagnostic("1/4 Сообщение получено webhook. Тип чата: "+(chatType||"не определён")+". chat_id: "+(chatId?"есть":"нет")+". user_id: "+(userId?"есть":"нет")+". Ключ OpenAI: "+(process.env.OPENAI_API_KEY?"настроен":"НЕ настроен")+".");
    if(sender.is_bot||!chatId||!userId){
+    if(diagnosticMode)await sendDiagnostic("ОШИБКА: сообщение остановлено до обработки. sender_is_bot="+Boolean(sender.is_bot)+", chat_id="+Boolean(chatId)+", user_id="+Boolean(userId)+".");
     console.warn("NORKA message ignored before routing",JSON.stringify({
      senderIsBot:Boolean(sender.is_bot),hasChatId:Boolean(chatId),hasUserId:Boolean(userId)
     }));
@@ -178,6 +179,8 @@ module.exports=async function handler(req,res){
     return json(res,200,{ok:true,action:"support_confirmation"});
    }
    if(chatType==="chat"){
+    diagnosticStage="group_route";
+    if(diagnosticMode)await sendDiagnostic("2/4 Групповой маршрут распознан. Передаю сообщение помощнику.");
     console.info("NORKA group route selected",JSON.stringify({hasChatId:Boolean(chatId),hasUserId:Boolean(userId)}));
     const botUsername=clean(process.env.MAX_BOT_USERNAME||"",80).replace(/^@/,"").toLowerCase();
     const lowerText=rawText.toLowerCase();
@@ -190,16 +193,21 @@ module.exports=async function handler(req,res){
      text:rawText,
      botMentioned:Boolean(botMentioned)
     });
+    diagnosticStage="assistant_result";
     console.info("NORKA group assistant result",JSON.stringify({handled:Boolean(result.handled),reason:result.reason||null,hasReply:Boolean(result.text)}));
+    if(diagnosticMode)await sendDiagnostic("3/4 Помощник завершил работу. handled="+Boolean(result.handled)+". Причина: "+(result.reason||"ответ сформирован")+". Ответ: "+(result.text?"сформирован":"нет")+".");
     if(result.handled){
      await send(chatId,result.text);
+     diagnosticStage="reply_sent";
+     if(diagnosticMode)await sendDiagnostic("4/4 Ответ успешно отправлен в групповую беседу.");
      console.info("NORKA group reply sent",JSON.stringify({hasChatId:Boolean(chatId)}));
      return json(res,200,{ok:true,action:"group_assistant_reply"});
     }
     return json(res,200,{ok:true,ignored:result.reason||"group_message_not_relevant"});
    }
+   if(diagnosticMode)await sendDiagnostic("Сообщение получено, но тип чата не поддерживается групповым помощником: "+(chatType||"не определён")+".");
    return json(res,200,{ok:true,ignored:"unsupported_message"});
   }
   return json(res,200,{ok:true,ignored:type||"unknown update type"});
- }catch(e){if(dedupeKey){try{await redis(["DEL",dedupeKey]);}catch{}}console.error("NORKA webhook:",e&&e.message||"unknown error");return json(res,200,{ok:true,processing_error:true});}
+ }catch(e){if(dedupeKey){try{await redis(["DEL",dedupeKey]);}catch{}}console.error("NORKA webhook:",e&&e.message||"unknown error");if(diagnosticMode)await sendDiagnostic("СБОЙ на этапе "+diagnosticStage+": "+String(e&&e.message||"неизвестная ошибка").slice(0,300));return json(res,200,{ok:true,processing_error:true});}
 };
