@@ -33,13 +33,15 @@ for (const marker of ["firstTopupBonusCoins", "first_topup_task", "norka:taskcla
 const webhook = fs.readFileSync("api/webhook.js", "utf8");
 if (!webhook.includes('const { requestMax, sendMaxMessage } = require("../lib/max-api");')) throw new Error("Support direct messages must import requestMax");
 if (!webhook.includes("(u.message&&u.message.recipient&&u.message.recipient.chat_id)")) throw new Error("MAX callback chat ID must be read from the root message recipient");
-if (!webhook.includes("const callbackUserId=actorId||userIdFromUpdate(u);") || !webhook.includes('await sendUser(userId,"✍️ Опишите') || !webhook.includes('await sendUser(callbackUserId,"Хорошо!')) throw new Error("MAX private-dialog callbacks must reply using recipient user_id, not chat_id");
+if (!webhook.includes("const callbackUserId=actorId||userIdFromUpdate(u)||clean(String(callback.message?.recipient?.user_id||\"\"),80);") || !webhook.includes("u.callback?.message?.recipient?.user_id") || !webhook.includes('await sendUser(userId,"✍️ Опишите') || !webhook.includes('await sendUser(callbackUserId,"Хорошо!')) throw new Error("MAX private-dialog callbacks must resolve the clicked user and reply in their DM");
 if (!webhook.includes('callbackEventKey=type==="message_callback"') || webhook.includes("callback.timestamp,callback.user&&")) throw new Error("MAX button callbacks must not deduplicate by user ID when a unique callback ID is absent");
 if (!webhook.includes("Array.isArray(root.updates)") || !webhook.includes("for(const update of updates)")) throw new Error("MAX webhook must process batched updates");
 if (!webhook.includes('apiPath:"/answers?callback_id="+encodeURIComponent(String(callbackId))') || !webhook.includes('body:{notification:"Готово"}')) throw new Error("MAX callback acknowledgement is missing");
 if (!webhook.includes("callback.payload||u.payload||") || !webhook.includes("m.body&&m.body.text||m.text||u.body&&u.body.text||u.text")) throw new Error("MAX callback/message payload fallbacks are missing");
 
 if (!webhook.includes("grantLaunchReward") || !webhook.includes("bot_started")) throw new Error("Bot-start reward webhook is missing");
+const setupWebhook = fs.readFileSync("api/setup-webhook.js", "utf8");
+if (!setupWebhook.includes("process.env.MAX_WEBHOOK_URL") || setupWebhook.includes("VERCEL_PROJECT_PRODUCTION_URL")) throw new Error("MAX webhook setup must register the Yandex Cloud webhook URL, not a Vercel URL");
 const tracker = fs.readFileSync("api/track-user.js", "utf8");
 if (!tracker.includes('body:{text,format:"markdown"}') || !tracker.includes('max://user/')) throw new Error("Admin open-app alerts must contain clickable MAX user profile links");
 for (const marker of ["norka_support_yes", "norka_support_no", "norka_support_reply:", "awaiting_issue", "support:ticket:", "support_reply_sent", "Ответить клиенту", "sendUser(adminId", "sendUser(ticket.userId"]) if (!webhook.includes(marker)) throw new Error("Support conversation flow is missing: " + marker);
