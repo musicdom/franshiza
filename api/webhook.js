@@ -88,7 +88,6 @@ async function moderateGroupLink({chatId,userId,messageId,message,update}) {
  return {action:"link_warning",strike};
 }
 
-async function sendDiagnostic(text){try{await sendUser(adminUserId(),"🔧 Диагностика Норки\n"+text);}catch(error){console.warn("NORKA diagnostic DM failed:",error&&error.message||"unknown");}}
 function userIdFromUpdate(u){const m=u.message||{},cm=u.callback?.message||{},s=m.sender||m.from||cm.sender||cm.from||u.user||u.from||u.callback?.user||{};return clean(String(u.callback?.user?.user_id||u.callback?.user?.id||u.callback?.message?.recipient?.user_id||u.user?.user_id||u.user?.id||u.user_id||s.user_id||s.id||""),80);}
 async function grantLaunchReward(userId){
  const reward=50,now=new Date().toISOString(),item=JSON.stringify({type:"task_reward",taskId:"launch",title:"Награда: Запустить бота",berries:reward,at:now});
@@ -130,7 +129,7 @@ module.exports=async function handler(req,res){
  const eventId=clean(String(u.update_id||u.updateId||u.event_id||callbackEventKey||(u.message&&u.message.body&&u.message.body.mid)||""),180);
  const dedupeKey=eventId?"norka:webhook:processed:"+eventId:"";
  const chatId=u.chat_id||(u.message&&u.message.recipient&&u.message.recipient.chat_id)||(u.callback&&u.callback.message&&u.callback.message.recipient&&u.callback.message.recipient.chat_id);
- let diagnosticMode=false,diagnosticStage="webhook";
+
  try{
   if(dedupeKey){
    try{
@@ -217,9 +216,6 @@ module.exports=async function handler(req,res){
    const m=u.message||{},sender=m.sender||m.from||{},rawText=clean(m.body&&m.body.text||m.text||u.body&&u.body.text||u.text,1500),text=rawText.toLowerCase(),userId=userIdFromUpdate(u);
    const recipient=m.recipient||{};
    const chatType=recipient.chat_type||m.chat_type||u.chat_type||"";
-   const botUsernameForDiagnostic=clean(process.env.MAX_BOT_USERNAME||"",80).replace(/^@/,"").toLowerCase();
-   // Group activity must never trigger private diagnostic messages to the administrator.
-   diagnosticMode=false;
    console.info("NORKA incoming message",JSON.stringify({
     updateType:type,chatType:chatType||"missing",hasChatId:Boolean(chatId),
     hasUserId:Boolean(userId),hasText:Boolean(rawText),textLength:rawText.length,
@@ -335,7 +331,6 @@ module.exports=async function handler(req,res){
     return json(res,200,{ok:true,action:"support_confirmation"});
    }
    if(chatType==="chat"){
-    diagnosticStage="group_route";
      console.info("NORKA group route selected",JSON.stringify({hasChatId:Boolean(chatId),hasUserId:Boolean(userId)}));
     const botUsername=clean(process.env.MAX_BOT_USERNAME||"",80).replace(/^@/,"").toLowerCase();
     const lowerText=rawText.toLowerCase();
@@ -348,11 +343,9 @@ module.exports=async function handler(req,res){
      text:rawText,
      botMentioned:Boolean(botMentioned)
     });
-    diagnosticStage="assistant_result";
     console.info("NORKA group assistant result",JSON.stringify({handled:Boolean(result.handled),reason:result.reason||null,hasReply:Boolean(result.text)}));
      if(result.handled){
      await send(chatId,result.text,isAppRelated(rawText+" "+result.text)?appButton():[]);
-     diagnosticStage="reply_sent";
        console.info("NORKA group reply sent",JSON.stringify({hasChatId:Boolean(chatId)}));
      return json(res,200,{ok:true,action:"group_assistant_reply"});
     }
