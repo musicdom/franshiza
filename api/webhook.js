@@ -4,7 +4,13 @@ function redisConfig(){const url=process.env.KV_REST_API_URL||process.env.UPSTAS
 async function redis(parts){const c=redisConfig();if(!c)throw new Error("Redis is not configured");const r=await fetch(c.url,{method:"POST",headers:{Authorization:"Bearer "+c.token,"Content-Type":"application/json"},body:JSON.stringify(parts)});if(!r.ok)throw new Error("Redis HTTP "+r.status);const d=await r.json();if(d.error)throw new Error(d.error);return d.result;}
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function clean(v,n=200){return typeof v==="string"?v.trim().slice(0,n):"";}
-async function send(chatId,text,attachments=[]){const token=process.env.MAX_BOT_TOKEN;const r=await sendMaxMessage({token,chatId,text,attachments});if(!r.ok)throw new Error("MAX message failed: "+r.status+" "+String(r.raw||"").slice(0,800));}
+function formatGroupMessage(text){
+ const content=String(text||"").trim();
+ if(!content)return "🌿 **НОРКА**";
+ if(/^🌿\s*\*\*НОРКА\*\*/i.test(content))return content;
+ return "🌿 **НОРКА**\\n\\n"+content;
+}
+async function send(chatId,text,attachments=[]){const token=process.env.MAX_BOT_TOKEN;const r=await sendMaxMessage({token,chatId,text:formatGroupMessage(text),attachments});if(!r.ok)throw new Error("MAX message failed: "+r.status+" "+String(r.raw||"").slice(0,800));}
 async function sendUser(userId,text,attachments=[]){const token=process.env.MAX_BOT_TOKEN;if(!token)throw new Error("MAX_BOT_TOKEN is not configured");const body={text,format:"markdown"};if(attachments.length)body.attachments=attachments;const r=await requestMax({token,method:"POST",apiPath:"/messages?user_id="+encodeURIComponent(String(userId)),body});if(!r.ok)throw new Error("MAX user message failed: "+r.status+" "+String(r.raw||"").slice(0,800));}
 async function readUserWallet(userId){
  const raw=await redis(["HGETALL","norka:wallet:"+String(userId)]);
