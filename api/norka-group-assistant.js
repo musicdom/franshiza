@@ -154,6 +154,42 @@ async function saveHistory(chatId, role, content) {
   await redis(["EXPIRE", key, "86400"]);
 }
 
+function localConversationAnswer(text) {
+  const value = text.toLowerCase().replace(/ё/g, "е").trim();
+
+  if (/^(привет|прив|здравствуй|здравствуйте|доброе утро|добрый день|добрый вечер|хай|хеллоу)[!. ,]*$/.test(value)) {
+    return "Привееет! 🌿 Как настроение? Что сегодня интересного в нашей компании?";
+  }
+  if (/как дела|как ты|как настроение|как поживаешь/.test(value)) {
+    return "У меня всё ягодно! 🍓 Готова поддержать разговор. А у тебя как дела?";
+  }
+  if (/спасибо|благодарю|спс|пасиб/.test(value)) {
+    return "Всегда пожалуйста! 🌿 Рада быть полезной!";
+  }
+  if (/ахах|хах|лол|😂|🤣|смешно/.test(value)) {
+    return "Ахаха, вот это настроение! 😂 Продолжайте, я внимательно слушаю 👀";
+  }
+  if (/пока|до встречи|спокойной ночи|ушел|ушла/.test(value)) {
+    return "До встречи! 🌿 Возвращайся, тут всегда найдётся место для хорошего настроения!";
+  }
+  if (/как дела|кто ты|что умеешь|что ты можешь/.test(value)) {
+    return "Я Норка 🌿 Могу поболтать, поддержать компанию и подсказать всё о ягодах 🍓, монетах 🪙, заданиях и розыгрышах 🎁";
+  }
+  if (/круто|классно|супер|огонь|молодц|отлично/.test(value)) {
+    return "Вот это настрой! ✨ Пусть дальше будет ещё круче!";
+  }
+  if (/грустно|плохо настроение|устал|устала|тяжелый день|тяжёлый день/.test(value)) {
+    return "Обнимаю по-норочьи 🌿 Пусть день станет полегче. Хочешь рассказать, что случилось?";
+  }
+  if (/добро пожаловать|рады видеть|рад видеть/.test(value)) {
+    return "И я всем рада! 🌿 Устраивайтесь поудобнее, у нас тут уютная компания 🙂";
+  }
+  if (/[?？]/.test(value) && /^(а |и |но |так |почему|зачем|как|что|когда|где|кто|можно ли|правда ли|сколько)/.test(value)) {
+    return "Интересный вопрос! 🌿 Если он про Норку — помогу разобраться. А если тема другая, уточни чуть подробнее: мой бесплатный режим пока лучше всего знает механику нашего сообщества.";
+  }
+  return null;
+}
+
 async function handleGroupMessage({ chatId, userId, userName, text, botMentioned = false }) {
   const safeText = clean(text, 1200);
   const safeChatId = clean(String(chatId || ""), 100);
@@ -161,15 +197,14 @@ async function handleGroupMessage({ chatId, userId, userName, text, botMentioned
   if (!safeText || !safeChatId || !safeUserId || !shouldRespond(safeText)) {
     return { handled: false, reason: "not_relevant" };
   }
-  // Redis stores cooldowns and dialogue history, but must not be a hard
-  // dependency for basic group help. If Redis is down, continue without memory.
+
+  // Free local mode is the default. Paid OpenAI calls happen only when
+  // NORKA_AI_ENABLED=true is explicitly set in the runtime environment.
   let chronological = [];
   let redisAvailable = true;
   try {
     chronological = (await getHistory(safeChatId)).reverse();
     await saveHistory(safeChatId, "user", (clean(userName, 80) ? clean(userName, 80) + ": " : "") + safeText);
-    // A direct mention is an explicit request for Norka to answer.
-    // Do not let a previous group cooldown suppress that requested reply.
     if (!botMentioned && !(await allowed(safeChatId, safeUserId))) {
       return { handled: false, reason: "rate_limited" };
     }
@@ -178,16 +213,18 @@ async function handleGroupMessage({ chatId, userId, userName, text, botMentioned
     console.error("NORKA group Redis unavailable; using stateless response:", error && error.message || "unknown");
   }
 
-  let answer = await aiAnswer(safeText, chronological, clean(userName, 80));
-  // FAQ and direct mentions must remain answerable during OpenAI or Redis outages.
+  const aiEnabled = process.env.NORKA_AI_ENABLED === "true" && Boolean(process.env.OPENAI_API_KEY);
+  let answer = aiEnabled ? await aiAnswer(safeText, chronological, clean(userName, 80)) : null;
+
   if ((!answer || answer === "[[SILENT]]") && (hasKnowledgeTopic(safeText) || botMentioned)) {
     answer = localAnswer(safeText);
   }
-  if (answer === "[[SILENT]]") return { handled: false, reason: "assistant_stayed_silent" };
-  if (!answer) {
-    if (!botMentioned && !hasKnowledgeTopic(safeText)) return { handled: false, reason: "ai_unavailable" };
-    answer = localAnswer(safeText);
+  if (!answer && !botMentioned && !hasKnowledgeTopic(safeText)) {
+    answer = localConversationAnswer(safeText);
   }
+  if (answer === "[[SILENT]]") return { handled: false, reason: "assistant_stayed_silent" };
+  if (!answer) return { handled: false, reason: "local_no_match" };
+
   if (redisAvailable) {
     try {
       await saveHistory(safeChatId, "assistant", answer);
@@ -195,7 +232,7 @@ async function handleGroupMessage({ chatId, userId, userName, text, botMentioned
       console.warn("NORKA group history save failed:", error && error.message || "unknown");
     }
   }
-  return { handled: true, text: answer };
+  return { handled: true, text: answer, mode: aiEnabled ? "hybrid" : "free_local" };
 }
 
 module.exports = { handleGroupMessage };
