@@ -33,6 +33,7 @@ for (const marker of ["firstTopupBonusCoins", "first_topup_task", "norka:taskcla
 const webhook = fs.readFileSync("api/webhook.js", "utf8");
 if (!webhook.includes('const { requestMax, sendMaxMessage } = require("../lib/max-api");')) throw new Error("Support direct messages must import requestMax");
 if (!webhook.includes("(u.message&&u.message.recipient&&u.message.recipient.chat_id)")) throw new Error("MAX callback chat ID must be read from the root message recipient");
+if (!webhook.includes("const callbackUserId=actorId||userIdFromUpdate(u);") || !webhook.includes('await sendUser(userId,"✍️ Опишите') || !webhook.includes('await sendUser(callbackUserId,"Хорошо!')) throw new Error("MAX private-dialog callbacks must reply using recipient user_id, not chat_id");
 if (!webhook.includes('callbackEventKey=type==="message_callback"')) throw new Error("MAX button callbacks must use unique callback event deduplication keys");
 if (!webhook.includes("grantLaunchReward") || !webhook.includes("bot_started")) throw new Error("Bot-start reward webhook is missing");
 const tracker = fs.readFileSync("api/track-user.js", "utf8");
