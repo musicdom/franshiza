@@ -1,4 +1,4 @@
-const { sendMaxMessage } = require("../lib/max-api");
+const { requestMax, sendMaxMessage } = require("../lib/max-api");
 function redisConfig(){const url=process.env.KV_REST_API_URL||process.env.UPSTASH_REDIS_REST_URL;const token=process.env.KV_REST_API_TOKEN||process.env.UPSTASH_REDIS_REST_TOKEN;return url&&token?{url:url.replace(/\/$/, ""),token}:null;}
 async function redis(parts){const c=redisConfig();if(!c)throw new Error("Redis is not configured");const r=await fetch(c.url,{method:"POST",headers:{Authorization:"Bearer "+c.token,"Content-Type":"application/json"},body:JSON.stringify(parts)});if(!r.ok)throw new Error("Redis HTTP "+r.status);const d=await r.json();if(d.error)throw new Error(d.error);return d.result;}
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
@@ -25,7 +25,7 @@ module.exports=async function handler(req,res){
  if(req.method!=="POST"){res.setHeader("Allow","POST");return json(res,405,{ok:false,error:"Method not allowed"});}
  const secret=process.env.MAX_WEBHOOK_SECRET;if(!secret)return json(res,503,{ok:false,error:"Webhook secret is not configured"});
  if(req.headers["x-max-bot-api-secret"]!==secret)return json(res,401,{ok:false,error:"Unauthorized"});
- const u=req.body&&typeof req.body==="object"?req.body:{};const type=u.update_type;const eventId=clean(String(u.update_id||u.updateId||u.event_id||(u.message&&u.message.body&&u.message.body.mid)||""),120);const dedupeKey=eventId?"norka:webhook:processed:"+eventId:"";const chatId=u.chat_id||(u.message&&u.message.recipient&&u.message.recipient.chat_id)||(u.callback&&u.callback.message&&u.callback.message.recipient&&u.callback.message.recipient.chat_id);
+ const u=req.body&&typeof req.body==="object"?req.body:{};const type=u.update_type;const callback=u.callback||{};const callbackEventKey=type==="message_callback"?[callback.callback_id,callback.timestamp,callback.user&&(callback.user.user_id||callback.user.id)].filter(Boolean).join(":"):"";const eventId=clean(String(u.update_id||u.updateId||u.event_id||callbackEventKey||(u.message&&u.message.body&&u.message.body.mid)||""),180);const dedupeKey=eventId?"norka:webhook:processed:"+eventId:"";const chatId=u.chat_id||(u.message&&u.message.recipient&&u.message.recipient.chat_id)||(u.callback&&u.callback.message&&u.callback.message.recipient&&u.callback.message.recipient.chat_id);
  try{
   if(dedupeKey){const claimed=await redis(["SET",dedupeKey,"1","NX","EX","604800"]);if(!claimed)return json(res,200,{ok:true,duplicate:true});}
   if(type==="bot_added" && u.is_channel && chatId){
