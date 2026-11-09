@@ -34,7 +34,7 @@ const webhook = fs.readFileSync("api/webhook.js", "utf8");
 if (!webhook.includes('const { requestMax, sendMaxMessage } = require("../lib/max-api");')) throw new Error("Support direct messages must import requestMax");
 if (!webhook.includes("(u.message&&u.message.recipient&&u.message.recipient.chat_id)")) throw new Error("MAX callback chat ID must be read from the root message recipient");
 if (!webhook.includes("const callbackUserId=actorId||userIdFromUpdate(u);") || !webhook.includes('await sendUser(userId,"✍️ Опишите') || !webhook.includes('await sendUser(callbackUserId,"Хорошо!')) throw new Error("MAX private-dialog callbacks must reply using recipient user_id, not chat_id");
-if (!webhook.includes('callbackEventKey=type==="message_callback"')) throw new Error("MAX button callbacks must use unique callback event deduplication keys");
+if (!webhook.includes('callbackEventKey=type==="message_callback"') || webhook.includes("callback.timestamp,callback.user&&")) throw new Error("MAX button callbacks must not deduplicate by user ID when a unique callback ID is absent");
 if (!webhook.includes("Array.isArray(root.updates)") || !webhook.includes("for(const update of updates)")) throw new Error("MAX webhook must process batched updates");
 if (!webhook.includes('apiPath:"/answers?callback_id="+encodeURIComponent(String(callbackId))') || !webhook.includes('body:{notification:"Готово"}')) throw new Error("MAX callback acknowledgement is missing");
 if (!webhook.includes("callback.payload||u.payload||") || !webhook.includes("m.body&&m.body.text||m.text||u.body&&u.body.text||u.text")) throw new Error("MAX callback/message payload fallbacks are missing");
