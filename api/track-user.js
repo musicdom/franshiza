@@ -56,7 +56,7 @@ module.exports=async function handler(req,res){
   const profile="[Открыть профиль](max://user/"+encodeURIComponent(id)+")";
   const text=[
    returning?"🔄 Повторное открытие мини-приложения «Норка»":"🌿 Пользователь открыл мини-приложение «Норка»",
-   "","👤 Имя: "+escapeText(name),"🆔 ID: "+escapeText(id),"🔗 Профиль: "+profile,
+   "","👤 Имя: ["+name.replace(/[\[\]\\]/g,"")+"](max://user/"+encodeURIComponent(id)+")","🆔 ID: "+escapeText(id),"🔗 Профиль: "+profile,
    "📛 "+(username?"@"+escapeText(username.replace(/^@/,"")):"username отсутствует"),
    "🌐 Язык: "+escapeText(language||"не передан"),
    "🖼 Фото профиля: "+(photoUrl?escapeText(photoUrl):"не передано"),
