@@ -2,9 +2,9 @@
 
 const knowledge = require("./norka-knowledge");
 
-const CHAT_COOLDOWN_SECONDS = 8;
-const USER_COOLDOWN_SECONDS = 25;
-const HOURLY_CHAT_LIMIT = 12;
+const CHAT_COOLDOWN_SECONDS = 3;
+const USER_COOLDOWN_SECONDS = 8;
+const HOURLY_CHAT_LIMIT = 60;
 const HISTORY_LIMIT = 8;
 
 function clean(value, max = 1200) {
@@ -67,7 +67,7 @@ function fuzzyHasToken(value, variants) {
 
 function detectTopic(text) {
   const value = normalizeText(text);
-  if (/(розыгр|розыграш|розыгрыш|лотере|разыгрыв|приз|победител|участв|билет|номерок|номер розыгр)/.test(value)) return "raffle";
+  if (/(розыгр|розыграш|розыгрыш|лотере|разыгрыв|приз|победител|участв|билет|номерок|номер розыгр|свободн мест|сколько мест|стоимость участия|какой приз|что разыгр|сейчас разыгр)/.test(value)) return "raffle";
   if (/(ежедневн|дейлик|каждый день|дневн|заходить каждый|ежедневная наград)/.test(value)) return "daily";
   if (/(задан|мисси|активност|подписк|выполнить|награду за|что сделать|как заработать)/.test(value)) return "tasks";
   if (/(обмен|курс|конвертац|перевести яг|поменять яг|сколько ягод за|ягоды в монеты)/.test(value)) return "exchange";
