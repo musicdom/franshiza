@@ -18,6 +18,10 @@ function asksForWallet(text){
  const value=String(text||"").toLowerCase().replace(/ё/g,"е");
  return /(баланс|сколько\s+(у\s+меня\s+)?(ягод|монет)|мои\s+(ягоды|монеты)|остаток\s+(ягод|монет)|кошелек|кошелёк)/i.test(value);
 }
+function asksForBerryBalance(text){
+ const value=String(text||"").toLowerCase().replace(/ё/g,"е");
+ return /(баланс\s+(моих\s+)?ягод|сколько\s+(у\s+меня\s+)?ягод|мои\s+ягоды|покажи\s+(мой\s+)?баланс\s+ягод|остаток\s+ягод)/i.test(value);
+}
 function supportButtons(){return [{type:"inline_keyboard",payload:{buttons:[[{type:"callback",text:"Да",payload:"norka_support_yes"},{type:"callback",text:"Нет",payload:"norka_support_no"}]]}}];}
 function replyButton(ticketId){return [{type:"inline_keyboard",payload:{buttons:[[{type:"callback",text:"Ответить клиенту",payload:"norka_support_reply:"+ticketId}]]}}];}
 function adminUserId(){return clean(process.env.MAX_ADMIN_USER_ID||process.env.MAX_OWNER_USER_ID||"163701646",80);}
@@ -207,6 +211,17 @@ module.exports=async function handler(req,res){
      senderIsBot:Boolean(sender.is_bot),hasChatId:Boolean(chatId),hasUserId:Boolean(userId)
     }));
     return json(res,200,{ok:true,ignored:true});
+   }
+   if(!privateDialog && chatId && asksForBerryBalance(rawText)){
+    try{
+     const wallet=await readUserWallet(userId);
+     await send(chatId,"🍓 Баланс ягод участника, который вызвал Норку: **"+wallet.berries.toLocaleString("ru-RU")+" ягод**.");
+     return json(res,200,{ok:true,action:"group_public_berry_balance"});
+    }catch(error){
+     console.error("NORKA group berry balance read failed:",error&&error.message||"unknown");
+     await send(chatId,"Не получилось получить баланс ягод прямо сейчас. Проверь его в приложении в разделе «Кошелёк».");
+     return json(res,200,{ok:true,action:"group_public_berry_balance_unavailable"});
+    }
    }
    if(privateDialog && asksForWallet(rawText)){
     try{
