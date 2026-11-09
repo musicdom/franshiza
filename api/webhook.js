@@ -48,7 +48,8 @@ module.exports=async function handler(req,res){
    return json(res,200,{ok:true,action:"norka_welcome"});
   }
   if(type==="message_callback"){
-   const callback=u.callback||{},payload=clean(String(callback.payload||""),180),actorId=clean(String(callback.user?.user_id||callback.user?.id||callback.sender?.user_id||""),80);\n   // In a MAX dialog, message.recipient.chat_id is null; recipient.user_id identifies the DM target.\n   const callbackUserId=actorId||userIdFromUpdate(u);
+   const callback=u.callback||{},payload=clean(String(callback.payload||""),180),actorId=clean(String(callback.user?.user_id||callback.user?.id||callback.sender?.user_id||""),80);
+   // In a MAX dialog, message.recipient.chat_id is null; recipient.user_id identifies the DM target.\n   const callbackUserId=actorId||userIdFromUpdate(u);
    if(payload==="norka_support_yes"){
     const userId=callbackUserId;if(!userId)return json(res,200,{ok:true,ignored:"missing support user"});
     await redis(["SET","norka:support:state:"+userId,"awaiting_issue","EX","86400"]);
@@ -56,7 +57,8 @@ module.exports=async function handler(req,res){
     return json(res,200,{ok:true,action:"support_issue_requested"});
    }
    if(payload==="norka_support_no"){
-    if(!callbackUserId)return json(res,200,{ok:true,ignored:"missing support user"});\n    await sendUser(callbackUserId,"Хорошо! Если понадобится помощь, просто напишите «поддержка».");
+    if(!callbackUserId)return json(res,200,{ok:true,ignored:"missing support user"});
+    await sendUser(callbackUserId,"Хорошо! Если понадобится помощь, просто напишите «поддержка».");
     return json(res,200,{ok:true,action:"support_cancelled"});
    }
    if(payload.startsWith("norka_support_reply:")){
