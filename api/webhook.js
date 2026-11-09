@@ -225,7 +225,7 @@ module.exports=async function handler(req,res){
    if(!privateDialog && chatId && asksForBerryBalance(rawText)){
     try{
      const wallet=await readUserWallet(userId);
-     await send(chatId,"🍓 Баланс ягод участника, который вызвал Норку: **"+wallet.berries.toLocaleString("ru-RU")+" ягод**.");
+     await send(chatId,"🍓 Баланс ягод участника, который вызвал Норку: **"+wallet.berries.toLocaleString("ru-RU")+" ягод**.",appButton());
      return json(res,200,{ok:true,action:"group_public_berry_balance"});
     }catch(error){
      console.error("NORKA group berry balance read failed:",error&&error.message||"unknown");
