@@ -334,7 +334,12 @@ async function handleGroupMessage({ chatId, userId, userName, text, botMentioned
   }
 
   const aiEnabled = process.env.NORKA_AI_ENABLED === "true" && Boolean(process.env.OPENAI_API_KEY);
-  let liveRaffles = null;\n  if (detectTopic(safeText) === "raffle" || /норка/i.test(safeText)) {\n    try { liveRaffles = await getActiveRaffles(); }\n    catch (error) { console.warn("NORKA live raffle lookup failed:", error && error.message || "unknown"); }\n  }\n  let answer = aiEnabled ? await aiAnswer(safeText + (liveRaffles ? "\\n\\nACTIVE_RAFFLES: " + JSON.stringify(liveRaffles) : ""), chronological, clean(userName, 80)) : null;
+  let liveRaffles = null;
+  if (detectTopic(safeText) === "raffle" || /норка/i.test(safeText)) {
+    try { liveRaffles = await getActiveRaffles(); }
+    catch (error) { console.warn("NORKA live raffle lookup failed:", error && error.message || "unknown"); }
+  }
+  let answer = aiEnabled ? await aiAnswer(safeText + (liveRaffles ? "\n\nACTIVE_RAFFLES: " + JSON.stringify(liveRaffles) : ""), chronological, clean(userName, 80)) : null;
 
   if ((!answer || answer === "[[SILENT]]") && (hasKnowledgeTopic(safeText) || botMentioned)) {
     answer = localAnswer(safeText, liveRaffles);
