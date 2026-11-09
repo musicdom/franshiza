@@ -40,6 +40,7 @@ if (!html.includes('id="collection"') || !match[1].includes("function renderProg
 const cron = fs.readFileSync("api/cron/norka.js", "utf8");
 if (!cron.includes('norka:daily:"+id+":"+day') || !cron.includes("Тебе доступны ежедневные 10 ягод") || !cron.includes("norka:reminder:")) throw new Error("Daily berry reminder must follow the daily claim marker and send the 10-berry notice");
 if (!cron.includes("skippedClaimed") || !cron.includes("skippedReminder") || !cron.includes("failedReminders") || !cron.includes("authorization header mismatch")) throw new Error("Daily reminder cron must expose actionable delivery diagnostics");
+if (!cron.includes("const result=await send(id,message);if(!result.ok)return false;")) throw new Error("Notification markers must only be written after successful MAX delivery");
 const vercel = JSON.parse(fs.readFileSync("vercel.json", "utf8"));
 if (!vercel.crons?.some(job => job.path === "/api/cron/norka" && job.schedule === "0 0 * * *")) throw new Error("Daily reminder cron must run at 00:00 UTC");
 
