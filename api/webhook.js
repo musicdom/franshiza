@@ -8,7 +8,7 @@ async function sendUser(userId,text,attachments=[]){const token=process.env.MAX_
 function supportButtons(){return [{type:"inline_keyboard",payload:{buttons:[[{type:"callback",text:"Да",payload:"norka_support_yes"},{type:"callback",text:"Нет",payload:"norka_support_no"}]]}}];}
 function replyButton(ticketId){return [{type:"inline_keyboard",payload:{buttons:[[{type:"callback",text:"Ответить клиенту",payload:"norka_support_reply:"+ticketId}]]}}];}
 function adminUserId(){return clean(process.env.MAX_ADMIN_USER_ID||process.env.MAX_OWNER_USER_ID||"163701646",80);}
-function userIdFromUpdate(u){const m=u.message||{},s=m.sender||u.user||u.from||{};return clean(String(s.user_id||s.id||u.user_id||""),80);}
+function userIdFromUpdate(u){const m=u.message||{},s=m.sender||m.from||u.user||u.from||u.callback?.user||{};return clean(String(u.callback?.user?.user_id||u.callback?.user?.id||u.user?.user_id||u.user?.id||u.user_id||s.user_id||s.id||""),80);}
 async function grantLaunchReward(userId){
  const reward=50,now=new Date().toISOString(),item=JSON.stringify({type:"task_reward",taskId:"launch",title:"Награда: Запустить бота",berries:reward,at:now});
  const script=[
@@ -25,7 +25,27 @@ module.exports=async function handler(req,res){
  if(req.method!=="POST"){res.setHeader("Allow","POST");return json(res,405,{ok:false,error:"Method not allowed"});}
  const secret=process.env.MAX_WEBHOOK_SECRET;if(!secret)return json(res,503,{ok:false,error:"Webhook secret is not configured"});
  if(req.headers["x-max-bot-api-secret"]!==secret)return json(res,401,{ok:false,error:"Unauthorized"});
- const u=req.body&&typeof req.body==="object"?req.body:{};const type=u.update_type;const callback=u.callback||{};const callbackEventKey=type==="message_callback"?[callback.callback_id,callback.timestamp,callback.user&&(callback.user.user_id||callback.user.id)].filter(Boolean).join(":"):"";const eventId=clean(String(u.update_id||u.updateId||u.event_id||callbackEventKey||(u.message&&u.message.body&&u.message.body.mid)||""),180);const dedupeKey=eventId?"norka:webhook:processed:"+eventId:"";const chatId=u.chat_id||(u.message&&u.message.recipient&&u.message.recipient.chat_id)||(u.callback&&u.callback.message&&u.callback.message.recipient&&u.callback.message.recipient.chat_id);
+ let root=req.body&&typeof req.body==="object"?req.body:{};
+ if(typeof root==="string"){try{root=JSON.parse(root);}catch{return json(res,200,{ok:false,error:"Invalid JSON"});}}
+ const updates=Array.isArray(root.updates)?root.updates:[root];
+ if(Array.isArray(root.updates)){
+  const results=[];
+  for(const update of updates){
+   let subStatus=200,subBody="";
+   const subRes={status(code){subStatus=Number(code)||200;return this;},setHeader(){return this;},end(value=""){subBody=String(value||"");}};
+   await module.exports({...req,body:update},subRes);
+   let parsed={};try{parsed=JSON.parse(subBody||"{}");}catch{}
+   results.push({status:subStatus,...parsed});
+  }
+  return json(res,200,{ok:true,received:true,results});
+ }
+ const u=updates[0]||{};
+ const type=u.update_type||u.type||root.update_type||root.type||"";
+ const callback=u.callback||{};
+ const callbackEventKey=type==="message_callback"?[callback.callback_id,callback.id,callback.timestamp,callback.user&&(callback.user.user_id||callback.user.id)].filter(Boolean).join(":"):"";
+ const eventId=clean(String(u.update_id||u.updateId||u.event_id||callbackEventKey||(u.message&&u.message.body&&u.message.body.mid)||""),180);
+ const dedupeKey=eventId?"norka:webhook:processed:"+eventId:"";
+ const chatId=u.chat_id||(u.message&&u.message.recipient&&u.message.recipient.chat_id)||(u.callback&&u.callback.message&&u.callback.message.recipient&&u.callback.message.recipient.chat_id);
  try{
   if(dedupeKey){const claimed=await redis(["SET",dedupeKey,"1","NX","EX","604800"]);if(!claimed)return json(res,200,{ok:true,duplicate:true});}
   if(type==="bot_added" && u.is_channel && chatId){
@@ -48,7 +68,14 @@ module.exports=async function handler(req,res){
    return json(res,200,{ok:true,action:"norka_welcome"});
   }
   if(type==="message_callback"){
-   const callback=u.callback||{},payload=clean(String(callback.payload||""),180),actorId=clean(String(callback.user?.user_id||callback.user?.id||callback.sender?.user_id||""),80);
+   const callback=u.callback||{},payload=clean(String(callback.payload||u.payload||""),180),actorId=clean(String(callback.user?.user_id||callback.user?.id||callback.sender?.user_id||u.user?.user_id||u.user?.id||u.user_id||""),80);
+   const callbackId=callback.callback_id||callback.id||null;
+   if(callbackId){
+    try{
+     const ack=await requestMax({token:process.env.MAX_BOT_TOKEN,method:"POST",apiPath:"/answers?callback_id="+encodeURIComponent(String(callbackId)),body:{notification:"Готово"}});
+     if(!ack.ok)console.warn("NORKA callback acknowledgement failed:",ack.status,String(ack.raw||"").slice(0,300));
+    }catch(error){console.warn("NORKA callback acknowledgement error:",error&&error.message||"unknown error");}
+   }
    // In a MAX dialog, message.recipient.chat_id is null; recipient.user_id identifies the DM target.
    const callbackUserId=actorId||userIdFromUpdate(u);
    if(payload==="norka_support_yes"){
@@ -74,7 +101,7 @@ module.exports=async function handler(req,res){
    return json(res,200,{ok:true,ignored:"unknown_callback"});
   }
   if(type==="message_created"){
-   const m=u.message||{},sender=m.sender||{},rawText=clean(m.body&&m.body.text,1500),text=rawText.toLowerCase(),userId=userIdFromUpdate(u);
+   const m=u.message||{},sender=m.sender||m.from||{},rawText=clean(m.body&&m.body.text||m.text||u.body&&u.body.text||u.text,1500),text=rawText.toLowerCase(),userId=userIdFromUpdate(u);
    if(sender.is_bot||!chatId||!userId)return json(res,200,{ok:true,ignored:true});
    const adminId=adminUserId();
    if(userId===adminId){
