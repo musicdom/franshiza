@@ -114,6 +114,8 @@ module.exports=async function handler(req,res){
   }
   if(type==="message_created"){
    const m=u.message||{},sender=m.sender||m.from||{},rawText=clean(m.body&&m.body.text||m.text||u.body&&u.body.text||u.text,1500),text=rawText.toLowerCase(),userId=userIdFromUpdate(u);
+   const recipient=m.recipient||{};
+   const chatType=recipient.chat_type||m.chat_type||u.chat_type||"";
    if(sender.is_bot||!chatId||!userId)return json(res,200,{ok:true,ignored:true});
    const adminId=adminUserId();
    if(userId===adminId){
@@ -142,7 +144,7 @@ module.exports=async function handler(req,res){
     await send(chatId,"✅ Обращение передано в поддержку. Мы ответим вам здесь, в личном чате с Норкой.");
     return json(res,200,{ok:true,action:"support_ticket_created",ticketId});
    }
-   if(text==="/start"||text==="старт"||text==="норка"){
+   if(chatType!=="chat"&&(text==="/start"||text==="старт"||text==="норка")){
     await send(chatId,"🌿 Норка ждёт тебя! Открой приложение, чтобы проверить баланс ягод и монет, выполнить задания и посмотреть розыгрыши.",[{type:"inline_keyboard",payload:{buttons:[[{type:"open_app",text:"🌿 Открыть Норку",web_app:"se14711525_bot"}]]}}]);
     return json(res,200,{ok:true,action:"norka_start"});
    }
@@ -150,8 +152,6 @@ module.exports=async function handler(req,res){
     await send(chatId,"Нужна помощь? Хотите связаться с поддержкой Норки?",supportButtons());
     return json(res,200,{ok:true,action:"support_confirmation"});
    }
-   const recipient=m.recipient||{};
-   const chatType=recipient.chat_type||m.chat_type||u.chat_type||"";
    if(chatType==="chat"){
     const botUsername=clean(process.env.MAX_BOT_USERNAME||"",80).replace(/^@/,"").toLowerCase();
     const lowerText=rawText.toLowerCase();
