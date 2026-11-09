@@ -44,7 +44,7 @@ form.addEventListener('submit',async event=>{
  if(!secret)return;
  submit.disabled=true; submit.textContent='Подключаю…'; result.textContent='';
  try{
-  const response=await fetch(location.pathname,{method:'POST',headers:{'Authorization':'Bearer '+secret,'Content-Type':'application/json'},body:'{}',cache:'no-store'});
+  const response=await fetch(location.pathname+location.search,{method:'POST',headers:{'Authorization':'Bearer '+secret,'Content-Type':'application/json'},body:'{}',cache:'no-store'});
   const data=await response.json().catch(()=>({}));
   secretInput.value='';
   if(response.ok&&data.ok){result.textContent='Готово: webhook зарегистрирован.\\nАдрес: '+data.webhook_url;}
@@ -65,7 +65,7 @@ module.exports = async function handler(req, res) {
   const token = process.env.MAX_BOT_TOKEN;
   const secret = process.env.MAX_WEBHOOK_SECRET;
   if (!token || !secret) {
-    return json(res, 503, { ok: false, error: "Set MAX_BOT_TOKEN and MAX_WEBHOOK_SECRET in Vercel" });
+    return json(res, 503, { ok: false, error: "Set MAX_BOT_TOKEN and MAX_WEBHOOK_SECRET in Yandex Cloud" });
   }
 
   if (req.headers.authorization !== `Bearer ${secret}`) {
