@@ -48,24 +48,24 @@ module.exports=async function handler(req,res){
    return json(res,200,{ok:true,action:"norka_welcome"});
   }
   if(type==="message_callback"){
-   const callback=u.callback||{},payload=clean(String(callback.payload||""),180),actorId=clean(String(callback.user?.user_id||callback.user?.id||callback.sender?.user_id||""),80);
+   const callback=u.callback||{},payload=clean(String(callback.payload||""),180),actorId=clean(String(callback.user?.user_id||callback.user?.id||callback.sender?.user_id||""),80);\n   // In a MAX dialog, message.recipient.chat_id is null; recipient.user_id identifies the DM target.\n   const callbackUserId=actorId||userIdFromUpdate(u);
    if(payload==="norka_support_yes"){
-    const userId=actorId||userIdFromUpdate(u);if(!userId||!chatId)return json(res,200,{ok:true,ignored:"missing support user"});
+    const userId=callbackUserId;if(!userId)return json(res,200,{ok:true,ignored:"missing support user"});
     await redis(["SET","norka:support:state:"+userId,"awaiting_issue","EX","86400"]);
-    await send(chatId,"✍️ Опишите, пожалуйста, вашу ситуацию одним сообщением. Я передам обращение специалисту поддержки.");
+    await sendUser(userId,"✍️ Опишите, пожалуйста, вашу ситуацию одним сообщением. Я передам обращение специалисту поддержки.");
     return json(res,200,{ok:true,action:"support_issue_requested"});
    }
    if(payload==="norka_support_no"){
-    await send(chatId,"Хорошо! Если понадобится помощь, просто напишите «поддержка».");
+    if(!callbackUserId)return json(res,200,{ok:true,ignored:"missing support user"});\n    await sendUser(callbackUserId,"Хорошо! Если понадобится помощь, просто напишите «поддержка».");
     return json(res,200,{ok:true,action:"support_cancelled"});
    }
    if(payload.startsWith("norka_support_reply:")){
     if(actorId!==adminUserId())return json(res,200,{ok:true,ignored:"support_reply_not_admin"});
     const ticketId=payload.slice("norka_support_reply:".length);
     const ticketRaw=await redis(["GET","norka:support:ticket:"+ticketId]);
-    if(!ticketRaw){await send(chatId,"Обращение не найдено или срок ответа истёк.");return json(res,200,{ok:true,action:"support_ticket_missing"});}
+    if(!ticketRaw){await sendUser(callbackUserId,"Обращение не найдено или срок ответа истёк.");return json(res,200,{ok:true,action:"support_ticket_missing"});}
     await redis(["SET","norka:support:reply:"+actorId,ticketId,"EX","1800"]);
-    await send(chatId,"💬 Напишите следующим сообщением ответ клиенту. Я отправлю его в личный чат пользователя.");
+    await sendUser(callbackUserId,"💬 Напишите следующим сообщением ответ клиенту. Я отправлю его в личный чат пользователя.");
     return json(res,200,{ok:true,action:"support_reply_started"});
    }
    return json(res,200,{ok:true,ignored:"unknown_callback"});
