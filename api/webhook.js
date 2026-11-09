@@ -218,17 +218,16 @@ module.exports=async function handler(req,res){
    const recipient=m.recipient||{};
    const chatType=recipient.chat_type||m.chat_type||u.chat_type||"";
    const botUsernameForDiagnostic=clean(process.env.MAX_BOT_USERNAME||"",80).replace(/^@/,"").toLowerCase();
-   diagnosticMode=/норка/i.test(rawText)||(botUsernameForDiagnostic&&rawText.toLowerCase().includes("@"+botUsernameForDiagnostic));
+   // Group activity must never trigger private diagnostic messages to the administrator.
+   diagnosticMode=false;
    console.info("NORKA incoming message",JSON.stringify({
     updateType:type,chatType:chatType||"missing",hasChatId:Boolean(chatId),
     hasUserId:Boolean(userId),hasText:Boolean(rawText),textLength:rawText.length,
     senderIsBot:Boolean(sender.is_bot),hasOpenAIKey:Boolean(process.env.OPENAI_API_KEY)
    }));
-   if(diagnosticMode)await sendDiagnostic("1/4 Сообщение получено webhook. Тип чата: "+(chatType||"не определён")+". chat_id: "+(chatId?"есть":"нет")+". user_id: "+(userId?"есть":"нет")+". Ключ OpenAI: "+(process.env.OPENAI_API_KEY?"настроен":"НЕ настроен")+".");
    const privateDialog=chatType==="dialog"||(!chatId&&Boolean(recipient.user_id));
    if(sender.is_bot||(!chatId&&!privateDialog)||!userId){
-    if(diagnosticMode)await sendDiagnostic("ОШИБКА: сообщение остановлено до обработки. sender_is_bot="+Boolean(sender.is_bot)+", chat_id="+Boolean(chatId)+", user_id="+Boolean(userId)+".");
-    console.warn("NORKA message ignored before routing",JSON.stringify({
+     console.warn("NORKA message ignored before routing",JSON.stringify({
      senderIsBot:Boolean(sender.is_bot),hasChatId:Boolean(chatId),hasUserId:Boolean(userId)
     }));
     return json(res,200,{ok:true,ignored:true});
@@ -337,8 +336,7 @@ module.exports=async function handler(req,res){
    }
    if(chatType==="chat"){
     diagnosticStage="group_route";
-    if(diagnosticMode)await sendDiagnostic("2/4 Групповой маршрут распознан. Передаю сообщение помощнику.");
-    console.info("NORKA group route selected",JSON.stringify({hasChatId:Boolean(chatId),hasUserId:Boolean(userId)}));
+     console.info("NORKA group route selected",JSON.stringify({hasChatId:Boolean(chatId),hasUserId:Boolean(userId)}));
     const botUsername=clean(process.env.MAX_BOT_USERNAME||"",80).replace(/^@/,"").toLowerCase();
     const lowerText=rawText.toLowerCase();
     const botMentioned=lowerText.includes("норка")||(botUsername&&lowerText.includes("@"+botUsername));
@@ -352,19 +350,16 @@ module.exports=async function handler(req,res){
     });
     diagnosticStage="assistant_result";
     console.info("NORKA group assistant result",JSON.stringify({handled:Boolean(result.handled),reason:result.reason||null,hasReply:Boolean(result.text)}));
-    if(diagnosticMode)await sendDiagnostic("3/4 Помощник завершил работу. handled="+Boolean(result.handled)+". Причина: "+(result.reason||"ответ сформирован")+". Ответ: "+(result.text?"сформирован":"нет")+".");
-    if(result.handled){
+     if(result.handled){
      await send(chatId,result.text,isAppRelated(rawText+" "+result.text)?appButton():[]);
      diagnosticStage="reply_sent";
-     if(diagnosticMode)await sendDiagnostic("4/4 Ответ успешно отправлен в групповую беседу.");
-     console.info("NORKA group reply sent",JSON.stringify({hasChatId:Boolean(chatId)}));
+       console.info("NORKA group reply sent",JSON.stringify({hasChatId:Boolean(chatId)}));
      return json(res,200,{ok:true,action:"group_assistant_reply"});
     }
     return json(res,200,{ok:true,ignored:result.reason||"group_message_not_relevant"});
    }
-   if(diagnosticMode)await sendDiagnostic("Сообщение получено, но тип чата не поддерживается групповым помощником: "+(chatType||"не определён")+".");
    return json(res,200,{ok:true,ignored:"unsupported_message"});
   }
   return json(res,200,{ok:true,ignored:type||"unknown update type"});
- }catch(e){if(dedupeKey){try{await redis(["DEL",dedupeKey]);}catch{}}console.error("NORKA webhook:",e&&e.message||"unknown error");if(diagnosticMode)await sendDiagnostic("СБОЙ на этапе "+diagnosticStage+": "+String(e&&e.message||"неизвестная ошибка").slice(0,300));return json(res,200,{ok:true,processing_error:true});}
+ }catch(e){if(dedupeKey){try{await redis(["DEL",dedupeKey]);}catch{}}console.error("NORKA webhook:",e&&e.message||"unknown error");return json(res,200,{ok:true,processing_error:true});}
 };
