@@ -1,7 +1,11 @@
 const routes = {
   norka: require("./api/norka"),
   payment: require("./api/norka-payment"),
-  "track-user": require("./api/track-user")
+  "track-user": require("./api/track-user"),
+  webhook: require("./api/webhook"),
+  "setup-webhook": require("./api/setup-webhook"),
+  "yoomoney-notify": require("./api/yoomoney/notify"),
+  "cron-norka": require("./api/cron/norka")
 };
 
 function response(statusCode, body, headers = {}) {
@@ -11,6 +15,23 @@ function response(statusCode, body, headers = {}) {
     isBase64Encoded: false,
     body: body == null ? "" : String(body)
   };
+}
+
+function getRoute(event, query) {
+  const explicit = String(query.route || "").trim().toLowerCase();
+  if (explicit) return explicit.replace(/^\/+|\/+$/g, "").replace(/\.js$/, "");
+  const requestPath = String(event.path || event.rawPath || event.url || "").split("?")[0];
+  const last = requestPath.split("/").filter(Boolean).pop() || "health";
+  const normalized = last.toLowerCase().replace(/\.js$/, "");
+  const aliases = {
+    "norka-payment": "payment",
+    "track_user": "track-user",
+    "setup_webhook": "setup-webhook",
+    "yoomoney": "yoomoney-notify",
+    notify: "yoomoney-notify",
+    "cron": "cron-norka"
+  };
+  return aliases[normalized] || normalized;
 }
 
 async function health() {
@@ -56,7 +77,7 @@ async function health() {
 
 exports.handler = async function (event) {
   const query = event.queryStringParameters || {};
-  const route = String(query.route || "health").toLowerCase();
+  const route = getRoute(event, query);
 
   if (route === "health") {
     try {
@@ -71,7 +92,7 @@ exports.handler = async function (event) {
 
   const handler = routes[route];
   if (!handler) {
-    return response(404, JSON.stringify({ ok: false, error: "UNKNOWN_ROUTE" }), {
+    return response(404, JSON.stringify({ ok: false, error: "UNKNOWN_ROUTE", route }), {
       "Content-Type": "application/json; charset=utf-8"
     });
   }
@@ -81,19 +102,22 @@ exports.handler = async function (event) {
     headers[String(key).toLowerCase()] = value;
   }
 
+  let rawBody = event.body;
+  if (event.isBase64Encoded && typeof rawBody === "string") {
+    rawBody = Buffer.from(rawBody, "base64").toString("utf8");
+  }
+
   let body = {};
-  if (event.body) {
+  if (rawBody != null && rawBody !== "") {
     try {
-      body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
+      body = typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody;
     } catch {
-      return response(400, JSON.stringify({ ok: false, error: "INVALID_JSON" }), {
-        "Content-Type": "application/json; charset=utf-8"
-      });
+      body = rawBody;
     }
   }
 
   const req = {
-    method: String(event.httpMethod || "GET").toUpperCase(),
+    method: String(event.httpMethod || event.requestContext?.httpMethod || "GET").toUpperCase(),
     headers,
     query,
     body
