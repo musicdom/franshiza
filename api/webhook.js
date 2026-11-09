@@ -205,7 +205,8 @@ module.exports=async function handler(req,res){
     senderIsBot:Boolean(sender.is_bot),hasOpenAIKey:Boolean(process.env.OPENAI_API_KEY)
    }));
    if(diagnosticMode)await sendDiagnostic("1/4 Сообщение получено webhook. Тип чата: "+(chatType||"не определён")+". chat_id: "+(chatId?"есть":"нет")+". user_id: "+(userId?"есть":"нет")+". Ключ OpenAI: "+(process.env.OPENAI_API_KEY?"настроен":"НЕ настроен")+".");
-   const privateDialog=chatType==="dialog"||(!chatId&&Boolean(recipient.user_id));\n   if(sender.is_bot||(!chatId&&!privateDialog)||!userId){
+   const privateDialog=chatType==="dialog"||(!chatId&&Boolean(recipient.user_id));
+   if(sender.is_bot||(!chatId&&!privateDialog)||!userId){
     if(diagnosticMode)await sendDiagnostic("ОШИБКА: сообщение остановлено до обработки. sender_is_bot="+Boolean(sender.is_bot)+", chat_id="+Boolean(chatId)+", user_id="+Boolean(userId)+".");
     console.warn("NORKA message ignored before routing",JSON.stringify({
      senderIsBot:Boolean(sender.is_bot),hasChatId:Boolean(chatId),hasUserId:Boolean(userId)
