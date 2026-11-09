@@ -48,8 +48,8 @@ form.addEventListener('submit',async event=>{
   const data=await response.json().catch(()=>({}));
   secretInput.value='';
   if(response.ok&&data.ok){result.textContent='Готово: webhook зарегистрирован.\\nАдрес: '+data.webhook_url;}
-  else{result.textContent='Не получилось (код '+response.status+'): '+(data.error||'неизвестная ошибка')+(data.status?'\\nОтвет MAX: '+data.status:'')+(data.diagnostic?'\\nДиагностика: '+data.diagnostic:'');}
- }catch(e){secretInput.value='';result.textContent='Не удалось связаться с Vercel. Проверь интернет и попробуй ещё раз.';}
+  else{result.textContent='Не получилось (код '+response.status+'): '+(data.error||'неизвестная ошибка')+(data.status?'\\nОтвет MAX: '+data.status:'')+(data.diagnostic?'\\nДиагностика: '+data.diagnostic:'')+(data.max_error?'\\nОтвет MAX: '+data.max_error:'');}
+ }catch(e){secretInput.value='';result.textContent='Не удалось связаться с сервером настройки webhook. Проверь интернет и попробуй ещё раз.';}
  finally{submit.disabled=false;submit.textContent='Подключить webhook';}
 });
 </script></body></html>`);
@@ -90,7 +90,7 @@ module.exports = async function handler(req, res) {
     });
     if (!response.ok || response.data.success === false) {
       console.error("MAX webhook subscription failed:", response.status);
-      return json(res, 502, { ok: false, error: "MAX rejected webhook subscription", status: response.status });
+      const maxError = response.data && (response.data.message || response.data.error || response.data.code) ? String(response.data.message || response.data.error || response.data.code).slice(0, 500) : "";\n      return json(res, 502, { ok: false, error: "MAX rejected webhook subscription", status: response.status, max_error: maxError || undefined });
     }
     return json(res, 200, { ok: true, webhook_url: webhookUrl, result: response.data });
   } catch (error) {
