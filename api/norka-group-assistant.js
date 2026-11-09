@@ -147,8 +147,8 @@ async function getHistory(chatId) {
 
 async function saveHistory(chatId, userText, answer) {
   const key = "norka:group:history:" + chatId;
-  await redis(["LPUSH", key, JSON.stringify({ role: "assistant", content: answer })]);
   await redis(["LPUSH", key, JSON.stringify({ role: "user", content: userText })]);
+  await redis(["LPUSH", key, JSON.stringify({ role: "assistant", content: answer })]);
   await redis(["LTRIM", key, "0", String(HISTORY_LIMIT - 1)]);
   await redis(["EXPIRE", key, "86400"]);
 }
