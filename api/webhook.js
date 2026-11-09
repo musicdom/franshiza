@@ -226,7 +226,7 @@ module.exports=async function handler(req,res){
    if(privateDialog && /(обмен|курс|конвертац|перевести.*ягод|сколько.*монет.*ягод)/i.test(rawText)){
     let rate=100;
     try{rate=Math.max(1,Math.floor(Number(await redis(["GET","norka:exchange-rate"]))||100));}catch(error){console.warn("NORKA private exchange rate unavailable:",error&&error.message||"unknown");}
-    const amountMatch=rawText.toLowerCase().replace(/ё/g,"е").match(/(\\d{1,9})\\s*(?:ягод|ягоды|ягоду)/);
+    const amountMatch=rawText.toLowerCase().replace(/ё/g,"е").match(/(\d{1,9})\s*(?:ягод|ягоды|ягоду)/);
     let answer="🔄 Обмен находится в приложении в разделе «Обмен». Сейчас курс: "+rate+" ягод = 1 монета. Укажи количество ягод — приложение покажет итог до подтверждения. Обмениваются целые монеты, остаток ягод сохраняется.";
     if(amountMatch){
      const amount=Number(amountMatch[1]),coins=Math.floor(amount/rate),spent=coins*rate,remainder=amount-spent;
