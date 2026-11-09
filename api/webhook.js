@@ -24,6 +24,8 @@ function asksForBerryBalance(text){
 }
 function supportButtons(){return [{type:"inline_keyboard",payload:{buttons:[[{type:"callback",text:"Да",payload:"norka_support_yes"},{type:"callback",text:"Нет",payload:"norka_support_no"}]]}}];}
 function replyButton(ticketId){return [{type:"inline_keyboard",payload:{buttons:[[{type:"callback",text:"Ответить клиенту",payload:"norka_support_reply:"+ticketId}]]}}];}
+function appButton(){return [{type:"inline_keyboard",payload:{buttons:[[{type:"open_app",text:"🌿 Открыть мини-приложение Норки",web_app:"se14711525_bot"}]]}}];}
+function isAppRelated(text){return /(мини.?прилож|приложени|кошел|баланс|ягод|монет|обмен|задан|розыгрыш|розыгр|приз|профил|достижен)/i.test(String(text||""));}
 function adminUserId(){return clean(process.env.MAX_ADMIN_USER_ID||process.env.MAX_OWNER_USER_ID||"163701646",80);}
 function allowedLinkHosts() {
  const configured=clean(process.env.NORKA_ALLOWED_LINK_DOMAINS||"",1000);
@@ -146,8 +148,15 @@ module.exports=async function handler(req,res){
   if(type==="user_added" && !u.is_channel && chatId){
    const added=u.user||{};
    if(added.is_bot)return json(res,200,{ok:true,ignored:"bot_joined_group"});
+   const addedUserId=clean(String(added.user_id||added.id||""),80);
+   if(addedUserId){
+    try{
+     const claimed=await redis(["SET","norka:welcome:sent:"+chatId+":"+addedUserId,"1","NX","EX","120"]);
+     if(!claimed)return json(res,200,{ok:true,duplicate:true,action:"group_welcome_deduplicated"});
+    }catch(error){console.warn("NORKA welcome dedupe unavailable:",error&&error.message||"unknown");}
+   }
    const name=clean([added.first_name,added.last_name].filter(Boolean).join(" ")||added.name||"",80);
-   await send(chatId,(name?"Привет, "+name+"! 👋":"Привет! 👋")+" Добро пожаловать в наше сообщество Норки! 🌿\n\nЯ здесь, чтобы поболтать и подсказать про ягоды 🍓, монеты 🪙, задания и розыгрыши 🎁. Можешь писать обычными сообщениями — не нужно звать меня по имени или использовать команды. Я сама подключусь к разговору, когда смогу быть полезна 🙂");
+   await send(chatId,(name?"Привет, "+name+"! 👋":"Привет! 👋")+" Добро пожаловать в наше сообщество Норки! 🌿\n\nЯ здесь, чтобы поболтать и подсказать про ягоды 🍓, монеты 🪙, задания и розыгрыши 🎁. Можешь писать обычными сообщениями — не нужно звать меня по имени или использовать команды. Я сама подключусь к разговору, когда смогу быть полезна 🙂",appButton());
    return json(res,200,{ok:true,action:"group_member_welcomed"});
   }
   if(type==="bot_started"){
@@ -227,7 +236,7 @@ module.exports=async function handler(req,res){
    if(privateDialog && asksForWallet(rawText)){
     try{
      const wallet=await readUserWallet(userId);
-     await sendUser(userId,"👛 Твой актуальный баланс в Норке:\\n🍓 Ягоды: "+wallet.berries.toLocaleString("ru-RU")+"\\n🪙 Монеты: "+wallet.coins.toLocaleString("ru-RU")+"\\n\\nБаланс считан из кошелька приложения. Историю начислений и списаний можно посмотреть в разделе «Кошелёк».");
+     await sendUser(userId,"👛 Твой актуальный баланс в Норке:\\n🍓 Ягоды: "+wallet.berries.toLocaleString("ru-RU")+"\\n🪙 Монеты: "+wallet.coins.toLocaleString("ru-RU")+"\\n\\nБаланс считан из кошелька приложения. Историю начислений и списаний можно посмотреть в разделе «Кошелёк».",appButton());
      return json(res,200,{ok:true,action:"private_wallet_balance"});
     }catch(error){
      console.error("NORKA private wallet read failed:",error&&error.message||"unknown");
@@ -248,7 +257,7 @@ module.exports=async function handler(req,res){
      const amount=Number(amountMatch[1]),coins=Math.floor(amount/rate),spent=coins*rate,remainder=amount-spent;
      answer="🔄 По текущему курсу "+rate+" ягод = 1 монета. За "+amount.toLocaleString("ru-RU")+" ягод получится "+coins.toLocaleString("ru-RU")+" монет; спишется "+spent.toLocaleString("ru-RU")+" ягод"+(remainder?", останется "+remainder+" ягод":"")+". Подтвердить обмен можно в разделе «Обмен».";
     }
-    await sendUser(userId,answer);
+    await sendUser(userId,answer,appButton());
     return json(res,200,{ok:true,action:"private_exchange_help"});
    }
    if(privateDialog && /(купить|покупк|пополн|оплат|платеж|платёж|yoomoney|юмани)/i.test(rawText)){
@@ -256,11 +265,11 @@ module.exports=async function handler(req,res){
     const answer=failed
      ?"💳 Если деньги уже списались, но монеты не поступили, проверь раздел «Кошелёк» → историю операций. Не создавай повторный платёж. Нажми «поддержка» и приложи сумму, примерное время платежа и номер заказа, если он есть. Не присылай данные карты, пароли или коды."
      :"💳 Купить монеты можно в приложении: «Кошелёк» → «Купить монеты». Выбери сумму от 100 до 2000 ₽ с шагом 100 ₽, создай платёж и оплати по ссылке YooMoney. После подтверждения оплаты монеты автоматически поступят в кошелёк. Ягоды напрямую не продаются — их можно заработать за задания или получить через обмен.";
-    await sendUser(userId,answer);
+    await sendUser(userId,answer,appButton());
     return json(res,200,{ok:true,action:"private_payment_help"});
    }
    if(privateDialog && /(ягод|заработ|ежеднев|задан)/i.test(rawText)){
-    await sendUser(userId,"🍓 Ягоды можно получать за ежедневный визит и доступные задания. Открой «Задания», проверь ежедневную награду и условия активностей. Баланс и историю начислений найдёшь в «Кошельке». Ягоды можно обменять на монеты в разделе «Обмен».");
+    await sendUser(userId,"🍓 Ягоды можно получать за ежедневный визит и доступные задания. Открой «Задания», проверь ежедневную награду и условия активностей. Баланс и историю начислений найдёшь в «Кошельке». Ягоды можно обменять на монеты в разделе «Обмен».",appButton());
     return json(res,200,{ok:true,action:"private_berries_help"});
    }
 
@@ -334,7 +343,7 @@ module.exports=async function handler(req,res){
     console.info("NORKA group assistant result",JSON.stringify({handled:Boolean(result.handled),reason:result.reason||null,hasReply:Boolean(result.text)}));
     if(diagnosticMode)await sendDiagnostic("3/4 Помощник завершил работу. handled="+Boolean(result.handled)+". Причина: "+(result.reason||"ответ сформирован")+". Ответ: "+(result.text?"сформирован":"нет")+".");
     if(result.handled){
-     await send(chatId,result.text);
+     await send(chatId,result.text,isAppRelated(rawText+" "+result.text)?appButton():[]);
      diagnosticStage="reply_sent";
      if(diagnosticMode)await sendDiagnostic("4/4 Ответ успешно отправлен в групповую беседу.");
      console.info("NORKA group reply sent",JSON.stringify({hasChatId:Boolean(chatId)}));
