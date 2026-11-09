@@ -135,7 +135,7 @@ function localAnswer(text, liveRaffles = null, exchangeRate = 100) {
   if (topic === "coins") return "🪙 Монеты нужны для участия в розыгрышах Норки. Получить их можно двумя способами: обменять ягоды в разделе «Обмен» или купить в разделе «Кошелёк» → «Купить монеты». Баланс и история операций доступны в кошельке.";
   if (topic === "exchange") {
     const rate = Math.max(1, Math.floor(Number(exchangeRate) || 100));
-    const amountMatch = value.match(/(\\d{1,9})\\s*(?:ягод|ягоды|ягоду)/);
+    const amountMatch = value.match(/(\d{1,9})\s*(?:ягод|ягоды|ягоду)/);
     if (amountMatch && /(сколько|обмен|получ|конверт)/.test(value)) {
       const amount = Number(amountMatch[1]), coins = Math.floor(amount / rate), spent = coins * rate, remainder = amount - spent;
       return "🔄 По текущему курсу " + rate + " ягод = 1 монета. За " + amount.toLocaleString("ru-RU") + " ягод получится " + coins.toLocaleString("ru-RU") + " монет; спишется " + spent.toLocaleString("ru-RU") + " ягод" + (remainder ? ", останется " + remainder + " ягод" : "") + ". Обменяй их в разделе «Обмен» и проверь итог перед подтверждением.";
