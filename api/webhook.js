@@ -11,13 +11,13 @@ function replyButton(ticketId){return [{type:"inline_keyboard",payload:{buttons:
 function adminUserId(){return clean(process.env.MAX_ADMIN_USER_ID||process.env.MAX_OWNER_USER_ID||"163701646",80);}
 function allowedLinkHosts() {
  const configured=clean(process.env.NORKA_ALLOWED_LINK_DOMAINS||"",1000);
- const defaults=["max.ru"];
+ const defaults=[];
  return (configured?configured.split(","):defaults).map(x=>x.trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/.*$/,"").replace(/^www\./,"")).filter(Boolean);
 }
 function extractLinks(message, update) {
  const body=message.body||{};
  const text=String(body.text||message.text||update.body?.text||update.text||"");
- const urls=text.match(/(?:https?:\/\/|www\.)[^\s<>()]+/gi)||[];
+ const urls=text.match(/(?:https?:\/\/|www\.)[^\s<>()]+|(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s<>()]*)?/gi)||[];
  const attachments=[...(Array.isArray(body.attachments)?body.attachments:[]),...(Array.isArray(message.attachments)?message.attachments:[])];
  for(const item of attachments) {
   const raw=JSON.stringify(item||{});
@@ -29,7 +29,10 @@ function extractLinks(message, update) {
 function isExternalLink(url) {
  try {
   const normalized=/^www\./i.test(url)?"https://"+url:url;
-  const host=new URL(normalized).hostname.toLowerCase().replace(/^www\./,"");
+  const parsed=new URL(normalized);
+  const host=parsed.hostname.toLowerCase().replace(/^www\./,"");
+  // The Norka app's own MAX entry point is allowed; arbitrary max.ru links are not.
+  if(host==="max.ru" && /^\/se14711525_bot\/?$/i.test(parsed.pathname))return false;
   const allowed=allowedLinkHosts();
   return !allowed.some(domain=>host===domain||host.endsWith("."+domain));
  } catch { return false; }
