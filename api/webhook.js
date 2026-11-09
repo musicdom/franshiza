@@ -9,6 +9,59 @@ async function sendUser(userId,text,attachments=[]){const token=process.env.MAX_
 function supportButtons(){return [{type:"inline_keyboard",payload:{buttons:[[{type:"callback",text:"Да",payload:"norka_support_yes"},{type:"callback",text:"Нет",payload:"norka_support_no"}]]}}];}
 function replyButton(ticketId){return [{type:"inline_keyboard",payload:{buttons:[[{type:"callback",text:"Ответить клиенту",payload:"norka_support_reply:"+ticketId}]]}}];}
 function adminUserId(){return clean(process.env.MAX_ADMIN_USER_ID||process.env.MAX_OWNER_USER_ID||"163701646",80);}
+function allowedLinkHosts() {
+ const configured=clean(process.env.NORKA_ALLOWED_LINK_DOMAINS||"",1000);
+ const defaults=["max.ru"];
+ return (configured?configured.split(","):defaults).map(x=>x.trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/.*$/,"").replace(/^www\./,"")).filter(Boolean);
+}
+function extractLinks(message, update) {
+ const body=message.body||{};
+ const text=String(body.text||message.text||update.body?.text||update.text||"");
+ const urls=text.match(/(?:https?:\/\/|www\.)[^\s<>()]+/gi)||[];
+ const attachments=[...(Array.isArray(body.attachments)?body.attachments:[]),...(Array.isArray(message.attachments)?message.attachments:[])];
+ for(const item of attachments) {
+  const raw=JSON.stringify(item||{});
+  const found=raw.match(/https?:\\?\/\\?\/[^"\\\s<>]+/gi)||[];
+  urls.push(...found);
+ }
+ return [...new Set(urls.map(x=>x.replace(/[.,!?;:)\]}]+$/,"")))];
+}
+function isExternalLink(url) {
+ try {
+  const normalized=/^www\./i.test(url)?"https://"+url:url;
+  const host=new URL(normalized).hostname.toLowerCase().replace(/^www\./,"");
+  const allowed=allowedLinkHosts();
+  return !allowed.some(domain=>host===domain||host.endsWith("."+domain));
+ } catch { return false; }
+}
+async function moderateGroupLink({chatId,userId,messageId,message,update}) {
+ const links=extractLinks(message,update).filter(isExternalLink);
+ if(!links.length)return null;
+ if(!messageId)return {action:"link_detected_without_message_id"};
+ const token=process.env.MAX_BOT_TOKEN;
+ const deleted=await requestMax({token,method:"DELETE",apiPath:"/messages?message_id="+encodeURIComponent(String(messageId))});
+ if(!deleted.ok || deleted.data?.success===false) {
+  console.error("NORKA moderation message deletion failed:",deleted.status,String(deleted.raw||"").slice(0,300));
+  return {action:"link_delete_failed"};
+ }
+ const strikeKey="norka:moderation:strikes:"+chatId+":"+userId;
+ const strike=Number(await redis(["INCR",strikeKey]));
+ if(strike===1)await redis(["EXPIRE",strikeKey,"2592000"]);
+ if(strike>=3) {
+  const removed=await requestMax({token,method:"DELETE",apiPath:"/chats/"+encodeURIComponent(String(chatId))+"/members?user_id="+encodeURIComponent(String(userId))+"&block=true"});
+  if(!removed.ok || removed.data?.success===false) {
+   console.error("NORKA moderation removal failed:",removed.status,String(removed.raw||"").slice(0,300));
+   await send(chatId,"⛔ Ссылка удалена. Это третье нарушение правил публикации ссылок. Не удалось автоматически исключить участника — требуется администратор.");
+   return {action:"link_third_strike_remove_failed",strike};
+  }
+  await send(chatId,"⛔ Ссылка удалена. За третье нарушение участник исключён из чата. Блокировка от повторного входа зависит от типа чата MAX.");
+  return {action:"link_user_removed",strike};
+ }
+ const left=3-strike;
+ await send(chatId,"⚠️ В этом чате запрещены ссылки, не относящиеся к Норке. Ваше сообщение удалено. Предупреждение "+strike+"/3. Ещё "+left+" нарушение"+(left===1?" —":" —")+" и Норка исключит вас из чата.");
+ return {action:"link_warning",strike};
+}
+
 async function sendDiagnostic(text){try{await sendUser(adminUserId(),"🔧 Диагностика Норки\n"+text);}catch(error){console.warn("NORKA diagnostic DM failed:",error&&error.message||"unknown");}}
 function userIdFromUpdate(u){const m=u.message||{},cm=u.callback?.message||{},s=m.sender||m.from||cm.sender||cm.from||u.user||u.from||u.callback?.user||{};return clean(String(u.callback?.user?.user_id||u.callback?.user?.id||u.callback?.message?.recipient?.user_id||u.user?.user_id||u.user?.id||u.user_id||s.user_id||s.id||""),80);}
 async function grantLaunchReward(userId){
@@ -142,6 +195,20 @@ module.exports=async function handler(req,res){
     return json(res,200,{ok:true,ignored:true});
    }
    const adminId=adminUserId();
+   if(chatType==="chat" && userId!==adminId) {
+    const messageId=clean(String(m.body?.mid||m.mid||m.message_id||u.message_id||""),180);
+    try {
+     const moderation=await moderateGroupLink({chatId,userId,messageId,message:m,update:u});
+     if(moderation) {
+      console.info("NORKA group link moderation",JSON.stringify({action:moderation.action,strike:moderation.strike||null,hasMessageId:Boolean(messageId)}));
+      return json(res,200,{ok:true,...moderation});
+     }
+    } catch(error) {
+     console.error("NORKA group link moderation error:",error&&error.message||"unknown");
+     // If moderation storage or API is unavailable, stop normal assistant processing for this message.
+     return json(res,200,{ok:true,moderation_error:true});
+    }
+   }
    if(userId===adminId){
     const pendingTicket=await redis(["GET","norka:support:reply:"+adminId]);
     if(pendingTicket){
