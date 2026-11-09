@@ -66,7 +66,7 @@ module.exports=async function handler(req,res){
    const added=u.user||{};
    if(added.is_bot)return json(res,200,{ok:true,ignored:"bot_joined_group"});
    const name=clean([added.first_name,added.last_name].filter(Boolean).join(" ")||added.name||"",80);
-   await send(chatId,(name?"Привет, "+name+"! 👋":"Привет! 👋")+" Добро пожаловать в наше сообщество Норки! 🌿\n\nЯ здесь, чтобы поболтать и подсказать про ягоды 🍓, монеты 🪙, задания и розыгрыши 🎁. Если понадобится помощь — просто обратись ко мне по имени «Норка».");
+   await send(chatId,(name?"Привет, "+name+"! 👋":"Привет! 👋")+" Добро пожаловать в наше сообщество Норки! 🌿\n\nЯ здесь, чтобы поболтать и подсказать про ягоды 🍓, монеты 🪙, задания и розыгрыши 🎁. Можешь писать обычными сообщениями — не нужно звать меня по имени или использовать команды. Я сама подключусь к разговору, когда смогу быть полезна 🙂");
    return json(res,200,{ok:true,action:"group_member_welcomed"});
   }
   if(type==="bot_started"){
