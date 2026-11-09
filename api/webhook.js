@@ -219,6 +219,35 @@ module.exports=async function handler(req,res){
      return json(res,200,{ok:true,action:"private_wallet_balance_unavailable"});
     }
    }
+   if(privateDialog && /(поддержк|оператор|жалоб|обращени)/i.test(rawText)){
+    await sendUser(userId,"🛟 Нужна помощь поддержки? Нажми «Да», затем опиши ситуацию одним сообщением. Не отправляй пароли и коды подтверждения.",supportButtons());
+    return json(res,200,{ok:true,action:"private_support_confirmation"});
+   }
+   if(privateDialog && /(обмен|курс|конвертац|перевести.*ягод|сколько.*монет.*ягод)/i.test(rawText)){
+    let rate=100;
+    try{rate=Math.max(1,Math.floor(Number(await redis(["GET","norka:exchange-rate"]))||100));}catch(error){console.warn("NORKA private exchange rate unavailable:",error&&error.message||"unknown");}
+    const amountMatch=rawText.toLowerCase().replace(/ё/g,"е").match(/(\\d{1,9})\\s*(?:ягод|ягоды|ягоду)/);
+    let answer="🔄 Обмен находится в приложении в разделе «Обмен». Сейчас курс: "+rate+" ягод = 1 монета. Укажи количество ягод — приложение покажет итог до подтверждения. Обмениваются целые монеты, остаток ягод сохраняется.";
+    if(amountMatch){
+     const amount=Number(amountMatch[1]),coins=Math.floor(amount/rate),spent=coins*rate,remainder=amount-spent;
+     answer="🔄 По текущему курсу "+rate+" ягод = 1 монета. За "+amount.toLocaleString("ru-RU")+" ягод получится "+coins.toLocaleString("ru-RU")+" монет; спишется "+spent.toLocaleString("ru-RU")+" ягод"+(remainder?", останется "+remainder+" ягод":"")+". Подтвердить обмен можно в разделе «Обмен».";
+    }
+    await sendUser(userId,answer);
+    return json(res,200,{ok:true,action:"private_exchange_help"});
+   }
+   if(privateDialog && /(купить|покупк|пополн|оплат|платеж|платёж|yoomoney|юмани)/i.test(rawText)){
+    const failed=/(не приш|не зачисл|не поступ|списал|ошибк|не прош|завис)/i.test(rawText);
+    const answer=failed
+     ?"💳 Если деньги уже списались, но монеты не поступили, проверь раздел «Кошелёк» → историю операций. Не создавай повторный платёж. Нажми «поддержка» и приложи сумму, примерное время платежа и номер заказа, если он есть. Не присылай данные карты, пароли или коды."
+     :"💳 Купить монеты можно в приложении: «Кошелёк» → «Купить монеты». Выбери сумму от 100 до 2000 ₽ с шагом 100 ₽, создай платёж и оплати по ссылке YooMoney. После подтверждения оплаты монеты автоматически поступят в кошелёк. Ягоды напрямую не продаются — их можно заработать за задания или получить через обмен.";
+    await sendUser(userId,answer);
+    return json(res,200,{ok:true,action:"private_payment_help"});
+   }
+   if(privateDialog && /(ягод|заработ|ежеднев|задан)/i.test(rawText)){
+    await sendUser(userId,"🍓 Ягоды можно получать за ежедневный визит и доступные задания. Открой «Задания», проверь ежедневную награду и условия активностей. Баланс и историю начислений найдёшь в «Кошельке». Ягоды можно обменять на монеты в разделе «Обмен».");
+    return json(res,200,{ok:true,action:"private_berries_help"});
+   }
+
    const adminId=adminUserId();
    if(chatType==="chat" && userId!==adminId) {
     const messageId=clean(String(m.body?.mid||m.mid||m.message_id||u.message_id||""),180);
