@@ -32,6 +32,11 @@ const payment = fs.readFileSync("api/yoomoney/notify.js", "utf8");
 for (const marker of ["firstTopupBonusCoins", "first_topup_task", "norka:taskclaim:", "taskBonusCoins"]) if (!payment.includes(marker)) throw new Error("First top-up reward component is missing: " + marker);
 const webhook = fs.readFileSync("api/webhook.js", "utf8");
 if (!webhook.includes("grantLaunchReward") || !webhook.includes("bot_started")) throw new Error("Bot-start reward webhook is missing");
+const tracker = fs.readFileSync("api/track-user.js", "utf8");
+if (!tracker.includes('body:{text,format:"markdown"}') || !tracker.includes('max://user/')) throw new Error("Admin open-app alerts must contain clickable MAX user profile links");
+for (const marker of ["norka_support_yes", "norka_support_no", "norka_support_reply:", "awaiting_issue", "support:ticket:", "support_reply_sent", "Ответить клиенту", "sendUser(adminId", "sendUser(ticket.userId"]) if (!webhook.includes(marker)) throw new Error("Support conversation flow is missing: " + marker);
+if (!webhook.includes('format:"markdown"') || !webhook.includes("max://user/")) throw new Error("Support tickets must include a clickable MAX user profile link");
+
 if (!match[1].includes("Пополнить кошелёк") || !match[1].includes("1% монетами + 250 🍓")) throw new Error("First top-up task UI is missing");
 if (match[1].includes("confirm(")) throw new Error("Native browser confirmations must not block MAX admin actions");
 if (!api.includes("participantsRemoved") || !api.includes("backendVersion:NORKA_BACKEND_VERSION")) throw new Error("Giveaway deletion diagnostics are missing");
