@@ -49,7 +49,8 @@ module.exports=async function handler(req,res){
   }
   if(type==="message_callback"){
    const callback=u.callback||{},payload=clean(String(callback.payload||""),180),actorId=clean(String(callback.user?.user_id||callback.user?.id||callback.sender?.user_id||""),80);
-   // In a MAX dialog, message.recipient.chat_id is null; recipient.user_id identifies the DM target.\n   const callbackUserId=actorId||userIdFromUpdate(u);
+   // In a MAX dialog, message.recipient.chat_id is null; recipient.user_id identifies the DM target.
+   const callbackUserId=actorId||userIdFromUpdate(u);
    if(payload==="norka_support_yes"){
     const userId=callbackUserId;if(!userId)return json(res,200,{ok:true,ignored:"missing support user"});
     await redis(["SET","norka:support:state:"+userId,"awaiting_issue","EX","86400"]);
