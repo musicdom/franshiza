@@ -124,7 +124,22 @@ module.exports=async function handler(req,res){
    const m=u.message||{},sender=m.sender||m.from||{},rawText=clean(m.body&&m.body.text||m.text||u.body&&u.body.text||u.text,1500),text=rawText.toLowerCase(),userId=userIdFromUpdate(u);
    const recipient=m.recipient||{};
    const chatType=recipient.chat_type||m.chat_type||u.chat_type||"";
-   if(sender.is_bot||!chatId||!userId)return json(res,200,{ok:true,ignored:true});
+   console.info("NORKA incoming message",JSON.stringify({
+    updateType:type,
+    chatType:chatType||"missing",
+    hasChatId:Boolean(chatId),
+    hasUserId:Boolean(userId),
+    hasText:Boolean(rawText),
+    textLength:rawText.length,
+    senderIsBot:Boolean(sender.is_bot),
+    hasOpenAIKey:Boolean(process.env.OPENAI_API_KEY)
+   }));
+   if(sender.is_bot||!chatId||!userId){
+    console.warn("NORKA message ignored before routing",JSON.stringify({
+     senderIsBot:Boolean(sender.is_bot),hasChatId:Boolean(chatId),hasUserId:Boolean(userId)
+    }));
+    return json(res,200,{ok:true,ignored:true});
+   }
    const adminId=adminUserId();
    if(userId===adminId){
     const pendingTicket=await redis(["GET","norka:support:reply:"+adminId]);
@@ -163,9 +178,11 @@ module.exports=async function handler(req,res){
     return json(res,200,{ok:true,action:"support_confirmation"});
    }
    if(chatType==="chat"){
+    console.info("NORKA group route selected",JSON.stringify({hasChatId:Boolean(chatId),hasUserId:Boolean(userId)}));
     const botUsername=clean(process.env.MAX_BOT_USERNAME||"",80).replace(/^@/,"").toLowerCase();
     const lowerText=rawText.toLowerCase();
     const botMentioned=lowerText.includes("норка")||(botUsername&&lowerText.includes("@"+botUsername));
+    console.info("NORKA group assistant dispatch",JSON.stringify({botMentioned:Boolean(botMentioned),hasKnowledgeTopic:/ягод|монет|розыгр|розыгрыш|приз|обмен|курс|задан|ежеднев|баланс/i.test(rawText)}));
     const result=await handleGroupMessage({
      chatId,
      userId,
@@ -173,8 +190,10 @@ module.exports=async function handler(req,res){
      text:rawText,
      botMentioned:Boolean(botMentioned)
     });
+    console.info("NORKA group assistant result",JSON.stringify({handled:Boolean(result.handled),reason:result.reason||null,hasReply:Boolean(result.text)}));
     if(result.handled){
      await send(chatId,result.text);
+     console.info("NORKA group reply sent",JSON.stringify({hasChatId:Boolean(chatId)}));
      return json(res,200,{ok:true,action:"group_assistant_reply"});
     }
     return json(res,200,{ok:true,ignored:result.reason||"group_message_not_relevant"});
