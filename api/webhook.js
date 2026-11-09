@@ -62,6 +62,13 @@ module.exports=async function handler(req,res){
    if(String(current)===String(chatId))await redis(["DEL","norka:channel:chat_id"]);
    return json(res,200,{ok:true,action:"channel_id_removed"});
   }
+  if(type==="user_added" && !u.is_channel && chatId){
+   const added=u.user||{};
+   if(added.is_bot)return json(res,200,{ok:true,ignored:"bot_joined_group"});
+   const name=clean([added.first_name,added.last_name].filter(Boolean).join(" ")||added.name||"",80);
+   await send(chatId,(name?"Привет, "+name+"! 👋":"Привет! 👋")+" Добро пожаловать в наше сообщество Норки! 🌿\n\nЯ здесь, чтобы поболтать и подсказать про ягоды 🍓, монеты 🪙, задания и розыгрыши 🎁. Если понадобится помощь — просто обратись ко мне по имени «Норка».");
+   return json(res,200,{ok:true,action:"group_member_welcomed"});
+  }
   if(type==="bot_started"){
    if(!chatId)return json(res,200,{ok:true,ignored:"missing chat id"});
    const startedUser=u.user||u.from||u.message?.sender||{};
