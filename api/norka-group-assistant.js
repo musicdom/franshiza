@@ -168,7 +168,9 @@ async function handleGroupMessage({ chatId, userId, userName, text, botMentioned
   try {
     chronological = (await getHistory(safeChatId)).reverse();
     await saveHistory(safeChatId, "user", (clean(userName, 80) ? clean(userName, 80) + ": " : "") + safeText);
-    if (!(await allowed(safeChatId, safeUserId))) {
+    // A direct mention is an explicit request for Norka to answer.
+    // Do not let a previous group cooldown suppress that requested reply.
+    if (!botMentioned && !(await allowed(safeChatId, safeUserId))) {
       return { handled: false, reason: "rate_limited" };
     }
   } catch (error) {
