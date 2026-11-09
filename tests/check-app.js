@@ -31,6 +31,9 @@ if (!api.includes("Постоянное системное задание нел
 const payment = fs.readFileSync("api/yoomoney/notify.js", "utf8");
 for (const marker of ["firstTopupBonusCoins", "first_topup_task", "norka:taskclaim:", "taskBonusCoins"]) if (!payment.includes(marker)) throw new Error("First top-up reward component is missing: " + marker);
 const webhook = fs.readFileSync("api/webhook.js", "utf8");
+if (!webhook.includes('const { requestMax, sendMaxMessage } = require("../lib/max-api");')) throw new Error("Support direct messages must import requestMax");
+if (!webhook.includes("(u.message&&u.message.recipient&&u.message.recipient.chat_id)")) throw new Error("MAX callback chat ID must be read from the root message recipient");
+if (!webhook.includes('callbackEventKey=type==="message_callback"')) throw new Error("MAX button callbacks must use unique callback event deduplication keys");
 if (!webhook.includes("grantLaunchReward") || !webhook.includes("bot_started")) throw new Error("Bot-start reward webhook is missing");
 const tracker = fs.readFileSync("api/track-user.js", "utf8");
 if (!tracker.includes('body:{text,format:"markdown"}') || !tracker.includes('max://user/')) throw new Error("Admin open-app alerts must contain clickable MAX user profile links");
