@@ -24,7 +24,7 @@ function extractLinks(message, update) {
   const found=raw.match(/https?:\\?\/\\?\/[^"\\\s<>]+/gi)||[];
   urls.push(...found);
  }
- return [...new Set(urls.map(x=>x.replace(/[.,!?;:)\]}]+$/,"")))];
+ return [...new Set(urls.map(x=>x.replace(/\\\//g,"/").replace(/[.,!?;:)\]}]+$/,"")))];
 }
 function isExternalLink(url) {
  try {
@@ -49,7 +49,6 @@ async function moderateGroupLink({chatId,userId,messageId,message,update}) {
  }
  const strikeKey="norka:moderation:strikes:"+chatId+":"+userId;
  const strike=Number(await redis(["INCR",strikeKey]));
- if(strike===1)await redis(["EXPIRE",strikeKey,"2592000"]);
  if(strike>=3) {
   const removed=await requestMax({token,method:"DELETE",apiPath:"/chats/"+encodeURIComponent(String(chatId))+"/members?user_id="+encodeURIComponent(String(userId))+"&block=true"});
   if(!removed.ok || removed.data?.success===false) {
