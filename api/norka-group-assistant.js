@@ -70,7 +70,8 @@ function detectTopic(text) {
   if (/(розыгр|розыграш|розыгрыш|лотере|разыгрыв|приз|победител|участв|билет|номерок|номер розыгр|свободн мест|сколько мест|стоимость участия|какой приз|что разыгр|сейчас разыгр)/.test(value)) return "raffle";
   if (/(ежедневн|дейлик|каждый день|дневн|заходить каждый|ежедневная наград)/.test(value)) return "daily";
   if (/(задан|мисси|активност|подписк|выполнить|награду за|что сделать|как заработать)/.test(value)) return "tasks";
-  if (/(обмен|курс|конвертац|перевести яг|поменять яг|сколько ягод за|ягоды в монеты)/.test(value)) return "exchange";
+  if (/(обмен|курс|конвертац|перевести яг|поменять яг|сколько ягод за|ягоды в монеты|сколько монет за)/.test(value)) return "exchange";
+  if (/(купить|покупк|пополн|оплат|платеж|платёж|yoomoney|юмани)/.test(value)) return "payment";
   if (/(баланс|счет|остаток|кошелек|кошелёк|пропал|исчез|не пришл|не начисл|не добавил|не зачисл)/.test(value)) return "balance";
   if (/(монет|монетк|коин|coin)/.test(value)) return "coins";
   if (/(ягод|ягодк|клубник|малина|черник|начисл|заработ|получить наград|награда|вознагражден)/.test(value)) return "berries";
@@ -97,7 +98,7 @@ function hasKnowledgeTopic(text) {
   return Boolean(detectTopic(text));
 }
 
-function localAnswer(text, liveRaffles = null) {
+function localAnswer(text, liveRaffles = null, exchangeRate = 100) {
   const value = normalizeText(text);
   const topic = detectTopic(text);
   const app = "https://max.ru/se14711525_bot";
@@ -131,11 +132,20 @@ function localAnswer(text, liveRaffles = null) {
     return "🌱 В разделе «Задания» собраны способы получать ягоды: ежедневный визит, первое знакомство с ботом, подписка на канал и другие доступные активности. Открывай карточки и смотри актуальные условия и награды. Заглядывай туда почаще — не пропускай новые задания!";
   }
   if (topic === "daily") return "☀️ Ежедневный визит — простой способ пополнять запас ягод: заходи в Норку каждый день и забирай доступную награду. Проверь карточку ежедневного задания в разделе «Задания», чтобы увидеть текущий статус. Не забывай про ежедневный визит!";
-  if (topic === "coins") return "🪙 Монеты — валюта для участия в розыгрышах Норки. Пополнить их можно обменом ягод в разделе «Обмен». Перед подтверждением проверь текущий курс и стоимость участия в выбранном розыгрыше. Баланс монет находится в кошельке.";
-  if (topic === "exchange") return "🔄 Обмен находится в отдельном разделе приложения. Там отображается актуальный курс, доступное количество ягод и сколько монет получится после обмена. Проверь цифры перед подтверждением — курс берётся из настроек приложения и может меняться.";
-  if (topic === "berries") return "🍓 Ягоды — внутренняя игровая валюта Норки. Их можно получать за ежедневную активность и выполнение заданий, а затем обменивать на монеты. Заглядывай в «Задания», чтобы не пропускать способы заработать ягоды, и в «Обмен», чтобы посмотреть текущий курс.";
-  if (topic === "balance") return "📊 Личный баланс я не вижу из группового чата. Его можно проверить в приложении: ягоды — в соответствующем разделе, монеты — в кошельке. Там же доступна история операций. Если баланс изменился неправильно, напиши «поддержка» Норке в личном чате.";
-  if (topic === "wallet") return "👛 В кошельке отображается баланс монет и история операций. Если нужно больше монет для участия в розыгрышах, открой раздел «Обмен» и посмотри актуальный курс ягод к монетам. " + open;
+  if (topic === "coins") return "🪙 Монеты нужны для участия в розыгрышах Норки. Получить их можно двумя способами: обменять ягоды в разделе «Обмен» или купить в разделе «Кошелёк» → «Купить монеты». Баланс и история операций доступны в кошельке.";
+  if (topic === "exchange") {
+    const rate = Math.max(1, Math.floor(Number(exchangeRate) || 100));
+    const amountMatch = value.match(/(\\d{1,9})\\s*(?:ягод|ягоды|ягоду)/);
+    if (amountMatch && /(сколько|обмен|получ|конверт)/.test(value)) {
+      const amount = Number(amountMatch[1]), coins = Math.floor(amount / rate), spent = coins * rate, remainder = amount - spent;
+      return "🔄 По текущему курсу " + rate + " ягод = 1 монета. За " + amount.toLocaleString("ru-RU") + " ягод получится " + coins.toLocaleString("ru-RU") + " монет; спишется " + spent.toLocaleString("ru-RU") + " ягод" + (remainder ? ", останется " + remainder + " ягод" : "") + ". Обменяй их в разделе «Обмен» и проверь итог перед подтверждением.";
+    }
+    return "🔄 Сейчас курс обмена: " + rate + " ягод = 1 монета. Открой раздел «Обмен», укажи количество ягод и посмотри расчёт монет до подтверждения. Обмен выполняется целыми монетами; остаток ягод сохраняется.";
+  }
+  if (topic === "berries") return /(купить|покупк)/.test(value) ? "🍓 Ягоды напрямую не покупаются в платёжном разделе: их получают за ежедневную активность и доступные задания. Открой «Задания», забери ежедневную награду, а заработанные ягоды при желании обменяй на монеты в разделе «Обмен»." : "🍓 Ягоды — внутренняя игровая валюта Норки. Получай их за ежедневную активность и доступные задания, следи за начислениями в кошельке, а затем при желании обменивай на монеты. Начни с раздела «Задания».";
+  if (topic === "balance") return "📊 Личный баланс не публикую в общей группе — это приватные данные. Напиши мне в личный чат с ботом «баланс ягод» или «баланс монет», и я покажу актуальные цифры прямо из кошелька приложения. Там же можно открыть историю операций.";
+  if (topic === "payment") return "💳 Чтобы купить монеты: открой приложение Норки → «Кошелёк» → «Купить монеты», выбери сумму от 100 до 2000 ₽ с шагом 100 ₽ и создай платёж. Оплати по открывшейся ссылке YooMoney. После подтверждения платежа монеты автоматически поступят в кошелёк. Если платёж уже прошёл, а монеты не появились, проверь историю операций и напиши «поддержка» в личном чате. Ягоды за деньги не покупаются — их можно заработать в заданиях или получить через обмен."
+  if (topic === "wallet") return "👛 В кошельке видны актуальные балансы ягод и монет, а также история начислений и списаний. Здесь же можно перейти к покупке монет. Если хочешь обменять ягоды, открой отдельный раздел «Обмен» и посмотри текущий курс." + " " + open;
   if (topic === "levels" || topic === "achievements") return "🏅 В профиле Норки можно следить за XP, уровнем, серией активности и достижениями. Выполняй задания и возвращайся регулярно — так проще замечать свой прогресс. Открой раздел «Профиль» или «Достижения» в приложении.";
   if (topic === "wheel") return "🎡 Колесо находится в разделе «Обмен»/игровых возможностей приложения. Перед вращением внимательно проверь, какие условия и стоимость указаны на экране. " + open;
   if (topic === "leaderboard") return "🏆 Хочешь сравнить прогресс с другими? Загляни в рейтинг/таблицу лидеров приложения — там отображаются результаты участников. А заодно проверь профиль и достижения!";
@@ -278,6 +288,16 @@ function localConversationAnswer(text) {
   return null;
 }
 
+async function getCurrentExchangeRate() {
+  try {
+    const value = Number(await redis(["GET", "norka:exchange-rate"]));
+    return Number.isFinite(value) && value >= 1 ? Math.floor(value) : 100;
+  } catch (error) {
+    console.warn("NORKA exchange rate lookup failed:", error && error.message || "unknown");
+    return 100;
+  }
+}
+
 async function getActiveRaffles() {
   const items = await redis(["LRANGE", "norka:giveaways", "0", "99"]);
   if (!Array.isArray(items)) return [];
@@ -335,6 +355,8 @@ async function handleGroupMessage({ chatId, userId, userName, text, botMentioned
 
   const aiEnabled = process.env.NORKA_AI_ENABLED === "true" && Boolean(process.env.OPENAI_API_KEY);
   let liveRaffles = null;
+  let exchangeRate = 100;
+  if (detectTopic(safeText) === "exchange") exchangeRate = await getCurrentExchangeRate();
   if (detectTopic(safeText) === "raffle" || /норка/i.test(safeText)) {
     try { liveRaffles = await getActiveRaffles(); }
     catch (error) { console.warn("NORKA live raffle lookup failed:", error && error.message || "unknown"); }
@@ -342,7 +364,7 @@ async function handleGroupMessage({ chatId, userId, userName, text, botMentioned
   let answer = aiEnabled ? await aiAnswer(safeText + (liveRaffles ? "\n\nACTIVE_RAFFLES: " + JSON.stringify(liveRaffles) : ""), chronological, clean(userName, 80)) : null;
 
   if ((!answer || answer === "[[SILENT]]") && (hasKnowledgeTopic(safeText) || botMentioned)) {
-    answer = localAnswer(safeText, liveRaffles);
+    answer = localAnswer(safeText, liveRaffles, exchangeRate);
   }
   if (!answer && (!hasKnowledgeTopic(safeText) || botMentioned)) {
     answer = localConversationAnswer(safeText);
