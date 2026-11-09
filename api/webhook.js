@@ -45,7 +45,7 @@ module.exports=async function handler(req,res){
  const u=updates[0]||{};
  const type=u.update_type||u.type||root.update_type||root.type||"";
  const callback=u.callback||{};
- const callbackEventKey=type==="message_callback"?[callback.callback_id,callback.id,callback.timestamp,callback.user&&(callback.user.user_id||callback.user.id)].filter(Boolean).join(":"):"";
+ const callbackEventKey=type==="message_callback"?[callback.callback_id,callback.id,callback.timestamp].filter(Boolean).join(":"):"";
  const eventId=clean(String(u.update_id||u.updateId||u.event_id||callbackEventKey||(u.message&&u.message.body&&u.message.body.mid)||""),180);
  const dedupeKey=eventId?"norka:webhook:processed:"+eventId:"";
  const chatId=u.chat_id||(u.message&&u.message.recipient&&u.message.recipient.chat_id)||(u.callback&&u.callback.message&&u.callback.message.recipient&&u.callback.message.recipient.chat_id);
