@@ -768,7 +768,7 @@ module.exports=async function handler(req,res){
     const stage=async(name,fn)=>{const at=Date.now();try{return await fn();}finally{timings[name]=Date.now()-at;console.info("NORKA bootstrap stage",JSON.stringify({stage:name,durationMs:timings[name]}));}};
     let u=null,w={berries:0,coins:0},history=[],ts=[],gs=[],claims={},rate=100,progress={xp:0,level:1,streak:0,bestStreak:0,achievements:[]},rewards=[],community=null;
     try{const existing=Boolean(await stage("user_exists",()=>get(userKey(id))));u=await stage("user",()=>ensureUser(id,profile));u.lastOpenedAt=new Date().toISOString();await stage("last_opened_at",()=>set(userKey(id),u));if(!existing&&verified.startParam)await stage("referral_signup",()=>applyReferralSignup(id,verified.startParam));await stage("launch_task",()=>claimLaunchTask(id));await stage("sync_system_task_claims",()=>syncSystemTaskClaims(id));}catch(error){console.error("NORKA bootstrap user:",error&&error.message||"unknown");return json(res,503,{ok:false,error:"Не удалось загрузить профиль пользователя.",code:"BOOTSTRAP_USER_READ_FAILED",stage:"user",backendVersion:NORKA_BACKEND_VERSION});}
-    const runStage=async(name,fn,fallback)=>{try{return await stage(name,fn);}catch(error){console.error("NORKA bootstrap "+name+":",error&&error.message||"unknown");return fallback;}};
+    const degradedStages=[];const runStage=async(name,fn,fallback)=>{try{return await stage(name,fn);}catch(error){degradedStages.push(name);console.error("NORKA bootstrap "+name+":",error&&error.message||"unknown");return fallback;}};
     const [walletResult,historyResult,tasksResult,giveawaysResult,claimsResult,rateResult,progressResult,rewardsResult,communityResult]=await Promise.all([
      runStage("wallet",()=>readWallet(id),{berries:Number(u?.berries)||0,coins:Number(u?.coins)||0}),
      runStage("history",()=>list("norka:ledger:"+id),[]),
@@ -782,7 +782,7 @@ module.exports=async function handler(req,res){
     ]);
     w=walletResult;history=historyResult;ts=tasksResult;gs=giveawaysResult;claims=claimsResult;rate=rateResult;progress=progressResult;rewards=rewardsResult;community=communityResult;
     timings.total=Date.now()-started;console.info("NORKA bootstrap complete",JSON.stringify(timings));
-    return json(res,200,{ok:true,user:u,wallet:w,tasks:ts,giveaways:gs,history,claims,rate,progress,rewards,community,backendVersion:NORKA_BACKEND_VERSION,diagnostics:timings});
+    return json(res,200,{ok:true,user:u,wallet:w,tasks:ts,giveaways:gs,history,claims,rate,progress,rewards,community,backendVersion:NORKA_BACKEND_VERSION,diagnostics:timings,degradedStages});
    }
   await ensureUser(id,profile);
   if(action==="numbered_giveaway_state"){
