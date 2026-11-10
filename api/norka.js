@@ -1,6 +1,6 @@
 const { createHmac, timingSafeEqual, randomInt, randomBytes } = require("crypto");
 const { requestMax, sendMaxMessage, uploadMaxImage } = require("../lib/max-api");
-const NORKA_BACKEND_VERSION="norka-admin-users-last-opened-2026-11-09-v32";
+const NORKA_BACKEND_VERSION="norka-admin-user-history-2026-11-10-v33";
 
 function json(res,status,data){res.status(status).setHeader("Content-Type","application/json; charset=utf-8");res.setHeader("Cache-Control","no-store");res.end(JSON.stringify(data));}
 function cfg(){const kvUrl=process.env.KV_REST_API_URL,kvToken=process.env.KV_REST_API_TOKEN,upstashUrl=process.env.UPSTASH_REDIS_REST_URL,upstashToken=process.env.UPSTASH_REDIS_REST_TOKEN;if(kvUrl&&kvToken)return {url:kvUrl.replace(/\/$/,""),token:kvToken,source:"KV"};if(upstashUrl&&upstashToken)return {url:upstashUrl.replace(/\/$/,""),token:upstashToken,source:"UPSTASH"};if(kvUrl||kvToken||upstashUrl||upstashToken)throw new Error("Redis configuration is incomplete: URL and token must belong to the same provider");return null;}
@@ -383,6 +383,21 @@ module.exports=async function handler(req,res){
    if(!process.env.NORKA_ADMIN_PASSWORD)return json(res,503,{ok:false,error:"Не задан пароль админ-панели. Добавь NORKA_ADMIN_PASSWORD в переменные окружения backend и перезапусти функцию."});
    if(!(await admin(req)))return json(res,401,{ok:false,error:"Неверный пароль админ-панели. Проверь NORKA_ADMIN_PASSWORD."});
    if(action==="admin_auth")return json(res,200,{ok:true,authenticated:true});
+   if(action==="admin_user_history"){
+    const userId=clean(String(body.userId||""),80);
+    if(!/^\\d{1,80}$/.test(userId))return json(res,400,{ok:false,error:"Некорректный ID пользователя"});
+    const [rawUser,walletRaw,ledgerRaw,activityRaw,progress,claimsRaw]=await Promise.all([
+     redis(["GET","norka:user:"+userId]),redis(["HGETALL","norka:wallet:"+userId]),
+     redis(["LRANGE","norka:ledger:"+userId,"0","99"]),redis(["LRANGE","norka:activity:"+userId,"0","199"]),
+     get("norka:progress:"+userId),redis(["GET","norka:claims:"+userId])
+    ]);
+    let user={};try{user=rawUser?JSON.parse(rawUser):{};}catch{}
+    const pairs=Array.isArray(walletRaw)?walletRaw:[],wallet={berries:0,coins:0};
+    for(let i=0;i+1<pairs.length;i+=2)wallet[pairs[i]]=Number(pairs[i+1])||0;
+    const parseRows=rows=>(Array.isArray(rows)?rows:[]).map(raw=>{try{return JSON.parse(raw);}catch{return null;}}).filter(Boolean);
+    let claims={};try{claims=claimsRaw?JSON.parse(claimsRaw):{};}catch{}
+    return json(res,200,{ok:true,user:{userId:String(user.id||userId),name:clean(user.name,100)||"Участник Норки",avatar:/^https:\\/\\//i.test(String(user.avatar||""))?clean(user.avatar,500):"",createdAt:user.createdAt||null,lastOpenedAt:user.lastOpenedAt||null},wallet,ledger:parseRows(ledgerRaw),activity:parseRows(activityRaw),progress:progress||{},claims});
+   }
    if(action==="admin_users"){
     const started=Date.now(),keys=[];let cursor="0",pages=0;
     do{
