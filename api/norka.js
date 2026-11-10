@@ -336,6 +336,29 @@ async function markFullGiveawayDrawing(item){
  const script="local n=redis.call('LLEN',KEYS[1]); for i=0,n-1 do local raw=redis.call('LINDEX',KEYS[1],i); if raw then local g=cjson.decode(raw); if tostring(g.id)==ARGV[1] then local cap=tonumber(g.capacity) or 0; local sold=redis.call('SCARD',KEYS[2]); if g.status=='active' and cap>0 and sold==cap then g.status='drawing'; redis.call('LSET',KEYS[1],i,cjson.encode(g)); return 1 end; return 0 end end end; return 0";
  return Number(await redis(["EVAL",script,"2","norka:giveaways","norka:entries:"+item.id,String(item.id)]))===1;
 }
+async function processDailyReminders(){
+ const now=new Date(),keys=await redis(["KEYS","norka:user:*"]);let sentCount=0,scanned=0,notDue=0,claimed=0,alreadySent=0,failed=0;
+ for(const key of (Array.isArray(keys)?keys:[])){
+  if(!/^norka:user:[^:]+$/.test(String(key)))continue;
+  const raw=await redis(["GET",key]);if(!raw)continue;
+  let user;try{user=JSON.parse(raw)}catch{continue;}
+  const userId=key.slice(11);scanned++;
+  const timeZone=validTimeZone(user.timeZone)||"UTC";
+  const parts=new Intl.DateTimeFormat("en-US",{timeZone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(now);
+  const values=Object.fromEntries(parts.map(p=>[p.type,p.value]));
+  const day=values.year+"-"+values.month+"-"+values.day;
+  if(values.hour!=="10"||Number(values.minute)>=15){notDue++;continue;}
+  if(user.lastDaily===day||await redis(["GET","norka:daily:"+userId+":"+day])){claimed++;continue;}
+  const marker="norka:reminder:"+userId+":"+day;
+  if(await redis(["GET",marker])){alreadySent++;continue;}
+  try{
+   const result=await requestMax({token:process.env.MAX_BOT_TOKEN,method:"POST",apiPath:"/messages?user_id="+encodeURIComponent(userId),body:{text:"🍓 Тебе доступны ежедневные 10 ягод! Открой Норку и нажми «Забрать ягоды». Забирай награду и продолжай серию посещений."}});
+   if(result.ok){await redis(["SET",marker,"1","EX","172800"]);sentCount++;console.info("NORKA local-time daily reminder sent",JSON.stringify({userId,timeZone,day}));}
+   else{failed++;console.error("NORKA local-time daily reminder rejected",JSON.stringify({userId,timeZone,status:result.status}));}
+  }catch(error){failed++;console.error("NORKA local-time daily reminder failed",error&&error.message||"unknown");}
+ }
+ return {scanned,sent:sentCount,notDue,claimed,alreadySent,failed};
+}
 async function processGiveawayLifecycle(){
  const items=await list("norka:giveaways");
  for(let item of items){
@@ -381,7 +404,7 @@ module.exports=async function handler(req,res){
  if(!["GET","POST"].includes(req.method))return json(res,405,{ok:false,error:"Method not allowed"});
  try{
   const body=req.body&&typeof req.body==="object"?req.body:{};const action=clean(req.method==="GET"?req.query?.action:body.action,60);
-  if(action==="norka_process_giveaway_lifecycle"){const expected=process.env.NORKA_CRON_SECRET,supplied=String(req.headers["x-norka-cron"]||body.cronSecret||"");if(!expected)return json(res,503,{ok:false,error:"Не задан NORKA_CRON_SECRET"});const a=Buffer.from(supplied),b=Buffer.from(expected);if(a.length!==b.length||!timingSafeEqual(a,b))return json(res,401,{ok:false,error:"Доступ к обработчику розыгрышей запрещён"});await processGiveawayLifecycle();return json(res,200,{ok:true,processed:true,backendVersion:NORKA_BACKEND_VERSION});}
+  if(action==="norka_process_giveaway_lifecycle"){const expected=process.env.NORKA_CRON_SECRET,supplied=String(req.headers["x-norka-cron"]||body.cronSecret||"");if(!expected)return json(res,503,{ok:false,error:"Не задан NORKA_CRON_SECRET"});const a=Buffer.from(supplied),b=Buffer.from(expected);if(a.length!==b.length||!timingSafeEqual(a,b))return json(res,401,{ok:false,error:"Доступ к обработчику розыгрышей запрещён"});const dailyReminders=await processDailyReminders();await processGiveawayLifecycle();return json(res,200,{ok:true,processed:true,dailyReminders,backendVersion:NORKA_BACKEND_VERSION});}
    if(action.startsWith("admin_")){
    if(!process.env.NORKA_ADMIN_PASSWORD)return json(res,503,{ok:false,error:"Не задан пароль админ-панели. Добавь NORKA_ADMIN_PASSWORD в переменные окружения backend и перезапусти функцию."});
    if(!(await admin(req)))return json(res,401,{ok:false,error:"Неверный пароль админ-панели. Проверь NORKA_ADMIN_PASSWORD."});
