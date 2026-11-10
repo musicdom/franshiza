@@ -597,10 +597,18 @@ module.exports=async function handler(req,res){
     if(action==="admin_setup_channel_tracking"){
     const token=process.env.MAX_BOT_TOKEN,secret=process.env.MAX_WEBHOOK_SECRET;
     if(!token||!secret)return json(res,503,{ok:false,error:"Не настроены MAX_BOT_TOKEN или MAX_WEBHOOK_SECRET"});
-    const webhookUrl=process.env.NORKA_WEBHOOK_URL||"https://franshiza.vercel.app/api/webhook";
-    const r=await requestMax({token,method:"POST",apiPath:"/subscriptions",body:{url:webhookUrl,update_types:["bot_added","bot_removed","bot_started","message_created","user_added","user_removed"],secret}});
-    if(!r.ok)return json(res,502,{ok:false,error:"MAX не принял подписку на события",details:r.data||r.raw});
-    return json(res,200,{ok:true,message:"Подписка на события MAX обновлена",webhookUrl});
+    const webhookUrl="https://functions.yandexcloud.net/d4erur78tndi5tkkafn0?route=webhook";
+    const current=await requestMax({token,method:"GET",apiPath:"/subscriptions"});
+    if(!current.ok)return json(res,502,{ok:false,error:"Не удалось проверить текущие webhook-подписки MAX",status:current.status,details:current.data||current.raw});
+    const r=await requestMax({token,method:"POST",apiPath:"/subscriptions",body:{url:webhookUrl,update_types:["bot_added","bot_removed","bot_started","message_created","message_callback","user_added","user_removed"],secret}});
+    if(!r.ok||r.data?.success===false)return json(res,502,{ok:false,error:"MAX не принял подписку на Yandex Cloud webhook",status:r.status,details:r.data||r.raw});
+    const oldUrls=(Array.isArray(current.data?.subscriptions)?current.data.subscriptions:[]).map(item=>String(item.url||"")).filter(url=>url!==webhookUrl&&/^https:\/\/[^/]+\.vercel\.app\/api\/webhook(?:\?.*)?$/i.test(url));
+    const removed=[],failed=[];
+    for(const url of oldUrls){
+      const del=await requestMax({token,method:"DELETE",apiPath:"/subscriptions?url="+encodeURIComponent(url)});
+      if(del.ok&&del.data?.success!==false)removed.push(url);else failed.push({url,status:del.status,message:del.data?.message||del.raw||"Не удалось удалить"});
+    }
+    return json(res,200,{ok:true,message:"Webhook переведён на Yandex Cloud",webhookUrl,removedOldVercelWebhooks:removed,failedToRemove:failed});
    }
    if(action==="admin_overview"){const started=Date.now();const [pending,rateRaw,channelId,giveawayItems,taskItems,config]=await Promise.all([list("norka:pending"),redis(["GET","norka:exchange-rate"]),redis(["GET","norka:channel:chat_id"]),giveaways(),tasks(),progressConfig()]);return json(res,200,{ok:true,backendVersion:NORKA_BACKEND_VERSION,pending,giveaways:giveawayItems,tasks:taskItems,rate:Number(rateRaw)||100,channelId:channelId||"",progressConfig:config,loadTimeMs:Date.now()-started});}
    if(action==="admin_progress_config"){return json(res,200,{ok:true,config:await progressConfig()});}
