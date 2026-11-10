@@ -385,7 +385,7 @@ module.exports=async function handler(req,res){
    if(action==="admin_auth")return json(res,200,{ok:true,authenticated:true});
    if(action==="admin_user_history"){
     const userId=clean(String(body.userId||""),80);
-    if(!/^\\d{1,80}$/.test(userId))return json(res,400,{ok:false,error:"Некорректный ID пользователя"});
+    if(!/^\d{1,80}$/.test(userId))return json(res,400,{ok:false,error:"Некорректный ID пользователя"});
     const [rawUser,walletRaw,ledgerRaw,activityRaw,progress,claimsRaw]=await Promise.all([
      redis(["GET","norka:user:"+userId]),redis(["HGETALL","norka:wallet:"+userId]),
      redis(["LRANGE","norka:ledger:"+userId,"0","99"]),redis(["LRANGE","norka:activity:"+userId,"0","199"]),
@@ -396,7 +396,7 @@ module.exports=async function handler(req,res){
     for(let i=0;i+1<pairs.length;i+=2)wallet[pairs[i]]=Number(pairs[i+1])||0;
     const parseRows=rows=>(Array.isArray(rows)?rows:[]).map(raw=>{try{return JSON.parse(raw);}catch{return null;}}).filter(Boolean);
     let claims={};try{claims=claimsRaw?JSON.parse(claimsRaw):{};}catch{}
-    return json(res,200,{ok:true,user:{userId:String(user.id||userId),name:clean(user.name,100)||"Участник Норки",avatar:/^https:\\/\\//i.test(String(user.avatar||""))?clean(user.avatar,500):"",createdAt:user.createdAt||null,lastOpenedAt:user.lastOpenedAt||null},wallet,ledger:parseRows(ledgerRaw),activity:parseRows(activityRaw),progress:progress||{},claims});
+    return json(res,200,{ok:true,user:{userId:String(user.id||userId),name:clean(user.name,100)||"Участник Норки",avatar:/^https:\/\//i.test(String(user.avatar||""))?clean(user.avatar,500):"",createdAt:user.createdAt||null,lastOpenedAt:user.lastOpenedAt||null},wallet,ledger:parseRows(ledgerRaw),activity:parseRows(activityRaw),progress:progress||{},claims});
    }
    if(action==="admin_users"){
     const started=Date.now(),keys=[];let cursor="0",pages=0;
