@@ -8,6 +8,8 @@ async function redis(parts){const c=cfg();if(!c)throw new Error("Redis is not co
 async function get(key){const v=await redis(["GET",key]);if(!v)return null;try{return JSON.parse(v);}catch{return v;}}
 async function set(key,value){return redis(["SET",key,JSON.stringify(value)]);}
 function clean(v,n=160){return typeof v==="string"?v.trim().slice(0,n):"";}
+function validTimeZone(value){const zone=clean(value,80);if(!zone)return "";try{new Intl.DateTimeFormat("en-US",{timeZone:zone}).format(new Date());return zone;}catch{return "";}}
+function localDateKey(date=new Date(),timeZone="UTC"){const parts=new Intl.DateTimeFormat("en-CA",{timeZone,year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(date);const v=Object.fromEntries(parts.map(p=>[p.type,p.value]));return v.year+"-"+v.month+"-"+v.day;}
 function verifyInitData(req){
  const raw=String(req.headers["x-norka-initdata"]||req.body?.initData||"");
  const token=process.env.MAX_BOT_TOKEN;
@@ -36,6 +38,7 @@ async function ensureUser(id,profile={}){
  const name=clean(profile.name,100),avatar=clean(profile.avatar,500);
  if(name&&u.name!==name){u.name=name;changed=true;}
  if(avatar&&u.avatar!==avatar){u.avatar=avatar;changed=true;}
+ const timeZone=validTimeZone(profile.timeZone);if(timeZone&&u.timeZone!==timeZone){u.timeZone=timeZone;changed=true;}
  let mapped=u.referralCode?String(await redis(["GET","norka:referral:code:"+u.referralCode])||""):"";
  if(!u.referralCode||mapped&&mapped!==String(id)){
   u.referralCode="";
@@ -396,7 +399,7 @@ module.exports=async function handler(req,res){
     for(let i=0;i+1<pairs.length;i+=2)wallet[pairs[i]]=Number(pairs[i+1])||0;
     const parseRows=rows=>(Array.isArray(rows)?rows:[]).map(raw=>{try{return JSON.parse(raw);}catch{return null;}}).filter(Boolean);
     let claims={};try{claims=claimsRaw?JSON.parse(claimsRaw):{};}catch{}
-    return json(res,200,{ok:true,user:{userId:String(user.id||userId),name:clean(user.name,100)||"Участник Норки",avatar:/^https:\/\//i.test(String(user.avatar||""))?clean(user.avatar,500):"",createdAt:user.createdAt||null,lastOpenedAt:user.lastOpenedAt||null},wallet,ledger:parseRows(ledgerRaw),activity:parseRows(activityRaw),progress:progress||{},claims});
+    return json(res,200,{ok:true,user:{userId:String(user.id||userId),name:clean(user.name,100)||"Участник Норки",avatar:/^https:\/\//i.test(String(user.avatar||""))?clean(user.avatar,500):"",createdAt:user.createdAt||null,lastOpenedAt:user.lastOpenedAt||null,timeZone:validTimeZone(user.timeZone)||"UTC"},wallet,ledger:parseRows(ledgerRaw),activity:parseRows(activityRaw),progress:progress||{},claims});
    }
    if(action==="admin_users"){
     const started=Date.now(),keys=[];let cursor="0",pages=0;
@@ -709,7 +712,7 @@ module.exports=async function handler(req,res){
    return json(res,400,{ok:false,error:"Неизвестное действие"});
   }
   const verified=verifyInitData(req);if(!verified)return json(res,401,{ok:false,error:"Не удалось проверить данные MAX. Перезапусти мини-приложение."});
-  const id=verified.id;const profile=verified.profile;
+  const id=verified.id;const profile={...verified.profile,timeZone:validTimeZone(body.profile?.timeZone||body.timeZone)||undefined};
   if(action==="auth_check"){
    const pong=await redis(["PING"]);
    const existingUser=Boolean(await get(userKey(id)));
@@ -760,7 +763,7 @@ module.exports=async function handler(req,res){
    return json(res,200,{ok:true,giveawayId,status:item.status,entries:entries.length,capacity:Number(item.capacity)||0,soldNumbers:entries.map(x=>x.number),userNumbers});
   }
   if(action==="daily_claim"){
-   const day=new Date().toISOString().slice(0,10),t=(await tasks()).find(x=>x.type==="daily"&&x.active);
+   const currentUser=await get(userKey(id));const timeZone=validTimeZone(currentUser?.timeZone)||"UTC";const day=localDateKey(new Date(),timeZone),t=(await tasks()).find(x=>x.type==="daily"&&x.active);
    const reward=t?Math.max(0,Math.floor(Number(t.reward)||0)):10,now=new Date().toISOString();
    const ledgerItem=JSON.stringify({type:"daily",title:"Ежедневная награда",berries:reward,at:now});
    const script=[
