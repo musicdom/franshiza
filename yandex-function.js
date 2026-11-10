@@ -20,6 +20,7 @@ function response(statusCode, body, headers = {}) {
 function getRoute(event, query) {
   const explicit = String(query.route || "").trim().toLowerCase();
   if (explicit) return explicit.replace(/^\/+|\/+$/g, "").replace(/\.js$/, "");
+  if (Array.isArray(event.messages) && event.messages.length) return "norka";
   const requestPath = String(event.path || event.rawPath || event.url || "").split("?")[0];
   const last = requestPath.split("/").filter(Boolean).pop() || "health";
   const normalized = last.toLowerCase().replace(/\.js$/, "");
@@ -102,7 +103,9 @@ exports.handler = async function (event) {
     headers[String(key).toLowerCase()] = value;
   }
 
+  const timerMessage = Array.isArray(event.messages) ? event.messages[0] : null;
   let rawBody = event.body;
+  if ((rawBody == null || rawBody === "") && timerMessage?.details?.payload) rawBody = timerMessage.details.payload;
   if (event.isBase64Encoded && typeof rawBody === "string") {
     rawBody = Buffer.from(rawBody, "base64").toString("utf8");
   }
@@ -117,7 +120,7 @@ exports.handler = async function (event) {
   }
 
   const req = {
-    method: String(event.httpMethod || event.requestContext?.httpMethod || "GET").toUpperCase(),
+    method: String(event.httpMethod || event.requestContext?.httpMethod || (timerMessage ? "POST" : "GET")).toUpperCase(),
     headers,
     query,
     body
