@@ -52,7 +52,14 @@ module.exports=async function handler(req,res){
  if(!adminId)return json(res,503,{ok:false,error:"Администратор не привязан к боту."});
  try{
   let returning=false;
-  try{if(identified&&getRedisConfig()){const key="norka:user:tracked:"+id;returning=Boolean(await redis(["GET",key]));await redis(["SET",key,JSON.stringify({id,name,username:username||null,last_opened_at:new Date().toISOString()}),"EX","31536000"]);}}catch(error){console.error("TRACK USER storage warning:",error.message);}
+  const openedAt=new Date().toISOString();
+  try{if(identified&&getRedisConfig()){
+   const key="norka:user:tracked:"+id;returning=Boolean(await redis(["GET",key]));
+   await redis(["SET",key,JSON.stringify({id,name,username:username||null,last_opened_at:openedAt}),"EX","31536000"]);
+   const event={type:"app_open",title:returning?"Повторное открытие мини-приложения":"Первое открытие мини-приложения",at:openedAt,platform,version,language};
+   await redis(["LPUSH","norka:activity:"+id,JSON.stringify(event)]);
+   await redis(["LTRIM","norka:activity:"+id,"0","199"]);
+  }}catch(error){console.error("TRACK USER storage warning:",error.message);}
   const profile="[Открыть профиль](max://user/"+encodeURIComponent(id)+")";
   const text=[
    returning?"🔄 Повторное открытие мини-приложения «Норка»":"🌿 Пользователь открыл мини-приложение «Норка»",
