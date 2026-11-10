@@ -72,19 +72,20 @@ module.exports = async function handler(req, res) {
     return json(res, 401, { ok: false, error: "Unauthorized" });
   }
 
-  const webhookUrl = String(process.env.MAX_WEBHOOK_URL || "").trim();
-  if (!/^https:\/\//i.test(webhookUrl)) {
-    return json(res, 503, { ok: false, error: "Set MAX_WEBHOOK_URL to the full HTTPS URL of the Yandex Cloud webhook function, including ?route=webhook" });
-  }
+  const webhookUrl = "https://functions.yandexcloud.net/d4erur78tndi5tkkafn0?route=webhook";
 
   try {
+    const current = await requestMax({ token, method: "GET", apiPath: "/subscriptions" });
+    if (!current.ok) {
+      return json(res, 502, { ok: false, error: "Could not inspect existing MAX webhook subscriptions", status: current.status });
+    }
     const response = await requestMax({
       token,
       method: "POST",
       apiPath: "/subscriptions",
       body: {
         url: webhookUrl,
-        update_types: ["bot_added", "bot_removed", "bot_started", "user_added", "message_created", "message_callback"],
+        update_types: ["bot_added", "bot_removed", "bot_started", "user_added", "user_removed", "message_created", "message_callback"],
         secret
       }
     });
@@ -93,7 +94,17 @@ module.exports = async function handler(req, res) {
       const maxError = response.data && (response.data.message || response.data.error || response.data.code) ? String(response.data.message || response.data.error || response.data.code).slice(0, 500) : "";
       return json(res, 502, { ok: false, error: "MAX rejected webhook subscription", status: response.status, max_error: maxError || undefined });
     }
-    return json(res, 200, { ok: true, webhook_url: webhookUrl, result: response.data });
+    const oldUrls = (Array.isArray(current.data?.subscriptions) ? current.data.subscriptions : [])
+      .map(item => String(item.url || ""))
+      .filter(url => url !== webhookUrl && /^https:\/\/[^/]+\.vercel\.app\/api\/webhook(?:\?.*)?$/i.test(url));
+    const removed = [];
+    const failed = [];
+    for (const url of oldUrls) {
+      const result = await requestMax({ token, method: "DELETE", apiPath: "/subscriptions?url=" + encodeURIComponent(url) });
+      if (result.ok && result.data?.success !== false) removed.push(url);
+      else failed.push({ url, status: result.status });
+    }
+    return json(res, 200, { ok: true, webhook_url: webhookUrl, removed_old_vercel_webhooks: removed, failed_to_remove: failed, result: response.data });
   } catch (error) {
     const causeCode = error && error.cause && error.cause.code ? error.cause.code : "";
     const errorName = error && error.name ? error.name : "UnknownError";
