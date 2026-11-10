@@ -608,7 +608,8 @@ module.exports=async function handler(req,res){
       const del=await requestMax({token,method:"DELETE",apiPath:"/subscriptions?url="+encodeURIComponent(url)});
       if(del.ok&&del.data?.success!==false)removed.push(url);else failed.push({url,status:del.status,message:del.data?.message||del.raw||"Не удалось удалить"});
     }
-    return json(res,200,{ok:true,message:"Webhook переведён на Yandex Cloud",webhookUrl,removedOldVercelWebhooks:removed,failedToRemove:failed});
+    if(failed.length)return json(res,502,{ok:false,error:"Yandex Cloud webhook подключён, но старую Vercel-подписку удалить не удалось",webhookUrl,removedOldVercelWebhooks:removed,failedToRemove:failed});
+    return json(res,200,{ok:true,message:"Webhook переведён на Yandex Cloud",webhookUrl,removedOldVercelWebhooks:removed,failedToRemove:[]});
    }
    if(action==="admin_overview"){const started=Date.now();const [pending,rateRaw,channelId,giveawayItems,taskItems,config]=await Promise.all([list("norka:pending"),redis(["GET","norka:exchange-rate"]),redis(["GET","norka:channel:chat_id"]),giveaways(),tasks(),progressConfig()]);return json(res,200,{ok:true,backendVersion:NORKA_BACKEND_VERSION,pending,giveaways:giveawayItems,tasks:taskItems,rate:Number(rateRaw)||100,channelId:channelId||"",progressConfig:config,loadTimeMs:Date.now()-started});}
    if(action==="admin_progress_config"){return json(res,200,{ok:true,config:await progressConfig()});}
