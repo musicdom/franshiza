@@ -63,6 +63,7 @@ module.exports=async function handler(req,res){
   const profile="[Открыть профиль](max://user/"+encodeURIComponent(id)+")";
   const text=[
    returning?"🔄 Повторное открытие мини-приложения «Норка»":"🌿 Пользователь открыл мини-приложение «Норка»",
+   "☁️ Передал Яндекс Cloud",
    "","👤 Имя: ["+name.replace(/[\[\]\\]/g,"")+"](max://user/"+encodeURIComponent(id)+")","🆔 ID: "+escapeText(id),"🔗 Профиль: "+profile,
    "📛 "+(username?"@"+escapeText(username.replace(/^@/,"")):"username отсутствует"),
    "🌐 Язык: "+escapeText(language||"не передан"),
@@ -81,7 +82,7 @@ module.exports=async function handler(req,res){
    if(![429,500,502,503,504].includes(Number(sent.status))||attempt===3)break;
    await new Promise(resolve=>setTimeout(resolve,attempt*350));
   }
-  if(!sent?.ok){console.error("TRACK USER MAX send failed:",sent?.status);return json(res,502,{ok:false,error:"MAX не принял уведомление после повторных попыток.",status:sent?.status||0});}
+  if(!sent?.ok){const maxError=clean(sent?.raw||JSON.stringify(sent?.data||{}),240);console.error("TRACK USER MAX send failed:",sent?.status,maxError);return json(res,502,{ok:false,error:"MAX не принял уведомление после повторных попыток.",status:sent?.status||0,detail:maxError});}
   return json(res,200,{ok:true,returning});
- }catch(error){console.error("TRACK USER failed:",error&&error.message?error.message:"unknown error");return json(res,500,{ok:false,error:"Не удалось отправить уведомление."});}
+ }catch(error){const detail=clean(error&&error.message?error.message:"unknown error",240);console.error("TRACK USER failed:",detail);return json(res,500,{ok:false,error:"Не удалось отправить уведомление.",detail});}
 };
