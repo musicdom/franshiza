@@ -712,7 +712,7 @@ module.exports=async function handler(req,res){
    return json(res,400,{ok:false,error:"Неизвестное действие"});
   }
   const verified=verifyInitData(req);if(!verified)return json(res,401,{ok:false,error:"Не удалось проверить данные MAX. Перезапусти мини-приложение."});
-  const id=verified.id;const profile={...verified.profile,timeZone:validTimeZone(body.profile?.timeZone||body.timeZone)||undefined};
+  const id=verified.id;const profile={...verified.profile,timeZone:validTimeZone(body.profile?.timeZone||body.timeZone||req.query?.timeZone)||undefined};
   if(action==="auth_check"){
    const pong=await redis(["PING"]);
    const existingUser=Boolean(await get(userKey(id)));
