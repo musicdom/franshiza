@@ -74,8 +74,14 @@ module.exports=async function handler(req,res){
    "🌍 IP из WebApp: "+escapeText(ip||"не передан"),"🗂 Поля initData: "+escapeText(webappFields.join(", ")),
    "🕐 Время события: "+new Date().toLocaleString("ru-RU",{timeZone:"Europe/Moscow"})
   ].join("\n");
-  const sent=await requestMax({token,method:"POST",apiPath:"/messages?"+recipientParam+"="+encodeURIComponent(adminId),body:{text,format:"markdown"}});
-  if(!sent.ok){console.error("TRACK USER MAX send failed:",sent.status);return json(res,502,{ok:false,error:"MAX не принял уведомление.",status:sent.status});}
+  let sent=null;
+  for(let attempt=1;attempt<=3;attempt++){
+   sent=await requestMax({token,method:"POST",apiPath:"/messages?"+recipientParam+"="+encodeURIComponent(adminId),body:{text,format:"markdown"}});
+   if(sent.ok)break;
+   if(![429,500,502,503,504].includes(Number(sent.status))||attempt===3)break;
+   await new Promise(resolve=>setTimeout(resolve,attempt*350));
+  }
+  if(!sent?.ok){console.error("TRACK USER MAX send failed:",sent?.status);return json(res,502,{ok:false,error:"MAX не принял уведомление после повторных попыток.",status:sent?.status||0});}
   return json(res,200,{ok:true,returning});
  }catch(error){console.error("TRACK USER failed:",error&&error.message?error.message:"unknown error");return json(res,500,{ok:false,error:"Не удалось отправить уведомление."});}
 };
