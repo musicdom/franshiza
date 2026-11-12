@@ -949,6 +949,17 @@ body.onboarding-open{overflow:hidden}
 .giveaway-confirm-wallet{width:100%;margin-top:8px}
 .giveaway-confirm-cancel{display:block;width:100%;padding:12px;margin-top:8px;border:0;background:transparent;color:#b9c6ca;font-size:12px;font-weight:750}
 body.giveaway-modal-open{overflow:hidden}
+
+.exchange-confirm-modal[hidden]{display:none}
+.exchange-confirm-modal{position:fixed;z-index:36;inset:0;display:grid;place-items:center;padding:18px;background:#020c10d9;backdrop-filter:blur(10px)}
+.exchange-confirm-card{width:min(100%,390px);padding:22px;border:1px solid #55d8c555;border-radius:22px;background:linear-gradient(155deg,#173d3d,#172b3a);box-shadow:0 24px 70px #0009}
+.exchange-confirm-kicker{color:#86e6d7;font-size:9px;font-weight:900;letter-spacing:1.4px}
+.exchange-confirm-card h2{font-size:20px;margin:9px 0 16px}
+.exchange-confirm-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #ffffff18;font-size:12px}
+.exchange-confirm-row strong{font-size:13px;text-align:right}
+.exchange-confirm-receive{color:#f4d27c!important;font-size:19px!important}
+.exchange-confirm-card>p{min-height:34px;margin:13px 0 8px;color:#c1d8dd;font-size:11px;line-height:1.5}
+.exchange-confirm-cancel{display:block;width:100%;padding:12px;margin-top:7px;border:0;background:transparent;color:#b9c6ca;font-size:12px;font-weight:750}
 </style></head><body class="splash-open"><div class="norka-splash" id="norkaSplash" role="status" aria-live="polite"><div class="splash-inner"><div class="splash-brand">НОРКА</div><div class="splash-art"><img class="splash-mascot" src="Image/Загрузка норка.png" alt="Норка с корзинкой ягод"><img class="splash-berry strawberry" src="Image/Клубника загрузка.png" alt=""><img class="splash-berry raspberry" src="Image/Малина загрузка .png" alt=""><img class="splash-berry blueberry" src="Image/Черника загрузка .png" alt=""></div><div class="splash-caption" id="splashCaption">Норка собирает твои ягодки…</div><div class="splash-subcaption">Подготавливаем твой уютный уголок</div><div class="splash-progress" aria-hidden="true"><i></i></div><div class="splash-error" id="splashError"></div><button class="splash-retry" id="splashRetry" type="button">Повторить загрузку</button></div></div><style>
 
 :root{color-scheme:dark;--bg:#071b20;--bg2:#0b252c;--panel:#102a32;--panel2:#142f38;--text:#f3f8fa;--muted:#9bb1b9;--teal:#42e0cf;--teal2:#19b8b4;--violet:#9b79ff;--berry:#ff5e9b;--gold:#f4c96b;--line:#b7e5e522;--shadow:0 18px 44px #020b10a8}
@@ -1872,6 +1883,19 @@ body{
  </div>
 </div></section>
 <section class="view collection-view" id="collection"><button class="screen-back" type="button" data-tab="profile" aria-label="Вернуться в профиль">← Профиль</button><div class="achievements-heading"><span>ТВОЙ ПУТЬ В НОРКЕ</span><h1>Достижения</h1><p>Награды за активность, серии посещений и участие в жизни Норки.</p><div class="achievement-progress"><div><small>ОТКРЫТО</small><strong id="achievementCount">0 из 11</strong></div><div><small>УРОВЕНЬ</small><strong id="collectionLevel">1</strong></div><div><small>ЛУЧШАЯ СЕРИЯ</small><strong id="collectionBestStreak">0 дней</strong></div></div><small id="collectionXp">0 XP</small></div><div class="achievement-gallery-heading"><h2>Твои достижения</h2><span id="collectionLockedCount">Осталось открыть: 11</span></div><div id="achievementList" class="achievement-gallery"></div></section></main><div class="footer">НОРКА</div></div>
+<section class="exchange-confirm-modal" id="exchangeConfirmModal" role="dialog" aria-modal="true" aria-labelledby="exchangeConfirmTitle" hidden>
+ <div class="exchange-confirm-card">
+  <div class="exchange-confirm-kicker">ПРОВЕРЬ ПЕРЕД ОБМЕНОМ</div>
+  <h2 id="exchangeConfirmTitle">Обмен ягод на монеты</h2>
+  <div class="exchange-confirm-row"><span>Курс</span><strong id="exchangeConfirmRate">100 ягод = 1 монета</strong></div>
+  <div class="exchange-confirm-row"><span>Будет списано</span><strong id="exchangeConfirmSpent">0 ягод</strong></div>
+  <div class="exchange-confirm-row"><span>Получишь</span><strong class="exchange-confirm-receive" id="exchangeConfirmCoins">0 монет</strong></div>
+  <div class="exchange-confirm-row"><span>Останется ягод</span><strong id="exchangeConfirmRemaining">0 ягод</strong></div>
+  <p id="exchangeConfirmNote" aria-live="polite">Ягоды будут списаны только после подтверждения сервером.</p>
+  <button type="button" class="primary" id="exchangeConfirmBtn">Подтвердить обмен</button>
+  <button type="button" class="exchange-confirm-cancel" id="exchangeConfirmCancel">Отмена</button>
+ </div>
+</section>
 <section class="giveaway-confirm-modal" id="giveawayConfirmModal" role="dialog" aria-modal="true" aria-labelledby="giveawayConfirmTitle" aria-describedby="giveawayConfirmDescription" hidden>
  <div class="giveaway-confirm-card">
   <div class="giveaway-confirm-kicker">ПОДТВЕРЖДЕНИЕ УЧАСТИЯ</div>
@@ -1900,7 +1924,7 @@ body{
 <script>
 const API="https://franshiza.vercel.app/api", YANDEX_FUNCTION="https://functions.yandexcloud.net/d4erur78tndi5tkkafn0", $=id=>document.getElementById(id);
 let S={id:"",initData:"",profile:{},wallet:{berries:0,coins:0},tasks:[],giveaways:[],history:[],rewards:[],claims:{},progress:{xp:0,level:1,streak:0,bestStreak:0,achievements:[]},community:{referral:{},ranking:{top:[]}},admin:"",rate:100,user:{},channelOpened:false};
-let activeNumberGiveaway=null,selectedNumberIds=[],numberPurchaseConfirm=false,giveawayFilter="active",pendingGiveawayId=null,lastGiveawayTrigger=null,numberStatePoll=null,numberStatePollBusy=false,wheelRotation=0,wheelBusy=false,wheelUsed=0,wheelRemaining=3,wheelStatusReady=false;
+let activeNumberGiveaway=null,selectedNumberIds=[],numberPurchaseConfirm=false,giveawayFilter="active",pendingGiveawayId=null,lastGiveawayTrigger=null,pendingExchangeAmount=0,numberStatePoll=null,numberStatePollBusy=false,wheelRotation=0,wheelBusy=false,wheelUsed=0,wheelRemaining=3,wheelStatusReady=false;
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function fmt(n){return new Intl.NumberFormat("ru-RU").format(Number(n)||0);}function coinMark(){return '<i class="coin-mark" aria-hidden="true"></i>';}function coinValue(n){return fmt(n)+" "+coinMark();}
 let noticeTimer=null;function msg(s){$("notice").textContent=s;$("notice").classList.add("show");if(noticeTimer)clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>$("notice").classList.remove("show"),3000);}
@@ -2087,12 +2111,19 @@ $("buyCoinsBtn").onclick=async()=>{const btn=$("buyCoinsBtn"),price=Number($("pa
 paymentPreview();
 function renderWheel(){const button=$("spinWheelBtn");if(!button)return;const exhausted=wheelStatusReady&&wheelRemaining<=0;button.disabled=wheelBusy||Number(S.wallet.berries)<50||exhausted;button.textContent=wheelBusy?"Колесо вращается…":exhausted?"Попытки на сегодня закончились":"Крутить колесо · 50 🍓";$("wheelCost").textContent="🎟️ 50 🍓 за вращение · у тебя "+fmt(S.wallet.berries)+" 🍓";$("wheelDailyCount").textContent=wheelStatusReady?"Попыток осталось сегодня: "+wheelRemaining+" из 3":"Загружаем дневные попытки…";$("wheelDailyCount").classList.toggle("is-exhausted",exhausted);}async function refreshWheelStatus(){try{const d=await call("wheel_status");wheelUsed=d.used;wheelRemaining=d.remaining;wheelStatusReady=true;renderWheel();}catch(error){$("wheelDailyCount").textContent="Лимит: 3 вращения в сутки";}}
 async function spinWheel(){const button=$("spinWheelBtn");if(!button||wheelBusy||Number(S.wallet.berries)<50||(wheelStatusReady&&wheelRemaining<=0))return;wheelBusy=true;renderWheel();$("wheelResult").textContent="Норка запускает колесо…";try{const d=await call("spin_wheel",{requestId:requestId()});S.wallet=d.wallet;wheelUsed=d.used;wheelRemaining=d.remaining;wheelStatusReady=true;const index=Math.max(0,Math.min(7,Number(d.prize.index)||0)),img=$("wheelImage"),normalized=((wheelRotation%360)+360)%360,sectorCenter=(index*45),align=((360-sectorCenter-normalized)%360+360)%360;wheelRotation+=360*7+align;img.style.transform="rotate("+wheelRotation+"deg)";await new Promise(resolve=>{let finished=false;const done=()=>{if(finished)return;finished=true;img.removeEventListener("transitionend",done);resolve();};img.addEventListener("transitionend",done,{once:true});setTimeout(done,4800);});await load();const reward=d.prize.type==="coins"?d.prize.amount+" монет":d.prize.amount+" ягод";$("wheelResult").textContent="🎉 Выпало: "+d.prize.title;msg(d.duplicate?"Это вращение уже было учтено: "+reward:"Колесо удачи: "+reward+"!");}catch(error){if(error.message.includes("3 вращения закончились")){wheelUsed=3;wheelRemaining=0;wheelStatusReady=true;}else await refreshWheelStatus();$("wheelResult").textContent=error.message;msg(error.message);}finally{wheelBusy=false;renderWheel();}}
-function requestId(){return window.crypto&&typeof window.crypto.randomUUID==="function"?window.crypto.randomUUID():"norka_"+Date.now()+"_"+Math.random().toString(36).slice(2,12);}$("spinWheelBtn").onclick=spinWheel;$("exchangeAmount").oninput=preview;$("exchangeBtn").onclick=async()=>{const btn=$("exchangeBtn");if(btn.disabled)return;btn.disabled=true;btn.textContent="Обмениваем…";try{const d=await call("exchange",{berries:Number($("exchangeAmount").value),requestId:requestId()});S.wallet=d.wallet;await load();msg(d.duplicate?"Операция уже была выполнена":"Обмен завершён: +"+d.coins+" монет 🪙");}catch(e){msg(e.message);}finally{btn.textContent="Обменять ягоды";preview();}};
+function closeExchangeConfirm(){const modal=$("exchangeConfirmModal");if(!modal||modal.hidden)return;modal.hidden=true;document.body.classList.remove("exchange-modal-open");$("exchangeBtn").focus();}
+function openExchangeConfirm(){const requested=Math.floor(Number($("exchangeAmount").value)||0),rate=Math.max(1,Number(S.rate)||100),coins=Math.floor(requested/rate),spent=coins*rate,remaining=Math.max(0,Number(S.wallet.berries||0)-spent);if(spent<rate||spent>Number(S.wallet.berries||0)){msg("Проверь количество ягод для обмена.");return;}pendingExchangeAmount=requested;$("exchangeConfirmRate").textContent=fmt(rate)+" ягод = 1 монета";$("exchangeConfirmSpent").textContent=fmt(spent)+" ягод";$("exchangeConfirmCoins").textContent=fmt(coins)+" монет";$("exchangeConfirmRemaining").textContent=fmt(remaining)+" ягод";$("exchangeConfirmNote").textContent=requested>spent?"Ты указал "+fmt(requested)+" ягод. По курсу спишется "+fmt(spent)+", остаток "+fmt(Number(S.wallet.berries||0)-spent)+" ягод сохранится.":"Ягоды будут списаны только после подтверждения сервером.";$("exchangeConfirmBtn").disabled=false;$("exchangeConfirmBtn").textContent="Подтвердить обмен";$("exchangeConfirmModal").hidden=false;document.body.classList.add("exchange-modal-open");$("exchangeConfirmBtn").focus();}
+async function confirmExchange(){const btn=$("exchangeConfirmBtn");if(btn.disabled||!pendingExchangeAmount)return;btn.disabled=true;btn.textContent="Обмениваем…";try{const d=await call("exchange",{berries:pendingExchangeAmount,requestId:requestId()});S.wallet=d.wallet;await load();closeExchangeConfirm();pendingExchangeAmount=0;msg(d.duplicate?"Операция уже была выполнена":"Обмен завершён: +"+d.coins+" монет 🪙");}catch(error){$("exchangeConfirmNote").textContent=error.message||"Не удалось выполнить обмен. Ягоды не должны списаться без подтверждения сервера.";}finally{if(!$("exchangeConfirmModal").hidden){btn.disabled=false;btn.textContent="Подтвердить обмен";}}}
+$("exchangeConfirmBtn").onclick=confirmExchange;
+$("exchangeConfirmCancel").onclick=()=>{pendingExchangeAmount=0;closeExchangeConfirm();};
+
+function requestId(){return window.crypto&&typeof window.crypto.randomUUID==="function"?window.crypto.randomUUID():"norka_"+Date.now()+"_"+Math.random().toString(36).slice(2,12);}$("spinWheelBtn").onclick=spinWheel;$("exchangeAmount").oninput=preview;$("exchangeBtn").onclick=()=>{if(!$("exchangeBtn").disabled)openExchangeConfirm();};
 $("homeBtn").onclick=()=>nav("home");$("profileBtn").onclick=()=>nav("profile");$("supportBtn").onclick=()=>openExternal("https://max.ru/se14711525_bot");$("adminOpen").onclick=()=>{const panel=$("admin");panel.classList.add("show");document.body.classList.add("admin-modal-open");if(S.admin){$("adminLoginGate").hidden=true;$("adminContent").hidden=false;}else{$("adminLoginGate").hidden=false;$("adminContent").hidden=true;setTimeout(()=>$("adminPassword").focus(),80);}};
 function closeAdminModal(){ $("admin").classList.remove("show");document.body.classList.remove("admin-modal-open");$("adminOpen").focus();}
 $("adminClose").onclick=closeAdminModal;
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("admin").classList.contains("show"))closeAdminModal();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("giveawayConfirmModal").hidden)closeGiveawayConfirm();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("exchangeConfirmModal").hidden){pendingExchangeAmount=0;closeExchangeConfirm();}});
 async function fetchAdminOverview(){
  let lastError=null;
  for(let attempt=0;attempt<2;attempt++){
