@@ -2262,9 +2262,9 @@ const onboardingSteps=[
  {icon:"🎁",title:"Выбирай призы",description:"Открой «Призы», выбери розыгрыш и проверь стоимость участия перед подтверждением."}
 ];
 let onboardingStep=0;
-function closeOnboarding(){const overlay=$("onboarding");if(!overlay||overlay.hidden)return;try{localStorage.setItem("norka:onboarding:v1","done");}catch(error){window.__norkaOnboardingSeen=true;}overlay.hidden=true;document.body.classList.remove("onboarding-open");$("homeBtn")?.focus();}
+function closeOnboarding(){const overlay=$("onboarding");if(!overlay||overlay.hidden)return;try{localStorage.setItem("norka:onboarding:v1:"+S.id,"done");}catch(error){window.__norkaOnboardingSeen=true;}overlay.hidden=true;document.body.classList.remove("onboarding-open");$("homeBtn")?.focus();}
 function renderOnboarding(){const step=onboardingSteps[onboardingStep];$("onboardingArt").textContent=step.icon;$("onboardingProgress").textContent="ШАГ "+(onboardingStep+1)+" ИЗ "+onboardingSteps.length;$("onboardingTitle").textContent=step.title;$("onboardingDescription").textContent=step.description;$("onboardingDots").innerHTML=onboardingSteps.map((_,i)=>'<i'+(i===onboardingStep?' class="active"':'')+'></i>').join("");$("onboardingNext").textContent=onboardingStep===onboardingSteps.length-1?"Начать пользоваться":"Далее";}
-function maybeShowOnboarding(){let seen=Boolean(window.__norkaOnboardingSeen);try{seen=seen||localStorage.getItem("norka:onboarding:v1")==="done";}catch(error){}if(seen)return;const overlay=$("onboarding");if(!overlay)return;onboardingStep=0;renderOnboarding();overlay.hidden=false;document.body.classList.add("onboarding-open");$("onboardingNext").focus();}
+function maybeShowOnboarding(){let seen=Boolean(window.__norkaOnboardingSeen);try{seen=seen||localStorage.getItem("norka:onboarding:v1:"+S.id)==="done";}catch(error){}if(seen)return;const overlay=$("onboarding");if(!overlay)return;onboardingStep=0;renderOnboarding();overlay.hidden=false;document.body.classList.add("onboarding-open");$("onboardingNext").focus();}
 $("onboardingNext").onclick=()=>{if(onboardingStep<onboardingSteps.length-1){onboardingStep++;renderOnboarding();}else closeOnboarding();};
 $("onboardingSkip").onclick=closeOnboarding;
 
