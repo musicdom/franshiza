@@ -5,7 +5,9 @@ const match = html.match(/<script>([\s\S]*?)<\/script>/);
 if (!match) throw new Error("Inline application script was not found");
 new vm.Script(match[1], { filename: "index.html" });
 
-const ids = [...html.matchAll(new RegExp('\\bid="([^"]+)"', "g"))].map(match => match[1]);
+const staticHtml = html.slice(0, html.indexOf("<script>"));
+const ids = [...staticHtml.matchAll(new RegExp('\\bid="([^"]+)"', "g"))].map(match => match[1]);
+const declaredIds = [...html.matchAll(new RegExp('\\bid="([^"]+)"', "g"))].map(match => match[1]);
 const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
 if (duplicateIds.length) throw new Error("Duplicate DOM ids: " + [...new Set(duplicateIds)].join(", "));
 const references = [...match[1].matchAll(new RegExp('\\$\\("([^"]+)"\\)', "g"))].map(match => match[1]);
