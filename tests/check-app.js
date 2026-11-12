@@ -5,11 +5,13 @@ const match = html.match(/<script>([\s\S]*?)<\/script>/);
 if (!match) throw new Error("Inline application script was not found");
 new vm.Script(match[1], { filename: "index.html" });
 
-const ids = [...html.matchAll(new RegExp('\\bid="([^"]+)"', "g"))].map(match => match[1]);
+const staticHtml = html.slice(0, html.indexOf("<script>"));
+const ids = [...staticHtml.matchAll(new RegExp('\\bid="([^"]+)"', "g"))].map(match => match[1]);
+const declaredIds = [...html.matchAll(new RegExp('\\bid="([^"]+)"', "g"))].map(match => match[1]);
 const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
 if (duplicateIds.length) throw new Error("Duplicate DOM ids: " + [...new Set(duplicateIds)].join(", "));
 const references = [...match[1].matchAll(new RegExp('\\$\\("([^"]+)"\\)', "g"))].map(match => match[1]);
-const missing = [...new Set(references.filter(id => !ids.includes(id)))];
+const missing = [...new Set(references.filter(id => !declaredIds.includes(id)))];
 if (missing.length) throw new Error("Missing DOM ids: " + missing.join(", "));
 const buttons = [...html.matchAll(new RegExp('<button\\b[^>]*\\bid="([^"]+)"', "g"))].map(match => match[1]);
 const unbound = buttons.filter(id => !match[1].includes('$("' + id + '").onclick') && !match[1].includes('$("' + id + '").oninput'));
@@ -41,7 +43,7 @@ if (!webhook.includes("callback.payload||u.payload||") || !webhook.includes("m.b
 
 if (!webhook.includes("grantLaunchReward") || !webhook.includes("bot_started")) throw new Error("Bot-start reward webhook is missing");
 const setupWebhook = fs.readFileSync("api/setup-webhook.js", "utf8");
-if (!setupWebhook.includes("process.env.MAX_WEBHOOK_URL") || setupWebhook.includes("VERCEL_PROJECT_PRODUCTION_URL")) throw new Error("MAX webhook setup must register the Yandex Cloud webhook URL, not a Vercel URL");
+if (!setupWebhook.includes("https://functions.yandexcloud.net/") || setupWebhook.includes("VERCEL_PROJECT_PRODUCTION_URL")) throw new Error("MAX webhook setup must register the Yandex Cloud webhook URL, not a Vercel URL");
 const tracker = fs.readFileSync("api/track-user.js", "utf8");
 if (!tracker.includes('body:{text,format:"markdown"}') || !tracker.includes('max://user/')) throw new Error("Admin open-app alerts must contain clickable MAX user profile links");
 for (const marker of ["norka_support_yes", "norka_support_no", "norka_support_reply:", "awaiting_issue", "support:ticket:", "support_reply_sent", "Ответить клиенту", "sendUser(adminId", "sendUser(ticket.userId"]) if (!webhook.includes(marker)) throw new Error("Support conversation flow is missing: " + marker);
@@ -56,8 +58,11 @@ const cron = fs.readFileSync("api/cron/norka.js", "utf8");
 if (!cron.includes('norka:daily:"+id+":"+day') || !cron.includes("Тебе доступны ежедневные 10 ягод") || !cron.includes("norka:reminder:")) throw new Error("Daily berry reminder must follow the daily claim marker and send the 10-berry notice");
 if (!cron.includes("skippedClaimed") || !cron.includes("skippedReminder") || !cron.includes("failedReminders") || !cron.includes("authorization header mismatch")) throw new Error("Daily reminder cron must expose actionable delivery diagnostics");
 if (!cron.includes("const result=await send(id,message);if(!result.ok)return false;")) throw new Error("Notification markers must only be written after successful MAX delivery");
-if (!cron.includes('apiPath:"/messages?user_id="+encodeURIComponent(String(id))') || !cron.includes("NORKA bot DM sent") || !cron.includes("sender:message.sender") || !cron.includes("chat_type:message.recipient.chat_type")) throw new Error("Daily reminder must be sent by the Norka bot to the user dialog and log sender/recipient");
-const vercel = JSON.parse(fs.readFileSync("vercel.json", "utf8"));
-if (!vercel.crons?.some(job => job.path === "/api/cron/norka" && job.schedule === "0 0 * * *")) throw new Error("Daily reminder cron must run at 00:00 UTC");
+if (!cron.includes('apiPath:"/messages?user_id="+encodeURIComponent(String(id))') || !cron.includes("NORKA daily reminder sent") || !cron.includes("sender:message.sender") || !cron.includes("chat_type:message.recipient.chat_type")) throw new Error("Daily reminder must be sent by the Norka bot to the user dialog and log sender/recipient");
+const yandex = fs.readFileSync("yandex-function.js", "utf8");
+if (!yandex.includes('"cron-norka": require("./api/cron/norka")') || !yandex.includes('payload?.route')) throw new Error("Yandex Timer Trigger must route cron-norka events");
+if (!yandex.includes('headers.authorization = "Bearer " + process.env.CRON_SECRET')) throw new Error("Yandex Timer Trigger must authorize internal cron events");
+if (fs.existsSync("vercel.json")) throw new Error("Vercel Cron configuration must be removed");
+if (!html.includes('fetch(YANDEX_FUNCTION+"?route=payment"') || html.includes("franshiza.vercel.app")) throw new Error("Mini-app payments must use Yandex Cloud, not Vercel");
 
 process.stdout.write("Norka browser script, DOM references and button bindings: OK\n");
