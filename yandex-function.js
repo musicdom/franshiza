@@ -29,7 +29,7 @@ function timerPayload(event) {
 function getRoute(event, query) {
   const payload = timerPayload(event);
   const explicit = String(query.route || payload?.route || "").trim().toLowerCase();
-  if (explicit) return explicit.replace(/^\\/+|\\/+$/g, "").replace(/\\.js$/, "");
+  if (explicit) return explicit.replace(/^\/+|\/+$/g, "").replace(/\.js$/, "");
   if (Array.isArray(event.messages) && event.messages.length) return "norka";
   const requestPath = String(event.path || event.rawPath || event.url || "").split("?")[0];
   const last = requestPath.split("/").filter(Boolean).pop() || "health";
