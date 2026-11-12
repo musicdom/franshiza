@@ -17,9 +17,19 @@ function response(statusCode, body, headers = {}) {
   };
 }
 
+function timerPayload(event) {
+  const raw = event.messages?.[0]?.details?.payload;
+  if (raw && typeof raw === "object") return raw;
+  if (typeof raw === "string" && raw) {
+    try { return JSON.parse(raw); } catch { return null; }
+  }
+  return null;
+}
+
 function getRoute(event, query) {
-  const explicit = String(query.route || "").trim().toLowerCase();
-  if (explicit) return explicit.replace(/^\/+|\/+$/g, "").replace(/\.js$/, "");
+  const payload = timerPayload(event);
+  const explicit = String(query.route || payload?.route || "").trim().toLowerCase();
+  if (explicit) return explicit.replace(/^\\/+|\\/+$/g, "").replace(/\\.js$/, "");
   if (Array.isArray(event.messages) && event.messages.length) return "norka";
   const requestPath = String(event.path || event.rawPath || event.url || "").split("?")[0];
   const last = requestPath.split("/").filter(Boolean).pop() || "health";
@@ -104,6 +114,11 @@ exports.handler = async function (event) {
   }
 
   const timerMessage = Array.isArray(event.messages) ? event.messages[0] : null;
+  // Timer Trigger invocations are trusted Yandex Cloud events, not public HTTP requests.
+  // The cron handler still validates its bearer secret; inject it only for this internal event.
+  if (timerMessage && route === "cron-norka" && process.env.CRON_SECRET) {
+    headers.authorization = "Bearer " + process.env.CRON_SECRET;
+  }
   let rawBody = event.body;
   if ((rawBody == null || rawBody === "") && timerMessage?.details?.payload) rawBody = timerMessage.details.payload;
   if (event.isBase64Encoded && typeof rawBody === "string") {
