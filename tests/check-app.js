@@ -41,7 +41,7 @@ if (!webhook.includes("callback.payload||u.payload||") || !webhook.includes("m.b
 
 if (!webhook.includes("grantLaunchReward") || !webhook.includes("bot_started")) throw new Error("Bot-start reward webhook is missing");
 const setupWebhook = fs.readFileSync("api/setup-webhook.js", "utf8");
-if (!setupWebhook.includes("https://functions.yandexcloud.net/") || setupWebhook.includes(".vercel.app")) throw new Error("MAX webhook setup must register the Yandex Cloud webhook URL, not a Vercel URL");
+if (!setupWebhook.includes("https://functions.yandexcloud.net/") || setupWebhook.includes("VERCEL_PROJECT_PRODUCTION_URL")) throw new Error("MAX webhook setup must register the Yandex Cloud webhook URL, not a Vercel URL");
 const tracker = fs.readFileSync("api/track-user.js", "utf8");
 if (!tracker.includes('body:{text,format:"markdown"}') || !tracker.includes('max://user/')) throw new Error("Admin open-app alerts must contain clickable MAX user profile links");
 for (const marker of ["norka_support_yes", "norka_support_no", "norka_support_reply:", "awaiting_issue", "support:ticket:", "support_reply_sent", "Ответить клиенту", "sendUser(adminId", "sendUser(ticket.userId"]) if (!webhook.includes(marker)) throw new Error("Support conversation flow is missing: " + marker);
