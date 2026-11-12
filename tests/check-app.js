@@ -11,7 +11,7 @@ const declaredIds = [...html.matchAll(new RegExp('\\bid="([^"]+)"', "g"))].map(m
 const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
 if (duplicateIds.length) throw new Error("Duplicate DOM ids: " + [...new Set(duplicateIds)].join(", "));
 const references = [...match[1].matchAll(new RegExp('\\$\\("([^"]+)"\\)', "g"))].map(match => match[1]);
-const missing = [...new Set(references.filter(id => !ids.includes(id)))];
+const missing = [...new Set(references.filter(id => !declaredIds.includes(id)))];
 if (missing.length) throw new Error("Missing DOM ids: " + missing.join(", "));
 const buttons = [...html.matchAll(new RegExp('<button\\b[^>]*\\bid="([^"]+)"', "g"))].map(match => match[1]);
 const unbound = buttons.filter(id => !match[1].includes('$("' + id + '").onclick') && !match[1].includes('$("' + id + '").oninput'));
