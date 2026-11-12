@@ -2137,6 +2137,7 @@ $("adminClose").onclick=closeAdminModal;
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("admin").classList.contains("show"))closeAdminModal();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("giveawayConfirmModal").hidden)closeGiveawayConfirm();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("exchangeConfirmModal").hidden){pendingExchangeAmount=0;closeExchangeConfirm();}});
+document.addEventListener("keydown",e=>{if(e.key!=="Tab")return;const modal=[$("giveawayConfirmModal"),$("exchangeConfirmModal")].find(x=>x&&!x.hidden);if(!modal)return;const items=[...modal.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')].filter(x=>!x.hidden&&x.getAttribute("aria-hidden")!=="true");if(!items.length){e.preventDefault();return;}const first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}});
 async function fetchAdminOverview(){
  let lastError=null;
  for(let attempt=0;attempt<2;attempt++){
