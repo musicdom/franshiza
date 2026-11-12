@@ -2114,4 +2114,135 @@ $("splashRetry").onclick=async()=>{const btn=$("splashRetry");btn.disabled=true;
 
 async function start(){let w=window.WebApp||window.MAXWebApp||{},init=w.initDataUnsafe||w.init_data_unsafe||{},u=init.user||{};S.initData=String(w.initData||"");if(!u.id&&!u.user_id&&S.initData){try{const launchParams=new URLSearchParams(S.initData),rawUser=launchParams.get("user");if(rawUser)u=JSON.parse(rawUser);}catch(e){console.warn("MAX initData user preview unavailable",e);}}S.id=String(u.user_id||u.id||"");S.profile={name:[u.first_name,u.last_name].filter(Boolean).join(" ")||u.name||u.username||"Участник Норки",avatar:u.photo_url||"",timeZone:Intl.DateTimeFormat().resolvedOptions().timeZone||"UTC"};try{if(w.ready)w.ready();if(w.expand)w.expand();}catch(e){}if(!S.id||!S.initData){showSplashError("Открой Норку через бота MAX, чтобы загрузить профиль и баланс.",false);msg("Не удалось получить профиль MAX. Открой приложение через бота.");return;}fetch(YANDEX_FUNCTION+"?route=norka&action=auth_check",{headers:{"X-Norka-InitData":S.initData}}).then(async response=>{const result=await response.json();if(!response.ok||!result.ok)throw Error(result.error||"HTTP "+response.status);console.info("NORKA Yandex auth check:",result);}).catch(error=>console.warn("NORKA background auth check failed:",error));fetch(YANDEX_FUNCTION+"?route=track-user",{method:"POST",keepalive:true,headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:S.initData,timeZone:S.profile.timeZone,user:{id:S.id,name:S.profile.name,photo_url:S.profile.avatar,username:u.username},platform:w.platform||"",version:w.version||"",language_code:w.language_code||"",webapp_fields:Object.keys(init||{})})}).then(async response=>{if(!response.ok){const detail=await response.text().catch(()=>"");console.warn("NORKA track-user rejected:",response.status,detail.slice(0,300));}}).catch(e=>console.warn("NORKA track-user skipped:",e));try{await Promise.all([load(),preloadSplashAssets()]);await finishSplash();}catch(e){console.error("NORKA bootstrap failed:",{message:e.message,code:e.code,stage:e.stage,status:e.status,backendVersion:e.backendVersion});$("homeGiveaways").innerHTML='<div class="empty"><b>⚠️</b>Не удалось загрузить данные Норки.<br><small class="small">'+esc(e.message)+'</small><br><button class="secondary" id="retryLoad" type="button">Повторить загрузку</button></div>';$("retryLoad").onclick=async()=>{const btn=$("retryLoad");btn.disabled=true;btn.textContent="Загружаем…";try{await load();}catch(err){console.error("NORKA bootstrap retry failed:",{message:err.message,code:err.code,stage:err.stage,status:err.status,backendVersion:err.backendVersion});$("homeGiveaways").querySelector(".small").textContent=err.message;msg(err.message);btn.disabled=false;btn.textContent="Повторить загрузку";}};msg(e.message);showSplashError(e.message,true);}}
 start();
-</script></body></html>
+</script>
+<style id="norka-visual-redesign">
+/* NORKA VISUAL REDESIGN — presentation only; existing markup, labels and behavior stay intact */
+:root{
+ color-scheme:light;
+ --bg:#f5f7f3;--bg2:#edf2ed;--panel:#ffffff;--panel2:#f8faf7;
+ --text:#20352d;--muted:#718078;--teal:#248b72;--teal2:#16765f;
+ --violet:#8871c8;--berry:#e75b87;--gold:#c58b2d;
+ --line:#dfe8e0;--shadow:0 8px 24px rgba(34,65,49,.08)
+}
+html,body{background:#f5f7f3!important;color:#20352d!important}
+body{background:linear-gradient(180deg,#f8faf7 0%,#f1f5f0 55%,#f6f7f3 100%)!important}
+.app{max-width:720px;padding:calc(14px + env(safe-area-inset-top)) 18px calc(104px + env(safe-area-inset-bottom))!important}
+.top{margin-bottom:18px}
+.brand{color:#244238;letter-spacing:1.4px}
+.profile{background:#fff!important;color:#345247!important;border:1px solid #e1e9e2!important;box-shadow:0 3px 12px rgba(30,70,48,.05)}
+.mark{background:#dff3e9!important;color:#17664f!important;box-shadow:none!important}
+.hero,.home-hero{
+ background:linear-gradient(125deg,#e0f2e8 0%,#d7eee5 54%,#e8e4f7 100%)!important;
+ border:1px solid #d3e8dc!important;border-radius:26px!important;
+ box-shadow:0 10px 28px rgba(42,91,65,.08)!important;color:#244238!important
+}
+.hero h1,.home-hero h1{color:#203d31!important;max-width:82%}
+.hero p,.home-hero p{color:#597267!important}
+.eyebrow{color:#27856b!important}
+.home-paw{filter:none!important;opacity:.82}
+.balances{gap:12px;margin:14px 0 22px}
+.balance{
+ background:#fff!important;border:1px solid #e5ebe5!important;border-radius:20px!important;
+ box-shadow:0 5px 16px rgba(35,67,49,.045)!important;padding:16px!important
+}
+.berry-balance{background:#fff5f8!important;border-color:#f3dce5!important}
+.coin-balance{background:#fffaf0!important;border-color:#efe5ce!important}
+.balance-head{color:#718078!important;font-size:11px!important;letter-spacing:.2px}
+.balance-value{color:#253d32!important}
+.head{margin:25px 2px 12px}
+.head h2{color:#294238;font-size:18px}
+.head span{color:#829087}
+.actions{gap:11px}
+.action,.card,.exchange{
+ background:#fff!important;color:#263e33!important;border:1px solid #e3eae3!important;
+ border-radius:19px!important;box-shadow:0 5px 17px rgba(36,69,49,.055)!important
+}
+.action{min-height:108px;padding:16px!important}
+.action b,.card h3{color:#263e33!important}
+.action small,.card p,.small{color:#75847b!important}
+.action:hover{border-color:#b6d8c5!important}
+.ico{filter:none}
+.tag{background:#e8f5ed!important;color:#26785d!important;border-color:#d6ebdd!important}
+.prize{color:#4c3b70}
+.meta{color:#718078!important}
+.primary{
+ background:linear-gradient(110deg,#278d70,#1d795f)!important;color:#fff!important;
+ border:1px solid #1c795f!important;border-radius:14px!important;
+ box-shadow:0 5px 13px rgba(30,123,94,.16)!important
+}
+.primary:hover{filter:brightness(1.04)}
+.primary:disabled{opacity:.45}
+.secondary{
+ background:#f3f7f3!important;color:#365347!important;border:1px solid #dce7dd!important;
+ border-radius:13px!important
+}
+.empty{background:#fbfcfa!important;color:#75847b!important;border-color:#d7e2d8!important}
+.field{background:#fbfcfa!important;color:#253d32!important;border:1px solid #dce6dd!important}
+.field::placeholder{color:#9aa69e}
+.notice{background:#24483a!important;color:#fff!important;border:1px solid #477d64!important}
+.tabs{
+ background:rgba(255,255,255,.94)!important;border-top:1px solid #e1e9e1!important;
+ box-shadow:0 -5px 20px rgba(35,65,47,.06)!important;backdrop-filter:blur(18px)
+}
+.tab{color:#829087!important;border-radius:14px!important;font-size:10px!important}
+.tab.active{background:#e8f4ec!important;color:#21775b!important}
+.tab-icon{filter:none!important}
+.tab.active .tab-icon{filter:drop-shadow(0 2px 3px rgba(37,119,91,.15))!important}
+.section-banner{
+ border-radius:22px!important;box-shadow:0 6px 18px rgba(35,65,47,.07)!important
+}
+.banner-prizes{background:linear-gradient(120deg,#eee8fa,#e4def3)!important;border-color:#e0d7f1!important;color:#443761}
+.banner-berries{background:linear-gradient(120deg,#fde8ef,#f7dce6)!important;border-color:#f2d5e0!important;color:#693b50}
+.banner-profile{background:linear-gradient(120deg,#e3f0f7,#dceaf2)!important;border-color:#d5e6ef!important;color:#315366}
+.banner-collection{background:linear-gradient(120deg,#ece9fb,#e2e0f6)!important;border-color:#dedbf3!important;color:#453e70}
+.section-banner p{color:inherit!important;opacity:.76}
+.berries-view .card{background:#fff8fa!important;border-color:#f1dfe5!important}
+.berries-view .primary{background:linear-gradient(110deg,#e86f96,#d95782)!important;color:#fff!important;border-color:#d95782!important}
+.berries-view .tag{background:#fdeaf0!important;color:#b64c72!important;border-color:#f4d6e0!important}
+.berry-guide{background:#fff5f8!important;border-color:#f2dce5!important}
+.prizes-view .card{background:#fbf9ff!important;border-color:#e8e1f4!important}
+.prizes-view .primary{background:linear-gradient(110deg,#9b85d4,#8069bd)!important;color:#fff!important;border-color:#8069bd!important}
+.prizes-view .tag{background:#f0ecfa!important;color:#6d5a9e!important;border-color:#e3dcf2!important}
+.prizes-view .prize{background:#f3effa!important;border-color:#e8e1f4!important;color:#4d416c}
+.collection-summary{background:linear-gradient(115deg,#eeebfa,#e5e1f5)!important;border-color:#ded8f1!important}
+.collection-summary strong,.collection-summary i{color:#65558e!important}
+.collection-summary span{color:#71678d!important}
+.collection-view .achievement-card{background:#fbfaff!important;border-color:#e7e1f4!important}
+.collection-view .achievement-icon{background:#f0edfa!important}
+.collection-view .achievement-state{color:#725fa9!important}
+.profile-card{background:#f7fbfd!important;border-color:#dceaf0!important}
+.profile-view .balance{background:#fff!important;border-color:#e3eaec!important}
+.profile-view .profile-actions .secondary{background:#fff!important;border-color:#dce7e9!important}
+.progress-card{background:linear-gradient(115deg,#e6f2eb,#eeeafa)!important;border-color:#dce8e1!important}
+.progress-top h3{color:#294238}
+.progress-track{background:#dce8df!important}
+.progress-track span{background:linear-gradient(90deg,#36a17e,#9380ce)!important}
+.progress-foot{color:#718078!important}
+.streak-badge{background:#fff4e9!important;border-color:#f2dfca!important;color:#bd7938!important}
+.streak-badge small{color:#7b8179!important}
+.daily-card{background:linear-gradient(115deg,#e5f3eb,#e8f1f5)!important;border-color:#d7e8dd!important}
+.daily-kicker{color:#287c61!important}
+.lucky-wheel-card{box-shadow:0 8px 22px rgba(58,43,47,.12)!important}
+.payment-branding{background:linear-gradient(120deg,#e8f5ee,#f0ecfa)!important;border-color:#dce9df!important}
+.payment-branding b{color:#294238!important}
+.payment-branding p{color:#718078!important}
+.payment-box{background:#fff!important}
+.payment-amount strong{color:#248b72!important}
+.coin-preview{border-color:#e3eae3!important}
+.history{border-color:#e6ece6!important}
+.admin{background:#fffaf0!important;color:#3f3b30!important;border-color:#e9dfc9!important}
+.admin-user-row{background:#fff!important;border-color:#e7e9e2!important}
+.admin-user-info b{color:#35483c}
+.admin-user-info small{color:#778278}
+.admin-user-info span{color:#39785b}
+.footer{color:#93a098!important}
+@media(max-width:390px){
+ .app{padding-left:14px!important;padding-right:14px!important}
+ .home-hero h1{max-width:80%}
+ .balance{padding:14px!important}
+ .action{min-height:104px}
+}
+@media(prefers-reduced-motion:reduce){
+ .action,.primary,.tab-icon{transition:none!important}
+}
+</style></body></html>
