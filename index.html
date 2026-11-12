@@ -2432,4 +2432,128 @@ button:focus-visible{outline:3px solid #75b99a;outline-offset:3px}
  .wallet-quick-amounts button{font-size:10px}
 }
 @media(prefers-reduced-motion:reduce){.home-journey-link,.home-balance,.berry-hub-card{transition:none!important}}
+</style>
+<style id="norka-redesign-direction-v2">
+/* NORKA REDESIGN V2 — stronger art direction; CSS only */
+:root{
+ --n-ink:#17392f;--n-muted:#71877d;--n-leaf:#1f8b68;--n-leaf-dark:#14694f;
+ --n-berry:#df527d;--n-berry-soft:#fff0f4;--n-gold:#e4a83e;--n-gold-soft:#fff6e4;
+ --n-lilac:#8b78c9;--n-paper:#f4f7f2;--n-white:#fff;--n-border:#e3ebe3;
+ --n-shadow:0 12px 32px rgba(24,57,42,.075)
+}
+html,body{background:var(--n-paper)!important}
+body{background:radial-gradient(ellipse at 12% 0%,#e6f2e8 0,transparent 34%),linear-gradient(180deg,#f5f8f3 0%,#f1f5f0 100%)!important;color:var(--n-ink)!important}
+.app{max-width:600px!important;padding:calc(12px + env(safe-area-inset-top)) 16px calc(112px + env(safe-area-inset-bottom))!important}
+.top{height:54px;margin:0 2px 14px!important;align-items:center}
+.brand{font-size:16px!important;font-weight:950!important;letter-spacing:2px!important;color:#183d30!important}
+.brand-home{width:38px;height:38px;border-radius:13px!important;background:#e2f1e7!important;border:1px solid #d1e6d8!important}
+.profile{padding:9px 13px!important;border-radius:99px!important;background:#fff!important;border:1px solid #e1eae2!important;color:#315846!important;font-size:11px!important;font-weight:800!important;box-shadow:0 3px 12px #1b4a3210!important}
+.view{animation:norkaScreenIn .24s ease both}
+@keyframes norkaScreenIn{from{opacity:.65;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+.home-scene{
+ min-height:218px!important;padding:25px 22px!important;border:0!important;border-radius:29px!important;
+ background:radial-gradient(circle at 88% 12%,#4a9d78 0 9%,transparent 9.5%),linear-gradient(128deg,#164c3a 0%,#1d6a4e 58%,#397c5c 100%)!important;
+ color:#fff!important;box-shadow:0 17px 35px rgba(21,81,55,.2)!important
+}
+.home-scene:before{content:"";position:absolute;width:210px;height:210px;right:-55px;bottom:-135px;border:1px solid #ffffff35;border-radius:50%;box-shadow:0 0 0 22px #ffffff0d,0 0 0 46px #ffffff0a}
+.home-scene:after{right:23px;top:22px;width:8px;height:8px;border:0;background:#f3c86b;border-radius:50%;box-shadow:0 0 0 7px #ffffff18,0 0 0 15px #ffffff0c}
+.home-scene>div:first-child{max-width:75%}
+.home-scene>div:first-child>span{color:#b8e4c9!important;font-size:9px!important;letter-spacing:2px!important}
+.home-scene h1{color:#fff!important;font-size:clamp(32px,8vw,43px)!important;line-height:1.02!important;letter-spacing:-1.5px!important;margin:11px 0!important}
+.home-scene p{color:#d2e8da!important;font-size:12px!important;line-height:1.55!important}
+.home-level{background:#ffffff18!important;border:1px solid #ffffff30!important;color:#d6eadd!important}
+.home-level strong{color:#f4d17b!important}
+.home-mascot{font-size:76px!important;filter:drop-shadow(0 10px 9px #082f1d55)!important;transform:rotate(-8deg) translateY(4px)!important}
+.home-journey{padding:14px 12px!important;border-radius:21px!important;border:1px solid #e4ebe4!important;box-shadow:0 5px 17px #183d2b08!important}
+.home-journey-title{font-size:9px!important;letter-spacing:1.7px!important;color:#8b9a90!important}
+.home-journey-link{background:#f7faf6!important;border:1px solid #edf1ec!important;border-radius:15px!important;min-height:78px!important}
+.home-journey-link span{font-size:23px!important}
+.home-journey-link b{font-size:11px!important;color:#294b39!important}
+.home-journey-link small{font-size:8px!important;color:#8b9b90!important}
+.home-balance-grid{gap:10px!important;margin:12px 0!important}
+.home-balance{min-height:126px!important;padding:16px!important;border-radius:21px!important;box-shadow:0 8px 20px #183d2b0b!important;text-align:left!important}
+.home-balance.berry-home{background:linear-gradient(145deg,#fff0f4,#fff 80%)!important;border-color:#f3d9e2!important}
+.home-balance.coin-home{background:linear-gradient(145deg,#fff6e5,#fff 80%)!important;border-color:#f0e2c5!important}
+.home-balance>span{font-size:9px!important;letter-spacing:1px!important}
+.home-balance strong{font-size:34px!important;letter-spacing:-1px!important}
+.home-balance small{font-size:9px!important;font-weight:750!important}
+.daily-card{grid-template-columns:42px minmax(0,1fr)!important;padding:15px!important;border-radius:21px!important;background:linear-gradient(115deg,#e4f3e9,#f0f7f0)!important;border-color:#d6e9dc!important;box-shadow:0 7px 20px #1c5a3a0d!important}
+.daily-icon{border-radius:14px!important;background:#fff!important;box-shadow:0 3px 10px #194c3010!important}
+.daily-copy>span{font-size:8px!important;letter-spacing:1.2px!important}
+.daily-copy h2{font-size:14px!important}
+.daily-claim{border-radius:13px!important;background:linear-gradient(110deg,#238c68,#176c50)!important;box-shadow:0 5px 12px #176c5030!important;min-height:42px!important}
+.home-streak{border-radius:18px!important;padding:13px 15px!important}
+.home-shortcuts{gap:7px!important}
+.home-shortcuts button{border-radius:12px!important;padding:10px 12px!important;background:#fff!important;border-color:#e3ebe3!important;font-size:10px!important}
+.home-live-title{margin-top:24px!important}
+.home-live-title h2{font-size:18px!important;letter-spacing:-.4px}
+.prizes-heading,.berries-heading,.wallet-heading,.achievements-heading{
+ min-height:155px;padding:23px 20px!important;border-radius:25px!important;border:0!important;
+ background:linear-gradient(125deg,#254c3b,#36785a)!important;color:#fff!important;box-shadow:0 13px 28px #1c5b3b20!important
+}
+.prizes-heading>span,.berries-heading>span,.wallet-heading>span,.achievements-heading>span{color:#c2e8cf!important;font-size:9px!important;letter-spacing:1.8px!important}
+.prizes-heading h1,.berries-heading h1,.wallet-heading h1,.achievements-heading h1{color:#fff!important;font-size:31px!important;letter-spacing:-1px!important}
+.prizes-heading p,.berries-heading p,.wallet-heading p,.achievements-heading p{color:#e0eee4!important;font-size:11px!important}
+.prize-heading-art{font-size:61px!important;filter:drop-shadow(0 8px 7px #0b302555)!important}
+.berries-heading{background:linear-gradient(125deg,#8f3657,#d65d7f)!important}
+.berries-heading>span{color:#ffe1ea!important}
+.berries-heading h1 strong{color:#fff!important}
+.wallet-heading{background:linear-gradient(125deg,#234e68,#367b87)!important}
+.wallet-heading>span{color:#d1edf0!important}
+.achievements-heading{background:linear-gradient(125deg,#514777,#8a79bd)!important}
+.achievements-heading>span{color:#e8e1ff!important}
+.prizes-summary>div{padding:15px!important;border-radius:17px!important;border-color:#e8e5f0!important;box-shadow:0 5px 15px #35245b08!important}
+.prizes-summary strong{font-size:25px!important;color:#7359a9!important}
+.prize-format-intro{border-radius:17px!important;background:#f4f0fb!important;border-color:#e8e0f4!important}
+.prize-format-switch button{border-radius:13px!important;min-height:44px!important}
+.prize-format-switch button.active{background:#7259a7!important;border-color:#7259a7!important;color:#fff!important;box-shadow:0 5px 12px #7259a733!important}
+.giveaway-card{border-radius:21px!important;border:1px solid #e8e7ed!important;box-shadow:0 8px 22px #2a21400a!important;overflow:hidden}
+.giveaway-card-heading{gap:8px}
+.giveaway-prize-panel{border-radius:16px!important}
+.giveaway-action{min-height:45px!important;border-radius:13px!important}
+.berry-daily{border-radius:22px!important;padding:17px!important;box-shadow:0 8px 20px #9e41610c!important}
+.berry-daily-claim{min-height:46px!important;border-radius:14px!important;box-shadow:0 6px 14px #d9578230!important}
+.berry-hub-grid{gap:10px!important}
+.berry-hub-card{min-height:76px!important;border-radius:18px!important;padding:13px!important;box-shadow:0 5px 14px #813e5708!important}
+.berry-hub-icon{width:39px!important;height:39px!important;border-radius:13px!important}
+.berry-subheading h2{font-size:25px!important;letter-spacing:-.6px}
+.wallet-balance-card{padding:21px!important;border-radius:22px!important;background:linear-gradient(130deg,#e2f2e8,#fff)!important;box-shadow:0 8px 22px #1a56380d!important}
+.wallet-balance-card>strong{font-size:38px!important;letter-spacing:-1px}
+.payment-branding,.payment-box,.exchange,.card{border-radius:19px!important}
+.wallet-quick-amounts button{min-height:43px!important;border-radius:13px!important}
+.profile-cover-new{padding:21px!important;border:0!important;border-radius:25px!important;background:linear-gradient(125deg,#244e66,#497d91)!important;box-shadow:0 12px 26px #234b6022!important}
+.profile-topline{color:#c6e2eb!important}
+.profile-greeting{color:#c8e6ee!important}
+.profile-user-copy h1{color:#fff!important}
+.profile-user-copy strong{color:#e4f1f3!important}
+.profile-user-copy small{color:#c1dce2!important}
+.profile-cover-foot{border-color:#ffffff35!important;color:#d2e8ec!important}
+.profile-avatar-frame{width:72px!important;height:72px!important;border-radius:23px!important}
+.profile-asset{padding:16px!important;border-radius:18px!important;box-shadow:0 5px 14px #193e2c08!important}
+.profile-asset strong{font-size:29px!important}
+.profile-topup-new,.profile-shortcuts>button{min-height:62px!important;border-radius:16px!important}
+.achievement-card{border-radius:18px!important;padding:15px!important;box-shadow:0 5px 16px #382a5d09!important}
+.tabs{
+ position:fixed!important;left:0!important;right:0!important;bottom:0!important;z-index:50!important;
+ padding:8px 12px calc(8px + env(safe-area-inset-bottom))!important;
+ background:#fffffff2!important;border-top:1px solid #e1e9e2!important;
+ box-shadow:0 -9px 30px #173d2b12!important;backdrop-filter:blur(22px)!important
+}
+.tabrow{max-width:570px!important;gap:5px!important}
+.tab{min-height:57px!important;padding:7px 2px!important;border-radius:15px!important;color:#8a998f!important;font-size:9px!important;font-weight:750!important}
+.tab-icon{width:23px!important;height:23px!important}
+.tab.active{background:#e6f3e9!important;color:#1c7858!important}
+.tab.active:before{content:"";position:absolute;top:4px;width:17px;height:3px;border-radius:9px;background:#29936b}
+button{ -webkit-tap-highlight-color:transparent }
+button:focus-visible{outline:3px solid #77b99a!important;outline-offset:3px!important}
+@media(max-width:390px){
+ .app{padding-left:13px!important;padding-right:13px!important}
+ .home-scene{min-height:205px!important;padding:21px 17px!important}
+ .home-mascot{font-size:62px!important}
+ .home-balance{min-height:118px!important;padding:13px!important}
+ .home-balance strong{font-size:30px!important}
+ .tab{font-size:8px!important}
+ .tab-icon{width:21px!important;height:21px!important}
+}
+@media(prefers-reduced-motion:reduce){.view{animation:none!important}}
 </style></body></html>
