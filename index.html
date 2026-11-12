@@ -961,6 +961,11 @@ body.exchange-modal-open{overflow:hidden}
 .exchange-confirm-receive{color:#f4d27c!important;font-size:19px!important}
 .exchange-confirm-card>p{min-height:34px;margin:13px 0 8px;color:#c1d8dd;font-size:11px;line-height:1.5}
 .exchange-confirm-cancel{display:block;width:100%;padding:12px;margin-top:7px;border:0;background:transparent;color:#b9c6ca;font-size:12px;font-weight:750}
+
+.profile-progress-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0 16px}
+.profile-progress-summary>div{display:grid;gap:4px;padding:12px 10px;border:1px solid #73c9e733;border-radius:14px;background:#122c3a}
+.profile-progress-summary span{font-size:8px;font-weight:900;letter-spacing:1px;color:#9cc9d9}
+.profile-progress-summary strong{font-size:18px;color:#e9f7fb;overflow-wrap:anywhere}
 </style></head><body class="splash-open"><div class="norka-splash" id="norkaSplash" role="status" aria-live="polite"><div class="splash-inner"><div class="splash-brand">НОРКА</div><div class="splash-art"><img class="splash-mascot" src="Image/Загрузка норка.png" alt="Норка с корзинкой ягод"><img class="splash-berry strawberry" src="Image/Клубника загрузка.png" alt=""><img class="splash-berry raspberry" src="Image/Малина загрузка .png" alt=""><img class="splash-berry blueberry" src="Image/Черника загрузка .png" alt=""></div><div class="splash-caption" id="splashCaption">Норка собирает твои ягодки…</div><div class="splash-subcaption">Подготавливаем твой уютный уголок</div><div class="splash-progress" aria-hidden="true"><i></i></div><div class="splash-error" id="splashError"></div><button class="splash-retry" id="splashRetry" type="button">Повторить загрузку</button></div></div><style>
 
 :root{color-scheme:dark;--bg:#071b20;--bg2:#0b252c;--panel:#102a32;--panel2:#142f38;--text:#f3f8fa;--muted:#9bb1b9;--teal:#42e0cf;--teal2:#19b8b4;--violet:#9b79ff;--berry:#ff5e9b;--gold:#f4c96b;--line:#b7e5e522;--shadow:0 18px 44px #020b10a8}
@@ -1861,6 +1866,11 @@ body{
   <div class="profile-asset berry-asset"><span>🍓 ЯГОДЫ</span><strong id="profileBerry">0</strong><small>Награды и задания</small></div>
   <div class="profile-asset coin-asset"><span><i class="coin-mark" aria-hidden="true"></i> МОНЕТЫ</span><strong id="profileCoin">0</strong><small>Для участия в розыгрышах</small></div>
 </div>
+<div class="profile-progress-summary" aria-label="Игровой прогресс">
+ <div><span>УРОВЕНЬ</span><strong id="profileLevel">1</strong></div>
+ <div><span>ОПЫТ</span><strong id="profileXp">0 XP</strong></div>
+ <div><span>СЕРИЯ</span><strong id="profileStreak">0 дн.</strong></div>
+</div>
 <button class="profile-topup-new" data-tab="wallet"><span class="profile-topup-icon">＋</span><span><b>Пополнить кошелёк</b><small>Приобрести монеты для розыгрышей</small></span><strong>›</strong></button>
 <div class="profile-shortcuts">
   <button data-tab="collection"><span class="profile-shortcut-icon">🏅</span><span><b>Мои достижения</b><small>Уровень, серии и награды</small></span><strong>›</strong></button>
@@ -1986,7 +1996,7 @@ function renderProgress(){
  $("progressLevel").textContent=level;$("progressXp").textContent=fmt(xp)+" XP";
  $("progressNext").textContent=p.nextLevelXp>p.currentLevelXp?fmt(p.nextLevelXp-xp)+" XP":"максимум";
  $("progressStreak").textContent=fmt(p.streak||0);$("progressFill").style.width=(Number(p.levelProgress)||0)+"%";$("progressPercent").textContent=(Number(p.levelProgress)||0)+"%";
- $("collectionXp").textContent=fmt(xp)+" XP";$("collectionBestStreak").textContent=fmt(p.bestStreak||0)+" дней";$("collectionLevel").textContent=level;
+ $("collectionXp").textContent=fmt(xp)+" XP";$("collectionBestStreak").textContent=fmt(p.bestStreak||0)+" дней";$("collectionLevel").textContent=level;$("profileLevel").textContent=level;$("profileXp").textContent=fmt(xp)+" XP";$("profileStreak").textContent=fmt(p.streak||0)+" дн.";
  const unlocked=new Set(p.achievements||[]);$("achievementCount").textContent=unlocked.size+" из "+ACHIEVEMENTS.length;$("collectionLockedCount").textContent="Осталось открыть: "+Math.max(0,ACHIEVEMENTS.length-unlocked.size);
 
  $("achievementList").innerHTML=ACHIEVEMENTS.map(a=>{const done=unlocked.has(a.id),src=ACHIEVEMENT_IMAGES[a.id],attrs=' type="button" data-achievement="'+esc(a.id)+'" aria-label="Открыть описание достижения: '+esc(a.title)+'"';return '<button class="card achievement-card '+(done?"unlocked":"locked")+'" '+attrs+' '+(src?'style="--achievement-image:url('+src+')"':'')+'><span class="achievement-copy"><h3>'+esc(a.title)+'</h3><p>'+esc(a.description)+'</p></span><span class="achievement-state">'+(done?"ОТКРЫТО":"ЗАКРЫТО")+'</span></button>';}).join("");
