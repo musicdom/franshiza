@@ -321,10 +321,10 @@ body.splash-open{overflow:hidden}
 .profile-topup-new{display:flex;align-items:center;gap:12px;width:100%;margin:10px 0 14px;padding:13px;border:1px solid #b7df9855;border-radius:17px;background:linear-gradient(110deg,#365d3c,#284938);color:#f5f8ec;text-align:left}
 .profile-topup-icon{width:38px;height:38px;display:grid;place-items:center;flex:0 0 38px;border-radius:12px;background:#d7f1b51c;color:#d7f1b5;font-size:25px}
 .profile-topup-new>span:nth-child(2){display:grid;gap:3px;flex:1}.profile-topup-new b{font-size:12px}.profile-topup-new small{font-size:9px;color:#c5d9bd}.profile-topup-new>strong{font-size:24px;color:#d5efb7}
-.profile-shortcuts{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:0 0 23px}
-.profile-shortcuts button{display:flex;align-items:center;gap:8px;min-width:0;padding:11px 9px;border:1px solid #a9d58d30;border-radius:16px;background:#1b3026;color:#f3f6ed;text-align:left}
-.profile-shortcut-icon{width:34px;height:34px;display:grid;place-items:center;flex:0 0 34px;border-radius:11px;background:#b8e69b18;font-size:17px}
-.profile-shortcuts button>span:nth-child(2){display:grid;gap:3px;min-width:0;flex:1}.profile-shortcuts b{font-size:10px}.profile-shortcuts small{font-size:8px;line-height:1.3;color:#aebfae}.profile-shortcuts button>strong{color:#b8dc9e;font-size:19px}
+.profile-shortcuts{display:grid;grid-template-columns:1fr;gap:7px;margin:0 0 25px}
+.profile-shortcuts button{display:flex;align-items:center;gap:11px;min-width:0;min-height:61px;padding:10px 12px;border:1px solid #a9d58d30;border-radius:14px;background:#1b3026;color:#f3f6ed;text-align:left;transition:background .18s,border-color .18s}
+.profile-shortcut-icon{width:38px;height:38px;display:grid;place-items:center;flex:0 0 38px;border-radius:11px;background:#b8e69b18;font-size:18px}
+.profile-shortcuts button>span:nth-child(2){display:grid;gap:3px;min-width:0;flex:1}.profile-shortcuts b{font-size:12px}.profile-shortcuts small{font-size:10px;line-height:1.35;color:#aebfae}.profile-shortcuts button>strong{color:#b8dc9e;font-size:19px}
 .profile-history-heading{margin:0 2px 10px}.profile-history-heading p{margin:4px 0 0;font-size:10px;color:var(--muted)}
 .profile-history-section{margin:8px 0;padding:0 12px;border:1px solid #ffffff16;border-radius:16px;background:linear-gradient(145deg,#1b3028,#172820)}
 .profile-history-section summary{display:flex;align-items:center;gap:10px;min-height:62px;list-style:none;cursor:pointer}
@@ -336,6 +336,8 @@ body.splash-open{overflow:hidden}
 .profile-view .profile-admin-toggle{margin:16px 0 4px;border-color:#a9d58d35}
 @media(max-width:370px){.profile-shortcuts{grid-template-columns:1fr}.profile-user-row{gap:11px}.profile-avatar-frame{width:68px;height:68px;flex-basis:68px}.profile-user-copy h1{font-size:22px}}
 
+/* Profile layout: compact identity, clear balances and one action per row. */
+.profile-view{padding-bottom:20px}.profile-cover-new{padding:16px 17px 12px;border-radius:22px}.profile-user-row{margin:17px 0 14px}.profile-avatar-frame{width:68px;height:68px;flex-basis:68px;border-radius:21px}.profile-cover-foot{margin-top:3px}.profile-balance-title{margin-top:20px}.profile-assets-new{gap:8px}.profile-asset{padding:12px;border-radius:15px}.profile-asset>strong{font-size:clamp(23px,6vw,28px)}.profile-topup-new{min-height:62px;margin:9px 0 22px}.profile-group-heading{margin-bottom:11px}.profile-group-heading h2{margin-top:4px}.profile-history-heading{margin:0 2px 10px;padding-top:3px}.profile-history-section{margin:8px 0 12px;border-radius:15px}.profile-view .profile-admin-toggle{margin-top:20px}
 /* Fast first paint for MAX WebView + compact berry overview */
 .berries-view .berries-heading{min-height:156px;padding:18px 18px 17px}
 .berries-view .berries-heading h1{margin:9px 0 5px}
@@ -1879,12 +1881,12 @@ body{
   <div class="profile-asset coin-asset"><span><i class="coin-mark" aria-hidden="true"></i> МОНЕТЫ</span><strong id="profileCoin">0</strong><small>Для участия в розыгрышах</small></div>
 </div>
 <button class="profile-topup-new" data-tab="wallet"><span class="profile-topup-icon">＋</span><span><b>Пополнить кошелёк</b><small>Приобрести монеты для розыгрышей</small></span><strong>›</strong></button>
-<div class="profile-group-heading"><span>ТВОЯ АКТИВНОСТЬ</span><h2>Достижения и история</h2></div><div class="profile-shortcuts">
+<div class="profile-group-heading"><span>РАЗДЕЛЫ ПРОФИЛЯ</span><h2>Куда перейти</h2></div><div class="profile-shortcuts">
   <button data-tab="collection"><span class="profile-shortcut-icon">🏅</span><span><b>Мои достижения</b><small>Уровень, серии и награды</small></span><strong>›</strong></button>
   <button data-tab="wallet"><span class="profile-shortcut-icon">📜</span><span><b>История операций</b><small>Начисления, обмены и покупки</small></span><strong>›</strong></button>
   <button id="supportBtn"><span class="profile-shortcut-icon">✉️</span><span><b>Поддержка</b><small>Помощь по приложению</small></span><strong>›</strong></button>
 </div>
-<div class="profile-history-heading"><span>ТВОЯ КОЛЛЕКЦИЯ</span><h2>Подарки</h2><p>Победы и призы, полученные в розыгрышах.</p></div>
+<div class="profile-history-heading"><span>ТВОЯ КОЛЛЕКЦИЯ</span><h2>Полученные подарки</h2><p>Здесь сохраняются призы, которые ты выиграл в розыгрышах.</p></div>
 <details class="profile-history-section"><summary><span class="profile-history-icon">🎁</span><span><b>Мои подарки</b><small id="profileGiftCount">Подарков: 0</small></span><strong>⌄</strong></summary><div id="profileGifts" class="profile-history-list"></div></details>
 <button class="secondary profile-admin-toggle" id="adminOpen">⚙️ Администрирование</button>
 <div class="admin admin-modal" id="admin" role="dialog" aria-modal="true" aria-labelledby="adminModalTitle">
