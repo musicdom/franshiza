@@ -902,6 +902,61 @@ input.field,.field,textarea.field{
 .admin-section-body #adminGiveaways,.admin-section-body #pendingTasks{display:grid;gap:9px}
 body.admin-modal-open{overflow:hidden}
 @media(min-width:700px){.admin-modal-header{padding-left:max(24px,calc((100vw - 820px)/2));padding-right:max(24px,calc((100vw - 820px)/2))}.admin-modal-scroll{padding-left:22px;padding-right:22px}}
+
+/* NORKA REDESIGN 2026 — warm editorial product system */
+:root{color-scheme:light;--bg:#f5f3ed;--bg2:#eeece4;--panel:#fffefa;--panel2:#f4f1e8;--text:#202c25;--muted:#788178;--teal:#246b50;--teal2:#1b5942;--violet:#7965a8;--berry:#d94f78;--gold:#b88731;--line:#24372b20;--shadow:0 12px 32px #26372a12}
+html,body{background:var(--bg)!important;color:var(--text)!important}
+body{background:radial-gradient(ellipse at 90% 0%,#e6eee2 0,transparent 38%),var(--bg)!important}
+.app{max-width:680px;padding:calc(16px + env(safe-area-inset-top)) 18px calc(104px + env(safe-area-inset-bottom))}
+.top{margin-bottom:18px}.brand{color:#254b39;letter-spacing:1.7px;font-size:13px}.brand-home-icon{filter:none}.profile{background:#fffefa;border:1px solid #24372b18;color:#35483b;padding:9px 14px;font-weight:750}
+.view{animation:norka-enter .24s ease both}@keyframes norka-enter{from{opacity:.45;transform:translateY(5px)}to{opacity:1;transform:none}}
+.home-scene,.home-hero{background:linear-gradient(118deg,#214e3b,#2f6a4d 70%,#52775a)!important;border:0!important;border-radius:28px!important;box-shadow:0 16px 34px #214e3b22!important;color:#fff!important}
+.home-scene{padding:25px!important;min-height:205px!important}.home-scene h1,.home-hero h1{font-size:clamp(34px,8vw,46px)!important;letter-spacing:-1.8px!important;line-height:1.02!important}.home-scene p,.home-hero p{color:#e1eee3!important;font-size:13px!important;line-height:1.55!important}.home-scene>div:first-child>span,.home-level{color:#b9d8bf!important}
+.home-mascot,.home-paw{filter:none!important;opacity:.95!important}
+.home-journey{background:#fffefa!important;border:1px solid var(--line)!important;border-radius:22px!important;padding:17px!important;box-shadow:var(--shadow)!important}
+.home-journey-title,.home-live-title h2{color:#33483a!important;letter-spacing:1.1px!important}
+.home-journey-steps{gap:8px!important}.home-journey-link{background:#f3f2e9!important;border:1px solid #24372b12!important;border-radius:16px!important;color:#304638!important;padding:12px 7px!important}.home-journey-link span{font-size:23px!important}.home-journey-link b{font-size:12px!important}.home-journey-link small{color:#778278!important}
+.home-balance-grid{gap:10px!important}.home-balance{border-radius:20px!important;padding:17px!important;box-shadow:none!important;text-align:left!important}.berry-home{background:#fff0f3!important;border:1px solid #e8a5b7!important;color:#8f3150!important}.coin-home{background:#f7f0df!important;border:1px solid #dfc58e!important;color:#77551d!important}.home-balance strong{font-size:30px!important;letter-spacing:-1px!important}
+.daily-card{background:#fffefa!important;color:#293d30!important;border:1px solid #d9e4d8!important;border-radius:20px!important;box-shadow:var(--shadow)!important;padding:17px!important}.daily-card p{color:#7b857b!important}.daily-card h2{color:#293d30!important}.daily-claim{border-radius:13px!important;background:#246b50!important;color:white!important}
+.home-streak{background:#edf2e9!important;border:1px solid #d9e4d8!important;border-radius:18px!important;color:#35503d!important}
+.home-live-title{margin-top:26px!important}.home-live-title button{color:#246b50!important}
+.head h2,.wallet-buy-title h2,.wallet-history-title h2{color:#263b2e!important}
+.card,.exchange,.balance,.action{background:#fffefa!important;border:1px solid #24372b18!important;border-radius:19px!important;box-shadow:0 5px 18px #26372a0b!important;color:#27382d!important}
+.card p,.action small,.small,.meta{color:#788178!important}
+.card h3,.action b{color:#283b2e!important}
+.primary{background:#246b50!important;border:1px solid #246b50!important;color:#fff!important;border-radius:14px!important;box-shadow:none!important}
+.secondary{background:#f3f2eb!important;border:1px solid #dce1d7!important;color:#38503f!important;border-radius:13px!important}
+.tag{background:#e8f1e8!important;color:#356449!important;border:1px solid #d3e3d4!important}
+.empty{background:#fffefa!important;border:1px dashed #cbd5c9!important;color:#7c867b!important;border-radius:18px!important}
+.prizes-heading,.section-banner,.berries-heading,.wallet-heading{border-radius:25px!important;box-shadow:none!important}
+.prizes-heading{background:linear-gradient(120deg,#3d315d,#65527e)!important;color:#fff!important}
+.prizes-summary,.prize-format-intro{background:#fffefa!important;border:1px solid var(--line)!important;border-radius:18px!important;color:#334638!important}
+.prize-format-switch{background:#eeece4!important;border-radius:15px!important;padding:4px!important}.prize-format-switch button{border-radius:12px!important;color:#647064!important}.prize-format-switch button.active{background:#fffefa!important;color:#344d3b!important;box-shadow:0 2px 8px #26372a12!important}
+.prizes-view .card{background:#fffefa!important;border-color:#e1d9ec!important}.prizes-view .primary{background:#67558a!important;border-color:#67558a!important;color:white!important}.prizes-view .tag{background:#f0ebf7!important;color:#67558a!important;border-color:#e4d9f0!important}
+.berries-heading{background:linear-gradient(120deg,#78364f,#a54b67)!important;color:white!important}.berries-heading p{color:#f7dce5!important}
+.berry-daily{background:#fffefa!important;border:1px solid #f0d4dd!important;border-radius:21px!important;box-shadow:var(--shadow)!important}
+.berry-hub-card{background:#fffefa!important;border:1px solid #eadfe2!important;border-radius:17px!important;box-shadow:0 4px 15px #44202b0a!important;color:#3b3540!important}
+.berry-hub-card small{color:#858087!important}
+.berries-view .card{background:#fffefa!important;border-color:#eadfe2!important}.berries-view .primary{background:#bd4c70!important;border-color:#bd4c70!important;color:white!important}.berries-view .tag{background:#fff0f4!important;color:#ad3e62!important;border-color:#f3d5df!important}
+.wallet-heading{background:linear-gradient(120deg,#344c3c,#567252)!important;color:white!important;padding:23px!important}.wallet-heading p{color:#e1ebdd!important}
+.wallet-balance-card{background:#fffefa!important;border:1px solid #d9e4d8!important;border-radius:22px!important;color:#283d30!important;box-shadow:var(--shadow)!important}
+.payment-branding{background:#f0f4ed!important;border:1px solid #dce6d8!important;border-radius:17px!important}.payment-branding p{color:#738073!important}.payment-branding b{color:#314b38!important}
+.wallet-quick-amounts button{background:#fffefa!important;border:1px solid #dce1d7!important;color:#405443!important;border-radius:13px!important}.wallet-quick-amounts button[aria-pressed=true]{background:#e8f1e8!important;border-color:#8bb69a!important;color:#285b3d!important}
+.pay-slider{accent-color:#246b50!important}.field{background:#fffefa!important;border:1px solid #d9e1d7!important;color:#283b2e!important}
+.history{border-color:#e8ebe4!important;color:#3b493e!important}
+.profile-cover-new{background:linear-gradient(120deg,#294f3d,#466d50)!important;border:0!important;border-radius:25px!important;box-shadow:var(--shadow)!important;color:white!important}.profile-cover-new *{color:inherit}.profile-online{background:#ffffff18!important}
+.profile-assets-new .profile-asset{border-radius:18px!important;box-shadow:none!important}.profile-asset.berry-asset{background:#fff0f3!important;border:1px solid #e8c4ce!important;color:#913e58!important}.profile-asset.coin-asset{background:#f7f0df!important;border:1px solid #e7d7ae!important;color:#77591f!important}
+.profile-topup-new{background:#fffefa!important;border:1px solid #dce5d9!important;border-radius:17px!important;color:#31513a!important}
+.profile-shortcuts button{background:#fffefa!important;border:1px solid #e1e6dd!important;border-radius:16px!important;color:#34483a!important}
+.collection-summary{background:#f0edf7!important;border:1px solid #e0d8ed!important;color:#51436b!important}.collection-view .achievement-card{background:#fffefa!important;border-color:#e1dbea!important}
+.tabs{background:#fffefaed!important;backdrop-filter:blur(18px)!important;border-top:1px solid #26372a18!important;box-shadow:0 -8px 24px #26372a0a!important;padding:7px 10px calc(7px + env(safe-area-inset-bottom))!important}
+.tabrow{max-width:620px!important;gap:5px!important}.tab{color:#818a80!important;border-radius:13px!important;padding:5px 2px!important;font-size:10px!important}.tab.active{background:#eaf2e9!important;color:#285a3b!important}.tab-icon{filter:none!important;width:30px!important;height:30px!important}.tab.active .tab-icon{filter:none!important;transform:translateY(-1px)!important}
+.notice{background:#fffefa!important;color:#2d4334!important;border:1px solid #cbdccb!important;box-shadow:0 12px 30px #26372a20!important}
+.admin{background:#fffefa!important;border:1px solid #dfd3ad!important;border-radius:18px!important;color:#39483b!important}.admin-user-row{background:#f7f6f0!important;border-color:#e4e7df!important}
+button:focus-visible,input:focus-visible{outline:3px solid #4b8b65!important;outline-offset:3px!important}
+@media(max-width:380px){.app{padding-left:13px;padding-right:13px}.home-scene{padding:20px!important}.home-journey{padding:13px!important}.home-journey-link{padding:10px 4px!important}.home-journey-link small{font-size:9px!important}.tab{font-size:9px!important}}
+@media(prefers-reduced-motion:reduce){.view,.home-journey-link,.tab-icon{animation:none!important;transition:none!important}}
+
 </style></head><body class="splash-open"><div class="norka-splash" id="norkaSplash" role="status" aria-live="polite"><div class="splash-inner"><div class="splash-brand">НОРКА</div><div class="splash-art"><img class="splash-mascot" src="Image/Загрузка норка.png" alt="Норка с корзинкой ягод"><img class="splash-berry strawberry" src="Image/Клубника загрузка.png" alt=""><img class="splash-berry raspberry" src="Image/Малина загрузка .png" alt=""><img class="splash-berry blueberry" src="Image/Черника загрузка .png" alt=""></div><div class="splash-caption" id="splashCaption">Норка собирает твои ягодки…</div><div class="splash-subcaption">Подготавливаем твой уютный уголок</div><div class="splash-progress" aria-hidden="true"><i></i></div><div class="splash-error" id="splashError"></div><button class="splash-retry" id="splashRetry" type="button">Повторить загрузку</button></div></div><style>
 
 :root{color-scheme:dark;--bg:#071b20;--bg2:#0b252c;--panel:#102a32;--panel2:#142f38;--text:#f3f8fa;--muted:#9bb1b9;--teal:#42e0cf;--teal2:#19b8b4;--violet:#9b79ff;--berry:#ff5e9b;--gold:#f4c96b;--line:#b7e5e522;--shadow:0 18px 44px #020b10a8}
