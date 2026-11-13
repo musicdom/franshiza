@@ -1755,87 +1755,16 @@ body{
 #wallet .coin-preview{display:flex;align-items:center;justify-content:space-between;gap:12px}
 #wallet .payment-note{line-height:1.55}
 #wallet .wallet-history-title{margin-top:25px}
-
-/* NORKA HOME V2 — simplified hierarchy */
-.home-v2{display:flex;flex-direction:column;gap:14px}
-.home-v2-hero{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:154px;padding:22px 20px;border:1px solid rgba(203,225,177,.14);border-radius:24px;background:linear-gradient(135deg,#203b2d 0%,#294b37 58%,#36563d 100%);overflow:hidden}
-.home-v2-hero:after{content:"";position:absolute;width:180px;height:180px;right:-62px;top:-92px;border-radius:50%;background:rgba(211,235,172,.08)}
-.home-v2-hero-copy{position:relative;z-index:1;max-width:calc(100% - 88px)}
-.home-v2-eyebrow{font-size:9px;font-weight:900;letter-spacing:1.7px;color:#c6d9b7}
-.home-v2-hero h1{margin:8px 0 5px;font-size:30px;line-height:1.08;color:#fff}
-.home-v2-hero h1 b{color:#d7efa9}
-.home-v2-hero p{max-width:290px;margin:0;color:#d6e1d2;font-size:12px;line-height:1.5}
-.home-v2-level{display:inline-flex;align-items:center;gap:7px;margin-top:13px;padding:6px 10px;border:1px solid rgba(225,240,211,.18);border-radius:30px;background:rgba(8,24,16,.2);font-size:10px;color:#e1ead9}
-.home-v2-level span:first-child{font-size:8px;letter-spacing:1px;font-weight:900;color:#c5d7b8}
-.home-v2-level strong{color:#fff}
-.home-v2-level i{font-style:normal;opacity:.55}
-.home-v2-mascot{position:relative;z-index:1;flex:0 0 72px;width:72px;height:72px;display:grid;place-items:center;border-radius:22px;background:rgba(255,255,255,.09);font-size:43px}
-.home-v2-actions{display:grid;gap:8px}
-.home-v2-primary{display:flex;align-items:center;gap:12px;width:100%;min-height:66px;padding:11px 14px;border:0;border-radius:17px;background:#d5e9ae;color:#203729;text-align:left}
-.home-v2-primary>span:first-child{display:grid;place-items:center;width:40px;height:40px;border-radius:13px;background:rgba(35,67,43,.1);font-size:21px}
-.home-v2-primary>span:nth-child(2){display:grid;gap:3px;flex:1}
-.home-v2-primary b{font-size:14px;font-weight:900}
-.home-v2-primary small{font-size:10px;color:#536c4e}
-.home-v2-primary>i{font-size:22px;font-style:normal}
-.home-v2-secondary{min-height:42px;border:1px solid rgba(203,225,177,.18);border-radius:13px;background:rgba(255,255,255,.035);color:#e3eadc;font-size:11px;font-weight:800}
-.home-v2-secondary span{margin-left:5px;color:#cfe4a9}
-.home-v2-balance{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.home-v2-balance-card{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0;padding:13px 14px;border:1px solid rgba(203,225,177,.14);border-radius:17px;background:#20392d;color:#fff;text-align:left}
-.home-v2-balance-card>span{font-size:9px;font-weight:900;letter-spacing:1px;color:#c8d7c1}
-.home-v2-balance-card>strong{font-size:26px;line-height:1.1;font-weight:900}
-.home-v2-balance-card>small{font-size:9px;color:#b5c7b1}
-.home-v2-daily{display:flex;align-items:center;gap:11px;padding:13px;border:1px solid rgba(235,197,103,.2);border-radius:17px;background:linear-gradient(110deg,rgba(121,91,37,.22),rgba(89,73,37,.12))}
-.home-v2-daily-icon{flex:0 0 38px;width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:rgba(255,211,111,.12);font-size:20px}
-.home-v2-daily-copy{display:grid;gap:3px;flex:1;min-width:0}
-.home-v2-daily-copy>span{font-size:8px;font-weight:900;letter-spacing:1px;color:#e4c77e}
-.home-v2-daily-copy>b{font-size:13px;color:#fff}
-.home-v2-daily-copy>small{font-size:9px;line-height:1.35;color:#c9c4ad}
-.home-v2-daily button{flex:0 0 auto;min-height:36px;padding:0 12px;border:0;border-radius:11px;background:#e5c979;color:#3b321c;font-size:10px;font-weight:900}
-.home-v2-progress{padding:12px 14px;border:1px solid rgba(203,225,177,.12);border-radius:15px;background:rgba(255,255,255,.025)}
-.home-v2-progress-top{display:flex;justify-content:space-between;gap:10px;font-size:10px;color:#dce7d7}
-.home-v2-progress-top strong{color:#fff}
-.home-v2-progress-track{height:5px;margin:9px 0 6px;border-radius:10px;background:rgba(255,255,255,.1);overflow:hidden}
-.home-v2-progress-track i{display:block;width:0;height:100%;border-radius:10px;background:#cfe5a8}
-.home-v2-progress>small{font-size:9px;color:#aebfa9}
-.home-v2-giveaways-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin:5px 1px 0}
-.home-v2-giveaways-heading>div>span{font-size:8px;font-weight:900;letter-spacing:1.2px;color:#b8caab}
-.home-v2-giveaways-heading h2{margin:3px 0 0;font-size:17px;color:#f2f5ed}
-.home-v2-giveaways-heading>button{padding:5px 0;border:0;background:none;color:#d1e5a9;font-size:10px;font-weight:800;white-space:nowrap}
-.home-v2 button:focus-visible{outline:2px solid #d8edb5;outline-offset:3px}
-@media(max-width:360px){.home-v2-hero{padding:18px 15px}.home-v2-hero h1{font-size:26px}.home-v2-mascot{flex-basis:60px;width:60px;height:60px;font-size:36px}.home-v2-daily{gap:8px;padding:10px}.home-v2-daily button{padding:0 9px}}
 </style><div class="app">
 <header class="top"><div class="brand"><button class="brand-home" id="homeBtn" type="button" aria-label="На главную"><img class="brand-home-icon" src="Image/Кнопка%20навигации%20Главная.png" alt=""></button> НОРКА</div><button class="profile" id="profileBtn">👤 Профиль</button></header>
-<main><section class="view active home-view home-v2" id="home">
-<div class="home-v2-hero">
-  <div class="home-v2-hero-copy">
-    <span class="home-v2-eyebrow">ТВОЯ НОРКА</span>
-    <h1>Привет, <b id="homeName">друг!</b></h1>
-    <p>Собирай ягоды за задания, меняй их на монеты и участвуй в розыгрышах.</p>
-    <div class="home-v2-level"><span>УРОВЕНЬ</span><strong id="progressLevel">1</strong><i>·</i><span id="progressXp">0 XP</span></div>
-  </div>
-  <div class="home-v2-mascot" aria-hidden="true">🦦</div>
-</div>
-<div class="home-v2-actions">
-  <button class="home-v2-primary" type="button" data-tab="earn"><span>🍓</span><span><b>Заработать ягоды</b><small>Задания и ежедневные награды</small></span><i>→</i></button>
-  <button class="home-v2-secondary" type="button" data-tab="giveaways">Посмотреть розыгрыши <span>→</span></button>
-</div>
-<div class="home-v2-balance">
-  <button class="home-v2-balance-card" type="button" data-tab="earn"><span>🍓 ЯГОДЫ</span><strong id="berries">0</strong><small>На задания и обмен</small></button>
-  <button class="home-v2-balance-card" type="button" data-tab="wallet"><span><i class="coin-mark" aria-hidden="true"></i> МОНЕТЫ</span><strong id="coins">0</strong><small>Для участия в розыгрышах</small></button>
-</div>
-<article class="home-v2-daily">
-  <div class="home-v2-daily-icon" aria-hidden="true">☀️</div>
-  <div class="home-v2-daily-copy"><span>КАЖДЫЙ ДЕНЬ</span><b>Ежедневная награда</b><small>Забирай ягоды за посещение Норки.</small></div>
-  <button id="dailyHomeBtn" type="button">Забрать</button>
-</article>
-<div class="home-v2-progress">
-  <div class="home-v2-progress-top"><span>🔥 Серия посещений</span><strong><b id="progressStreak">0</b> дней</strong></div>
-  <div class="home-v2-progress-track"><i id="progressFill"></i></div>
-  <small><span id="progressPercent">0%</span> до следующего уровня · <span id="progressNext">100 XP</span></small>
-</div>
-<div class="home-v2-giveaways-heading"><div><span>НЕ УПУСТИ</span><h2>Сейчас разыгрывается</h2></div><button type="button" data-tab="giveaways">Все розыгрыши →</button></div>
-<div id="homeGiveaways"><div class="empty">Загружаем розыгрыши…</div></div>
-</section>
+<main><section class="view active home-view" id="home">
+<div class="home-scene"><div><span>ТВОЯ НОРКА</span><h1>Привет,<br><b id="homeName">друг!</b></h1><p>Собирай ягоды за задания, меняй их на монеты и участвуй в розыгрышах.</p><div class="home-level">УРОВЕНЬ <strong id="progressLevel">1</strong> · <span id="progressXp">0 XP</span></div></div><div class="home-mascot">🦦</div></div>
+<div class="home-journey" aria-label="Как работает Норка"><div class="home-journey-title">ТВОЙ ПУТЬ К ПРИЗАМ</div><div class="home-journey-steps"><button type="button" class="home-journey-link" data-tab="earn"><span>🍓</span><b>Собирай</b><small>Выполняй задания</small></button><i aria-hidden="true">→</i><button type="button" class="home-journey-link" data-tab="exchange"><span>🪙</span><b>Меняй</b><small>Получай монеты</small></button><i aria-hidden="true">→</i><button type="button" class="home-journey-link" data-tab="giveaways"><span>🎁</span><b>Участвуй</b><small>Выбирай розыгрыш</small></button></div></div>
+<div class="home-balance-grid"><button class="home-balance berry-home" data-tab="earn"><span>🍓 ЯГОДЫ</span><strong id="berries">0</strong><small>Открыть задания →</small></button><button class="home-balance coin-home" data-tab="wallet"><span><i class="coin-mark" aria-hidden="true"></i> МОНЕТЫ</span><strong id="coins">0</strong><small>Пополнить кошелёк →</small></button></div>
+<article class="daily-card"><div class="daily-icon">☀️</div><div class="daily-copy"><span>ЕЖЕДНЕВНЫЙ ПОДАРОК</span><h2>Забери свои ягоды</h2><p>Награда за сегодняшний визит</p></div><button class="daily-claim" id="dailyHomeBtn" type="button">Забрать · 10 🍓</button></article>
+<div class="home-streak"><div><span>ТВОЯ СЕРИЯ</span><strong>🔥 <b id="progressStreak">0</b> дней подряд</strong></div><div class="streak-progress"><i id="progressFill"></i></div><small><span id="progressPercent">0%</span> до следующего уровня · <span id="progressNext">100 XP</span></small></div>
+<div class="home-shortcuts"><button data-tab="giveaways">🎁 Призы →</button><button data-tab="earn">🍓 Задания →</button><button data-tab="exchange">🎡 Колесо и обмен →</button></div>
+<div class="home-live-title"><h2>Сейчас разыгрывается</h2><button data-tab="giveaways">Все призы →</button></div><div id="homeGiveaways"><div class="empty">Загружаем розыгрыши…</div></div></section>
 <section class="view prizes-view" id="giveaways"><div class="prizes-heading"><span>ВИТРИНА РОЗЫГРЫШЕЙ</span><h1>Выбирай приз</h1><p>Выбирай формат участия и попробуй удачу вместе с Норкой.</p><div class="prize-heading-art">🎁</div></div><div class="prizes-summary"><div><strong id="prizeActiveCount">0</strong><span>активных розыгрышей</span></div><div><strong id="prizeMyCount">0</strong><span>моих участий</span></div></div><div class="prize-format-intro"><span>ВЫБЕРИ ФОРМАТ УЧАСТИЯ</span><p>В обычном розыгрыше — одно участие и один победитель. В номерном — сам выбираешь свободные номера.</p></div><div class="prize-format-switch"><button type="button" class="active" data-prize-tab="places" aria-pressed="true">🎁 Обычный · 1 победитель</button><button type="button" data-prize-tab="numbers" aria-pressed="false">🔢 Номерной · выбор номеров</button></div><div id="giveawayList" class="giveaway-feed"></div><div id="numberedGiveawayList" class="giveaway-feed" hidden></div></section>
 <section class="view berries-view" id="earn"><div class="berry-overview-panel" data-berry-panel="overview"><div class="berries-heading"><span>ТВОЙ ЯГОДНЫЙ СЧЁТ</span><h1><strong id="gardenBerryCount">0</strong> 🍓</h1><p>Твой запас ягод</p></div><div class="berry-daily"><div class="berry-daily-top"><div class="berry-daily-icon">☀️</div><div class="berry-daily-copy"><span>ЕЖЕДНЕВНЫЙ СБОР</span><h2>Подарок от Норки</h2><p>Заглядывай каждый день за наградой.</p></div><span class="berry-reward" id="berryDailyReward">+10 🍓</span></div><button class="primary berry-daily-claim" id="berryDailyBtn" type="button">Забрать ягоды</button><div class="berry-streak"><div><span>ТВОЯ СЕРИЯ</span><strong>🔥 <b id="berryStreak">0</b> дней подряд</strong></div><div class="berry-streak-track"><i id="berryStreakFill"></i></div><small><span id="berryStreakPercent">0%</span> до следующего уровня · <span id="berryStreakNext">100 XP</span></small></div></div>
 <div class="berry-hub-grid">
