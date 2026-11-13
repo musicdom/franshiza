@@ -1835,6 +1835,26 @@ body{
 #wallet .coin-preview{display:flex;align-items:center;justify-content:space-between;gap:12px}
 #wallet .payment-note{line-height:1.55}
 #wallet .wallet-history-title{margin-top:25px}
+
+/* Modal ergonomics: safe-area spacing, persistent purchase controls and clear focus. */
+.number-modal{padding:10px 10px calc(10px + env(safe-area-inset-bottom));}
+.number-modal-panel{max-height:calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overscroll-behavior:contain;padding:17px 16px calc(14px + env(safe-area-inset-bottom));scrollbar-width:thin;}
+.number-modal-head{position:sticky;top:-17px;z-index:4;margin:-17px -16px 0;padding:15px 16px 10px;background:linear-gradient(160deg,#1a303a,#192b37);border-radius:24px 24px 0 0;}
+.number-modal-actions{position:sticky;bottom:calc(-14px - env(safe-area-inset-bottom));z-index:3;margin:0 -16px calc(-14px - env(safe-area-inset-bottom));padding:11px 16px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(180deg,#172a35ed,#172a35 35%);border-top:1px solid #ffffff12;}
+.number-modal-actions .primary{min-height:48px;font-size:12px;font-weight:850;}
+.number-cell{min-height:44px;touch-action:manipulation;}
+.number-cell:focus-visible,.number-modal button:focus-visible,.achievement-modal button:focus-visible{outline:2px solid #b7f5d9;outline-offset:2px;}
+.achievement-modal{padding:12px 12px calc(12px + env(safe-area-inset-bottom));}
+.achievement-modal-panel{max-height:calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overscroll-behavior:contain;scrollbar-width:thin;}
+.achievement-modal-close{position:sticky;float:right;top:10px;margin:10px 10px -48px 0;}
+@media(max-width:600px){
+ .number-modal{align-items:flex-end;}
+ .number-modal-panel{width:100%;border-radius:23px 23px 14px 14px;}
+ .achievement-modal{align-items:flex-end;padding-left:8px;padding-right:8px;}
+ .achievement-modal-panel{width:100%;border-radius:22px 22px 16px 16px;}
+ .achievement-modal-art{height:clamp(145px,28vh,205px);}
+ .achievement-modal-body{padding:16px 16px calc(20px + env(safe-area-inset-bottom));}
+}
 </style><div class="app">
 <header class="top"><div class="brand"><button class="brand-home" id="homeBtn" type="button" aria-label="На главную"><img class="brand-home-icon" src="Image/Кнопка%20навигации%20Главная.png" alt=""></button> НОРКА</div><button class="profile" id="profileBtn">👤 Профиль</button></header>
 <main><section class="view active home-view" id="home">
